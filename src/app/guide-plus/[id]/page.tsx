@@ -122,7 +122,7 @@ export default function GuidePlusDetailPage() {
             <Calendar className="mx-auto h-12 w-12 text-[#4ade80]" />
             <h2 className="theme-heading mt-5 text-2xl font-semibold">Booking confirmed</h2>
             <p className="theme-muted mt-3 text-sm">
-              Your Guide+ session has been booked. {guide.name} will confirm the details shortly.
+              Your Guide+ session is booked. {guide.name} will confirm the details shortly.
             </p>
           </div>
         ) : null}
@@ -246,14 +246,14 @@ export default function GuidePlusDetailPage() {
                           }}
                           className="mt-4 w-full rounded-full bg-[#ff5630] py-2.5 text-sm font-semibold text-white"
                         >
-                          Book this service
+                          Book this session
                         </button>
                       ) : (
                         <a
                           href={`/login?redirect=/guide-plus/${id}`}
                           className="mt-4 block w-full rounded-full border border-white/15 py-2.5 text-center text-sm font-medium text-white/70"
                         >
-                          Sign in to book
+                          Traveler login to book
                         </a>
                       )}
                     </div>
@@ -309,7 +309,7 @@ export default function GuidePlusDetailPage() {
                     disabled={booking}
                     className="w-full rounded-full bg-[#ff5630] py-3 text-sm font-semibold text-white disabled:opacity-50"
                   >
-                    {booking ? "Confirming..." : "Confirm booking"}
+                    {booking ? "Confirming..." : "Confirm session"}
                   </button>
                   <button
                     type="button"

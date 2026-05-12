@@ -11,11 +11,9 @@ import {
   Sparkles,
   Users,
 } from "lucide-react";
-import { getTripTotals } from "@/lib/trip-planner/planner";
-import { TripPlannerItem, TripPlannerMeta } from "@/types/trip-planner";
+import { TripPlannerMeta } from "@/types/trip-planner";
 
 interface PlannerOverviewSectionProps {
-  items: TripPlannerItem[];
   meta: TripPlannerMeta;
   totalBudget: number;
   onMetaChange: (updates: Partial<TripPlannerMeta>) => void;
@@ -40,7 +38,6 @@ const quickActions = [
 ];
 
 export default function PlannerOverviewSection({
-  items,
   meta,
   totalBudget,
   onMetaChange,
@@ -48,25 +45,6 @@ export default function PlannerOverviewSection({
   onContinueToBoard,
   onOpenAddDrawer,
 }: PlannerOverviewSectionProps) {
-  const totals = getTripTotals(items, totalBudget);
-  const dayCount =
-    meta.startDate && meta.endDate
-      ? Math.max(
-          1,
-          Math.round(
-            (new Date(meta.endDate).getTime() - new Date(meta.startDate).getTime()) /
-              86400000
-          ) + 1
-        )
-      : 0;
-
-  const readiness =
-    items.length === 0
-      ? "Start with your travel dates, then add the first stay or experience."
-      : totals.remainingBudget < 0
-        ? "The plan is over budget. Tighten a few selections before you confirm."
-        : "The foundation is looking good. Move into the board to shape each day.";
-
   return (
     <section className="grid gap-5 xl:grid-cols-[minmax(0,1.25fr)_minmax(320px,0.75fr)]">
       <div className="theme-panel rounded-[30px] p-5 shadow-xl md:p-7">
@@ -184,43 +162,6 @@ export default function PlannerOverviewSection({
       </div>
 
       <aside className="space-y-5">
-        <div className="theme-panel rounded-[30px] p-5 shadow-xl">
-          <p className="theme-label text-xs uppercase tracking-[0.24em]">
-            Experience
-          </p>
-          <h3 className="theme-heading mt-2 text-xl font-semibold">
-            Trip pulse
-          </h3>
-          <p className="theme-muted mt-3 text-sm leading-6">{readiness}</p>
-
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
-            <div className="theme-card-soft rounded-[24px] p-4">
-              <div className="theme-muted text-sm">Days planned</div>
-              <div className="theme-heading mt-2 text-2xl font-semibold">
-                {dayCount}
-              </div>
-            </div>
-            <div className="theme-card-soft rounded-[24px] p-4">
-              <div className="theme-muted text-sm">Items saved</div>
-              <div className="theme-heading mt-2 text-2xl font-semibold">
-                {items.length}
-              </div>
-            </div>
-            <div className="theme-card-soft rounded-[24px] p-4">
-              <div className="theme-muted text-sm">Planned spend</div>
-              <div className="theme-heading mt-2 text-2xl font-semibold">
-                ${totals.totalCost}
-              </div>
-            </div>
-            <div className="theme-card-soft rounded-[24px] p-4">
-              <div className="theme-muted text-sm">Budget remaining</div>
-              <div className="theme-heading mt-2 text-2xl font-semibold">
-                ${Math.abs(totals.remainingBudget)}
-              </div>
-            </div>
-          </div>
-        </div>
-
         <div className="theme-panel rounded-[30px] p-5 shadow-xl">
           <div className="flex items-center justify-between gap-3">
             <div>

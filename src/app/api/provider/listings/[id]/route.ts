@@ -4,6 +4,12 @@ import { prisma } from "@/lib/prisma";
 import { apiError } from "@/lib/http";
 import { requireSessionUser } from "@/lib/auth";
 import { serializeListing } from "@/lib/platform";
+import {
+  buildDestinationMetadata,
+  getListingDestinationMetadata,
+  listingRequiresDestination,
+  resolveListingDestination,
+} from "@/lib/listing-destination-rules";
 
 export const dynamic = "force-dynamic";
 const updateListingSchema = z.object({
@@ -34,13 +40,36 @@ const updateListingSchema = z.object({
       z.object({
         startDate: z.string(),
         endDate: z.string(),
-        unitsAvailable: z.coerce.number().int().optional().nullable(),
+        unitsAvailable: z.coerce.number().int().min(0).optional().nullable(),
         status: z.string().default("available"),
         notes: z.string().optional().nullable(),
       })
     )
     .optional(),
 });
+
+function validateAvailabilitySlots(
+  availability: Array<{ startDate: string; endDate: string }> | undefined
+) {
+  if (!availability) {
+    return null;
+  }
+
+  for (const slot of availability) {
+    const start = new Date(slot.startDate);
+    const end = new Date(slot.endDate);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return "Availability slots must use valid start and end dates.";
+    }
+
+    if (end <= start) {
+      return "Availability slot end dates must be after start dates.";
+    }
+  }
+
+  return null;
+}
 
 export async function PATCH(
   request: NextRequest,
@@ -66,7 +95,7 @@ export async function PATCH(
         id: params.id,
         companyId: company.id,
       },
-      select: { id: true },
+      select: { id: true, category: true, metadata: true, location: true },
     });
 
     if (!listing) {
@@ -74,6 +103,37 @@ export async function PATCH(
     }
 
     const payload = updateListingSchema.parse(await request.json());
+    const availabilityError = validateAvailabilitySlots(payload.availability);
+
+    if (availabilityError) {
+      return apiError(availabilityError, 422);
+    }
+    const existingMetadata = (() => {
+      try {
+        return listing.metadata
+          ? (JSON.parse(listing.metadata) as Record<string, unknown>)
+          : {};
+      } catch {
+        return {};
+      }
+    })();
+    const nextMetadata = {
+      ...existingMetadata,
+      ...(payload.metadata ?? {}),
+    };
+    const submittedDestination = getListingDestinationMetadata(nextMetadata);
+    const destination = resolveListingDestination(submittedDestination.destinationId);
+    const nextCategory = payload.category ?? listing.category;
+    const requiresDestination = listingRequiresDestination(nextCategory);
+
+    if (requiresDestination && !destination) {
+      return apiError(
+        "Choose the destination this listing belongs to before publishing or saving.",
+        422
+      );
+    }
+
+    const destinationMetadata = buildDestinationMetadata(destination);
 
     await prisma.providerListing.update({
       where: { id: listing.id },
@@ -83,7 +143,7 @@ export async function PATCH(
         listingType: payload.listingType,
         shortDescription: payload.shortDescription,
         description: payload.description,
-        location: payload.location,
+        location: destination?.name ?? payload.location,
         pricingModel: payload.pricingModel,
         basePrice: payload.basePrice,
         currency: payload.currency,
@@ -97,7 +157,13 @@ export async function PATCH(
         tags: payload.tags ? JSON.stringify(payload.tags) : undefined,
         amenities: payload.amenities ? JSON.stringify(payload.amenities) : undefined,
         policies: payload.policies ? JSON.stringify(payload.policies) : undefined,
-        metadata: payload.metadata ? JSON.stringify(payload.metadata) : undefined,
+        metadata:
+          payload.metadata || destination
+            ? JSON.stringify({
+                ...nextMetadata,
+                ...destinationMetadata,
+              })
+            : undefined,
       },
     });
 

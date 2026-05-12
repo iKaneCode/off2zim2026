@@ -183,7 +183,7 @@ function BookingSuccessContent() {
                 <div className="space-y-2 theme-muted text-sm leading-6">
                   <p>Your booking is now visible in your explorer dashboard.</p>
                   <p>The provider will review and confirm it from their workspace.</p>
-                  <p>You'll receive updates as the booking is processed.</p>
+                  <p>You&apos;ll receive updates as the booking is processed.</p>
                 </div>
               </div>
             </div>

@@ -4,7 +4,7 @@ import React from "react";
 import { usePayment } from "@/contexts/PaymentContext";
 import { BookingItem } from "@/types/payment";
 import { Button } from "@/components/ui/button";
-import { ShoppingCart, Plus } from "lucide-react";
+import { Plus } from "lucide-react";
 import { toast } from "react-hot-toast";
 
 interface AddToCartButtonProps {

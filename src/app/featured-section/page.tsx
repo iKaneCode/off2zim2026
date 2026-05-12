@@ -76,8 +76,8 @@ const fairnessPrinciples = [
 ];
 
 const featuredTabs: { key: "current" | "algorithm" | "metrics"; label: string; icon: LucideIcon }[] = [
-  { key: "current", label: "Current feature set", icon: Award },
-  { key: "algorithm", label: "Fairness logic", icon: BarChart3 },
+  { key: "current", label: "Current featured set", icon: Award },
+  { key: "algorithm", label: "How selection works", icon: BarChart3 },
   { key: "metrics", label: "Platform metrics", icon: TrendingUp },
 ];
 
@@ -100,10 +100,10 @@ export default function FeaturedSectionPage() {
                 Featured framework
               </div>
               <h1 className="theme-heading mt-4 max-w-3xl text-4xl font-semibold md:text-5xl">
-                A better way to feature Zimbabwe without making visibility feel arbitrary
+                A clearer way to feature standout businesses and experiences across Zimbabwe
               </h1>
               <p className="theme-muted mt-4 max-w-2xl text-sm leading-7 md:text-base">
-                Editorial visibility built around trust, quality, and balance.
+                Featured visibility is based on trust, quality, and fair rotation.
               </p>
             </div>
             <div
@@ -180,7 +180,7 @@ export default function FeaturedSectionPage() {
           </div>
         ) : activeTab === "algorithm" ? (
           <div className="theme-panel rounded-[30px] p-6 md:p-8">
-            <h2 className="theme-heading text-2xl font-semibold">Fairness logic</h2>
+            <h2 className="theme-heading text-2xl font-semibold">How selection works</h2>
             <div className="mt-5 grid gap-4 md:grid-cols-2">
               {fairnessPrinciples.map(({ title, text }) => (
                 <div key={title} className="theme-card-soft rounded-[24px] p-4">

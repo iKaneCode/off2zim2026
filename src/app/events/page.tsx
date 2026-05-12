@@ -1,9 +1,17 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import AppServiceStrip from "@/components/ui/AppServiceStrip";
-import SectionHeader from "@/components/ui/SectionHeader";
+import CompactPageHero from "@/components/ui/CompactPageHero";
+import CompactSectionHeader from "@/components/ui/CompactSectionHeader";
+import HorizontalRail from "@/components/ui/HorizontalRail";
+import ServiceSubtypeChips from "@/components/ui/ServiceSubtypeChips";
+import {
+  getSubtypesForGroup,
+  inferServiceSubtype,
+  normalizeTaxonomyValue,
+} from "@/lib/taxonomy";
 import {
   CalendarDaysIcon,
   ClockIcon,
@@ -14,7 +22,6 @@ import {
 import {
   HeartIcon,
   MagnifyingGlassIcon,
-  SparklesIcon,
 } from "@heroicons/react/24/outline";
 import { Minus, Plus } from "lucide-react";
 import { usePayment } from "@/contexts/PaymentContext";
@@ -147,10 +154,19 @@ function formatDate(dateString: string) {
 
 export default function EventsPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { addToBooking } = usePayment();
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
-  const [activeLocation, setActiveLocation] = useState("All");
+  const [activeSubtype, setActiveSubtype] = useState(searchParams?.get("subtype") || "all");
+  const destinationParam = searchParams?.get("destination");
+  const initialLocation = destinationParam
+    ? destinationParam
+        .split("-")
+        .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+        .join(" ")
+    : "All";
+  const [activeLocation, setActiveLocation] = useState(initialLocation);
 
   const categories = ["All", ...Array.from(new Set(events.map((event) => event.category)))];
   const locations = ["All", ...Array.from(new Set(events.map((event) => event.location)))];
@@ -159,15 +175,27 @@ export default function EventsPage() {
     const term = search.trim().toLowerCase();
     return events.filter((event) => {
       const matchesCategory = activeCategory === "All" || event.category === activeCategory;
-      const matchesLocation = activeLocation === "All" || event.location === activeLocation;
+      const matchesSubtype =
+        activeSubtype === "all" ||
+        inferServiceSubtype({
+          category: "Event",
+          listingType: event.category,
+          title: event.title,
+          metadata: { serviceGroup: "events", serviceSubtype: event.category },
+        })?.id === activeSubtype ||
+        normalizeTaxonomyValue(event.category) === activeSubtype;
+      const matchesLocation =
+        activeLocation === "All" ||
+        normalizeTaxonomyValue(event.location).includes(normalizeTaxonomyValue(activeLocation)) ||
+        normalizeTaxonomyValue(activeLocation).includes(normalizeTaxonomyValue(event.location));
       const matchesSearch =
         !term ||
         event.title.toLowerCase().includes(term) ||
         event.description.toLowerCase().includes(term) ||
         event.location.toLowerCase().includes(term);
-      return matchesCategory && matchesLocation && matchesSearch;
+      return matchesCategory && matchesSubtype && matchesLocation && matchesSearch;
     });
-  }, [activeCategory, activeLocation, search]);
+  }, [activeCategory, activeLocation, activeSubtype, search]);
 
   const featured = filteredEvents.filter((event) => event.featured);
 
@@ -203,124 +231,83 @@ export default function EventsPage() {
 
   return (
     <div className="theme-page pb-20">
-      <section className="mx-auto max-w-7xl px-4 pb-6 pt-6 sm:px-6 lg:px-8">
-        <div className="theme-panel-strong overflow-hidden rounded-[34px]">
-          <div className="grid lg:grid-cols-[1.08fr_0.92fr]">
-            <div className="p-6 md:p-8 lg:p-10">
-              <div className="theme-chip inline-flex rounded-full px-4 py-2 text-xs uppercase tracking-[0.28em]">
-                Events
-              </div>
-              <h1 className="theme-heading mt-4 max-w-3xl text-4xl font-semibold md:text-5xl">
-                Find events worth building your trip around
-              </h1>
-              <p className="theme-muted mt-4 max-w-2xl text-sm leading-7 md:text-base">
-                Festivals, cultural showcases, and live events across Zimbabwe —
-                filter by destination or date, pick your tickets, and add them
-                straight to your itinerary or cart.
-              </p>
-
-              <div className="mt-8 grid gap-3 md:grid-cols-[1.2fr_0.8fr_0.8fr]">
-                <div className="relative">
-                  <MagnifyingGlassIcon className="theme-subtle absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2" />
-                  <input
-                    value={search}
-                    onChange={(event) => setSearch(event.target.value)}
-                    className="theme-input h-12 w-full rounded-[18px] pl-12 pr-4"
-                    placeholder="Search by event, city, or vibe"
-                  />
-                </div>
-                <select
-                  value={activeCategory}
-                  onChange={(event) => setActiveCategory(event.target.value)}
-                  className="theme-input h-12 rounded-[18px] px-4"
-                >
-                  {categories.map((category) => (
-                    <option key={category}>{category}</option>
-                  ))}
-                </select>
-                <select
-                  value={activeLocation}
-                  onChange={(event) => setActiveLocation(event.target.value)}
-                  className="theme-input h-12 rounded-[18px] px-4"
-                >
-                  {locations.map((location) => (
-                    <option key={location}>{location}</option>
-                  ))}
-                </select>
-              </div>
+      <CompactPageHero
+        eyebrow="Events"
+        title="Find events worth building your trip around"
+        description="Festivals, cultural showcases, and live events across Zimbabwe. Filter by destination or date, pick your tickets, and add them straight to your itinerary or cart."
+        imageUrl="/images/victoria-falls.jpg"
+      >
+        <div className="rounded-xl border border-white/12 bg-black/35 p-3 backdrop-blur">
+          <div className="grid gap-2 md:grid-cols-[1.2fr_0.8fr_0.8fr]">
+            <div className="relative">
+              <MagnifyingGlassIcon className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-white/55" />
+              <input
+                value={search}
+                onChange={(event) => setSearch(event.target.value)}
+                className="h-11 w-full rounded-lg border border-white/12 bg-white/95 pl-10 pr-3 text-sm text-slate-950 outline-none placeholder:text-slate-500"
+                placeholder="Search event, city, or vibe"
+              />
             </div>
-
-            <div
-              className="min-h-[280px] bg-cover bg-center"
-              style={{
-                backgroundImage:
-                  "linear-gradient(180deg, rgba(0,0,0,0.12), rgba(0,0,0,0.5)), url('/images/victoria-falls.jpg')",
-              }}
+            <select
+              value={activeCategory}
+              onChange={(event) => setActiveCategory(event.target.value)}
+              className="h-11 rounded-lg border border-white/12 bg-white/95 px-3 text-sm text-slate-950 outline-none"
             >
-              <div className="flex h-full items-end p-5 md:p-7">
-                <div className="w-full rounded-[28px] border border-white/15 bg-black/40 p-4 text-white backdrop-blur">
-                  <div className="text-xs uppercase tracking-[0.24em] text-white/55">
-                    Event rhythm
-                  </div>
-                  <div className="mt-2 text-xl font-semibold">
-                    Festivals, business, and culture across key stops
-                  </div>
-                  <div className="mt-3 flex flex-wrap gap-3 text-sm text-white/80">
-                    <span className="inline-flex items-center gap-2">
-                      <SparklesIcon className="h-4 w-4 text-[#ffca74]" />
-                      Featured moments
-                    </span>
-                    <span className="inline-flex items-center gap-2">
-                      <MapPinIcon className="h-4 w-4 text-[#ff7352]" />
-                      Route-aware discovery
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
+              {categories.map((category) => (
+                <option key={category}>{category}</option>
+              ))}
+            </select>
+            <select
+              value={activeLocation}
+              onChange={(event) => setActiveLocation(event.target.value)}
+              className="h-11 rounded-lg border border-white/12 bg-white/95 px-3 text-sm text-slate-950 outline-none"
+            >
+              {locations.map((location) => (
+                <option key={location}>{location}</option>
+              ))}
+            </select>
           </div>
+          <ServiceSubtypeChips
+            subtypes={getSubtypesForGroup("events")}
+            activeSubtype={activeSubtype}
+            onSelect={setActiveSubtype}
+            allLabel="All events"
+            className="mt-3"
+          />
         </div>
-      </section>
+      </CompactPageHero>
 
       <section className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
         <AppServiceStrip activeLabel="Events" />
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-        <div className="theme-panel rounded-[30px] p-6 md:p-8">
-          <div className="flex items-center justify-between gap-3">
-            <SectionHeader
-              eyebrow="Featured"
-              title="Event picks with the strongest travel pull"
-            />
-            <div className="theme-chip rounded-full px-4 py-2 text-sm">
-              {featured.length} highlighted
-            </div>
-          </div>
-
-          <div className="mt-5 grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
+        <div>
+          <CompactSectionHeader
+            eyebrow="Featured"
+            title="Strong travel pull"
+            count={`${featured.length} highlighted`}
+          />
+          <HorizontalRail itemClassName="w-[82vw] max-w-[320px] sm:w-[300px]">
             {(featured.length ? featured : filteredEvents).map((event) => (
               <EventCard key={`featured-${event.id}`} event={event} onBook={handleBookEvent} />
             ))}
-          </div>
+          </HorizontalRail>
         </div>
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-        <div className="theme-panel rounded-[30px] p-6 md:p-8">
-          <div className="flex items-center justify-between gap-3">
-            <SectionHeader
-              eyebrow="Explore more"
-              title="Build the itinerary around what is actually happening"
-            />
-            <div className="theme-muted text-sm">{filteredEvents.length} results</div>
-          </div>
-
-          <div className="mt-5 grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
+        <div>
+          <CompactSectionHeader
+            eyebrow="Explore more"
+            title="Happening around Zimbabwe"
+            count={`${filteredEvents.length} results`}
+          />
+          <HorizontalRail itemClassName="w-[82vw] max-w-[320px] sm:w-[300px]">
             {filteredEvents.map((event) => (
               <EventCard key={event.id} event={event} onBook={handleBookEvent} />
             ))}
-          </div>
+          </HorizontalRail>
         </div>
       </section>
     </div>
@@ -341,31 +328,31 @@ function EventCard({
   const lineTotal = ticketPrice * qty;
 
   return (
-    <article className="theme-card overflow-hidden flex flex-col">
+    <article className="theme-card flex h-[372px] flex-col overflow-hidden rounded-xl">
       <div
-        className="relative min-h-[220px] bg-cover bg-center"
+        className="relative min-h-[98px] bg-cover bg-center"
         style={{
           backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.55)), url('${event.image}')`,
         }}
       >
-        <div className="absolute left-4 top-4 rounded-full bg-black/45 px-3 py-1 text-xs font-medium text-white backdrop-blur">
+        <div className="absolute left-3 top-3 rounded-full bg-black/45 px-2.5 py-1 text-[11px] font-medium text-white backdrop-blur">
           {event.status}
         </div>
-        <button className="absolute right-4 top-4 rounded-full bg-black/45 p-3 text-white backdrop-blur">
+        <button className="absolute right-3 top-3 rounded-full bg-black/45 p-2 text-white backdrop-blur">
           <HeartIcon className="h-4 w-4" />
         </button>
       </div>
 
-      <div className="flex flex-1 flex-col p-5">
+      <div className="flex flex-1 flex-col p-3">
         <div className="theme-label text-xs uppercase tracking-[0.24em]">{event.category}</div>
-        <h3 className="theme-heading mt-2 text-xl font-semibold">{event.title}</h3>
-        <p className="theme-muted mt-2 text-sm leading-6 line-clamp-2">{event.description}</p>
+        <h3 className="theme-heading mt-1 line-clamp-2 text-lg font-semibold" title={event.description}>
+          {event.title}
+        </h3>
 
-        <div className="theme-muted mt-4 space-y-1.5 text-sm">
+        <div className="theme-muted mt-2 grid grid-cols-2 gap-1 text-xs">
           <div className="flex items-center gap-2">
             <CalendarDaysIcon className="h-4 w-4 text-[#ff7352]" />
             {formatDate(event.date)}
-            {event.endDate !== event.date ? ` – ${formatDate(event.endDate)}` : ""}
           </div>
           <div className="flex items-center gap-2">
             <ClockIcon className="h-4 w-4 text-[#5aa7ff]" />
@@ -382,42 +369,40 @@ function EventCard({
         </div>
 
         {/* Ticket tier selector */}
-        <div className="mt-4 border-t border-white/[0.07] pt-4">
+        <div className="mt-3 border-t border-white/[0.07] pt-3">
           <p className="theme-subtle mb-2 flex items-center gap-1.5 text-xs">
             <TicketIcon className="h-3.5 w-3.5" /> Select ticket tier
           </p>
           <div className="grid grid-cols-2 gap-2">
             <button
               onClick={() => setTier("general")}
-              className={`flex flex-col items-center rounded-[14px] border px-3 py-2.5 text-xs transition-colors ${
+              className={`flex flex-col items-center rounded-xl border px-3 py-2 text-xs transition-colors ${
                 tier === "general"
                   ? "border-[#ff5630] bg-[#ff5630]/10 text-[#ff7352]"
                   : "border-white/[0.08] bg-white/[0.03] theme-muted hover:bg-white/[0.06]"
               }`}
             >
               <span className="font-semibold">General</span>
-              <span className="mt-0.5 text-lg font-bold">${event.priceGeneral}</span>
-              <span className="opacity-60">per ticket</span>
+              <span className="mt-0.5 text-base font-bold">${event.priceGeneral}</span>
             </button>
             {hasVip && (
               <button
                 onClick={() => setTier("vip")}
-                className={`flex flex-col items-center rounded-[14px] border px-3 py-2.5 text-xs transition-colors ${
+                className={`flex flex-col items-center rounded-xl border px-3 py-2 text-xs transition-colors ${
                   tier === "vip"
                     ? "border-[#ffc247] bg-[#ffc247]/10 text-[#ffc247]"
                     : "border-white/[0.08] bg-white/[0.03] theme-muted hover:bg-white/[0.06]"
                 }`}
               >
                 <span className="font-semibold">VIP</span>
-                <span className="mt-0.5 text-lg font-bold">${event.priceVip}</span>
-                <span className="opacity-60">per ticket</span>
+                <span className="mt-0.5 text-base font-bold">${event.priceVip}</span>
               </button>
             )}
           </div>
         </div>
 
         {/* Quantity + total */}
-        <div className="mt-4 flex items-center justify-between gap-3">
+        <div className="mt-3 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <button
               onClick={() => setQty((q) => Math.max(1, q - 1))}
@@ -443,12 +428,12 @@ function EventCard({
 
         <button
           onClick={() => onBook(event, qty, tier)}
-          className="mt-3 w-full rounded-full bg-[#ff5630] px-5 py-3 text-sm font-semibold text-white hover:bg-[#ff7352] transition-colors"
+          className="mt-3 w-full rounded-lg bg-[#ff5630] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#ff7352] transition-colors"
         >
           Book {qty} {tier === "vip" ? "VIP" : "General"} ticket{qty !== 1 ? "s" : ""}
         </button>
 
-        <div className="theme-muted mt-4 border-t border-white/[0.06] pt-3 text-xs">
+        <div className="theme-muted mt-3 border-t border-white/[0.06] pt-2 text-xs">
           Hosted by {event.organizer}
         </div>
       </div>

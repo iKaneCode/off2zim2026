@@ -101,7 +101,8 @@ function AdminDisputesContent() {
   const handleUpdateDispute = async (
     dispute: DisputeRecord,
     status: "open" | "under_review" | "resolved" | "closed",
-    assignToMe = false
+    assignToMe = false,
+    refundAction: "none" | "full" = "none"
   ) => {
     setUpdatingId(dispute.id);
     try {
@@ -113,6 +114,7 @@ function AdminDisputesContent() {
             status,
             resolution: resolutionDrafts[dispute.id] || null,
             assignToMe,
+            refundAction,
           }),
         }
       );
@@ -277,6 +279,12 @@ function AdminDisputesContent() {
                     label="Provider"
                     value={selectedDispute.provider?.companyName || "Off2Zim"}
                   />
+                  <Info label="Booking status" value={selectedDispute.bookingStatus} />
+                  <Info label="Payment status" value={selectedDispute.paymentStatus} />
+                  <Info
+                    label="Booking value"
+                    value={`${selectedDispute.currency} ${selectedDispute.totalAmount.toFixed(2)}`}
+                  />
                   <Info
                     label="Assigned admin"
                     value={selectedDispute.assignedAdmin?.name || "Unassigned"}
@@ -330,6 +338,18 @@ function AdminDisputesContent() {
                       onClick={() => handleUpdateDispute(selectedDispute, "resolved")}
                     >
                       Resolve
+                    </ActionButton>
+                    <ActionButton
+                      variant="danger"
+                      disabled={
+                        updatingId === selectedDispute.id ||
+                        selectedDispute.paymentStatus === "REFUNDED"
+                      }
+                      onClick={() =>
+                        handleUpdateDispute(selectedDispute, "resolved", true, "full")
+                      }
+                    >
+                      Issue full refund
                     </ActionButton>
                   </div>
                 </div>

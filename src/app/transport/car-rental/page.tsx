@@ -57,10 +57,10 @@ export default function CarRentalPage() {
             <div className="p-6 md:p-8 lg:p-10">
               <div className="theme-chip inline-flex rounded-full px-4 py-2 text-xs uppercase tracking-[0.28em]">Car rental</div>
               <h1 className="theme-heading mt-4 text-4xl font-semibold md:text-5xl">
-                Self-drive freedom for travelers shaping their own pace
+                Rent a car for more flexibility across your trip
               </h1>
               <p className="theme-muted mt-4 max-w-2xl text-sm leading-7 md:text-base">
-                Car rental is strongest when the traveler wants more autonomy across multiple destinations, stays, or scenic routes.
+                Car rental works well for multi-stop trips, scenic routes, and travelers who want to move at their own pace.
               </p>
             </div>
             <div
@@ -84,7 +84,7 @@ export default function CarRentalPage() {
                 <h2 className="theme-heading mt-4 text-2xl font-semibold">{car.name}</h2>
                 <p className="theme-muted mt-3 text-sm leading-6">{car.description}</p>
                 <div className="theme-muted mt-4 space-y-2 text-sm">
-                  <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#8cf0a1]" />Insurance-led planning</div>
+                  <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#8cf0a1]" />Insurance options available</div>
                   <div className="flex items-center gap-2"><TimerReset className="h-4 w-4 text-[#5aa7ff]" />Flexible pickup and return</div>
                   <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-[#ffca74]" />{car.category}</div>
                 </div>
@@ -139,7 +139,7 @@ export default function CarRentalPage() {
                   onClick={() => handleBook(car)}
                   className="mt-4 w-full rounded-full bg-[#ff5630] px-5 py-3 text-sm font-semibold text-white hover:bg-[#ff7352] transition-colors"
                 >
-                  Book this vehicle
+                  Book rental car
                 </button>
               </div>
             );

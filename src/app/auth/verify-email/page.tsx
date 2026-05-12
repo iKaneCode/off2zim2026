@@ -2,17 +2,23 @@
 
 import { useEffect, Suspense, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { MailCheck, Loader2, XCircle } from "lucide-react";
+import { getSurfaceHref, resolveSurfaceFromPath } from "@/lib/app-surface";
 import { apiFetch } from "@/lib/client-api";
 
 type VerifyState = "verifying" | "success" | "error";
 
 function VerifyEmailContent() {
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const token = searchParams.get("token") || "";
   const [state, setState] = useState<VerifyState>("verifying");
   const [message, setMessage] = useState("Verifying your email address…");
+  const surface = resolveSurfaceFromPath(pathname);
+  const signInHref = getSurfaceHref(surface, "/login");
+  const resendHref = getSurfaceHref(surface, "/auth/verify-email/request");
+  const homeHref = getSurfaceHref(surface, "/");
 
   useEffect(() => {
     if (!token) {
@@ -70,13 +76,21 @@ function VerifyEmailContent() {
           {state !== "verifying" && (
             <div className="mt-8 flex flex-col gap-3">
               <Link
-                href="/login"
+                href={signInHref}
                 className="flex w-full items-center justify-center rounded-full bg-[#ff5630] px-5 py-3 text-sm font-semibold text-white hover:bg-[#ff7352] transition-colors"
               >
                 Go to sign in
               </Link>
+              {state === "error" ? (
+                <Link
+                  href={resendHref}
+                  className="theme-button-secondary flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold"
+                >
+                  Request a new verification email
+                </Link>
+              ) : null}
               <Link
-                href="/"
+                href={homeHref}
                 className="theme-button-secondary flex w-full items-center justify-center rounded-full px-5 py-3 text-sm font-semibold"
               >
                 Back to home

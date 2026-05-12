@@ -49,10 +49,10 @@ export default function FlightsPage() {
             <div className="p-6 md:p-8 lg:p-10">
               <div className="theme-chip inline-flex rounded-full px-4 py-2 text-xs uppercase tracking-[0.28em]">Flights</div>
               <h1 className="theme-heading mt-4 text-4xl font-semibold md:text-5xl">
-                Faster links between key Zimbabwe and regional stops
+                Compare flights for faster travel across Zimbabwe and the region
               </h1>
               <p className="theme-muted mt-4 max-w-2xl text-sm leading-7 md:text-base">
-                Flights matter when time is the constraint. Compare key air links and decide when flying strengthens the itinerary.
+                Use flights when time matters most. Compare key routes and decide when flying makes your itinerary easier.
               </p>
             </div>
             <div
@@ -76,7 +76,7 @@ export default function FlightsPage() {
                 <h2 className="theme-heading mt-4 text-2xl font-semibold">{flight.route}</h2>
                 <div className="theme-muted mt-4 space-y-2 text-sm">
                   <div className="flex items-center gap-2"><Clock3 className="h-4 w-4 text-[#5aa7ff]" />{flight.duration}</div>
-                  <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-[#8cf0a1]" />Compresses long-distance travel</div>
+                  <div className="flex items-center gap-2"><Sparkles className="h-4 w-4 text-[#8cf0a1]" />Cuts down long travel days</div>
                   <div className="flex items-center gap-2"><Ticket className="h-4 w-4 text-[#ffca74]" />${flight.price}/person</div>
                 </div>
 

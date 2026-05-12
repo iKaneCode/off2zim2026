@@ -1,16 +1,23 @@
 "use client";
 
 import Link from "next/link";
+import { useEffect, useMemo, useState } from "react";
 import AppServiceStrip from "@/components/ui/AppServiceStrip";
+import CompactRailCard from "@/components/ui/CompactRailCard";
+import CompactSectionHeader from "@/components/ui/CompactSectionHeader";
 import FavoriteButton from "@/components/ui/FavoriteButton";
-import SectionHeader from "@/components/ui/SectionHeader";
+import HorizontalRail from "@/components/ui/HorizontalRail";
 import WeatherBadge from "@/components/ui/WeatherBadge";
-import { useMemo, useState } from "react";
+import { apiFetch } from "@/lib/client-api";
+import {
+  type ExplorerDestinationSummary,
+  enrichDestination,
+} from "@/lib/destination-explorer";
+import { serviceGroups } from "@/lib/taxonomy";
 import {
   ArrowRight,
   Banknote,
-  Camera,
-  Clock3,
+  CalendarDays,
   CloudRain,
   FileText,
   Globe2,
@@ -19,54 +26,8 @@ import {
   MapPin,
   Search,
   SunMedium,
+  Users,
 } from "lucide-react";
-
-function toSlug(name: string) {
-  return name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-]/g, "");
-}
-
-const destinations = [
-  {
-    id: 1,
-    name: "Victoria Falls",
-    description: "Wonder-led adventure, helicopter views, sunset cruises, and iconic stays.",
-    bestTime: "May - October",
-    climate: "Subtropical",
-    highlights: ["Devil's Pool", "Bridge Bungee", "Helicopter Flights", "Sunset Cruises"],
-    image: "/images/victoria-falls.jpg",
-    meta: "Adventure capital",
-  },
-  {
-    id: 2,
-    name: "Hwange National Park",
-    description: "Zimbabwe's flagship wildlife circuit with elephants, camps, and long safari days.",
-    bestTime: "April - October",
-    climate: "Semi-arid",
-    highlights: ["Elephant Herds", "Big Five", "Game Drives", "Bird Watching"],
-    image: "/images/hwange.jpg",
-    meta: "Safari classic",
-  },
-  {
-    id: 3,
-    name: "Great Zimbabwe",
-    description: "Heritage-rich ruins, cultural context, and slower storytelling travel.",
-    bestTime: "April - September",
-    climate: "Temperate",
-    highlights: ["Stone Ruins", "Cultural Heritage", "Museums", "Local Crafts"],
-    image: "/images/great-zimbabwe.jpg",
-    meta: "Culture & history",
-  },
-  {
-    id: 4,
-    name: "Eastern Highlands",
-    description: "Cooler air, mountain roads, mist, waterfalls, and scenic boutique escapes.",
-    bestTime: "March - November",
-    climate: "Temperate",
-    highlights: ["Mountain Hiking", "Waterfalls", "Tea Estates", "Cool Weather"],
-    image: "/images/destinations/eastern-highlands.jpg",
-    meta: "Scenic escape",
-  },
-];
 
 const travelTips = [
   {
@@ -137,8 +98,38 @@ const facts = [
   ["Calling Code", "+263"],
 ];
 
+type GuideDestinationCard = ExplorerDestinationSummary & {
+  meta: string;
+  heroImage: string;
+};
+
+function toGuideDestination(destination: ExplorerDestinationSummary): GuideDestinationCard {
+  const enriched = enrichDestination(destination);
+
+  return {
+    ...enriched,
+    meta: enriched.category || "Destination guide",
+    heroImage: enriched.image_url || enriched.images?.[0] || "/images/victoria-falls.jpg",
+  };
+}
+
 export default function TravelGuidePage() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [destinations, setDestinations] = useState<GuideDestinationCard[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    apiFetch<{ destinations: ExplorerDestinationSummary[] }>("/api/destinations")
+      .then((payload) => {
+        setDestinations(payload.destinations.map(toGuideDestination));
+        setError("");
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : "Unable to load destinations.");
+      })
+      .finally(() => setLoading(false));
+  }, []);
 
   const filteredDestinations = useMemo(() => {
     const query = searchTerm.trim().toLowerCase();
@@ -151,58 +142,143 @@ export default function TravelGuidePage() {
       [
         destination.name,
         destination.description,
+        destination.region,
+        destination.explorerFocus,
         destination.bestTime,
-        destination.climate,
         destination.meta,
-        ...destination.highlights,
+        destination.location,
+        ...(destination.highlights || []),
       ]
         .join(" ")
         .toLowerCase()
         .includes(query)
     );
-  }, [searchTerm]);
+  }, [destinations, searchTerm]);
+
+  const featuredCount = destinations.filter((destination) => destination.featured).length;
+  const browseFacets = useMemo(() => {
+    const regions = Array.from(
+      new Set(destinations.map((destination) => destination.region).filter(Boolean))
+    ).slice(0, 6);
+    const provinces = Array.from(
+      new Set(destinations.map((destination) => destination.location).filter(Boolean))
+    ).slice(0, 6);
+    const activities = Array.from(
+      new Set(destinations.flatMap((destination) => destination.highlights || []))
+    ).slice(0, 8);
+
+    return { regions, provinces, activities };
+  }, [destinations]);
 
   return (
     <div className="theme-page pb-20">
-      <section className="mx-auto max-w-7xl px-4 pb-8 pt-8 sm:px-6 lg:px-8">
-        <div className="theme-panel-strong overflow-hidden rounded-[38px]">
-          <div className="grid lg:grid-cols-[1.02fr_0.98fr]">
-            <div className="p-6 md:p-8 lg:p-10">
-              <div className="theme-chip inline-flex rounded-full px-4 py-2 text-xs uppercase tracking-[0.28em]">
-                Destinations
-              </div>
-              <h1 className="theme-heading mt-4 max-w-3xl text-4xl font-bold leading-tight md:text-6xl">
-                Zimbabwe travel guide
-              </h1>
-              <p className="theme-muted mt-4 max-w-2xl text-base leading-7 md:text-lg">
-                Explore destinations, plan routes, and move straight into your itinerary.
-              </p>
+      <section className="relative border-b border-black/10 dark:border-white/10">
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{
+            backgroundImage:
+              "linear-gradient(180deg, rgba(0,0,0,0.42), rgba(0,0,0,0.72)), url('/images/victoria-falls.jpg')",
+          }}
+        />
+        <div className="relative mx-auto flex min-h-[360px] max-w-7xl flex-col justify-end px-4 pb-24 pt-12 text-white sm:px-6 lg:px-8">
+          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/72">
+            Zimbabwe destination guide
+          </p>
+          <h1 className="mt-3 max-w-3xl text-4xl font-bold leading-tight md:text-6xl">
+            Explore Zimbabwe
+          </h1>
+          <p className="mt-3 max-w-2xl text-sm leading-6 text-white/78 md:text-base">
+            Pick a destination, then compare the stays, activities, dining, transport, events, and local help available there.
+          </p>
+        </div>
+      </section>
 
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link
-                  href="/trip-planner"
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[#ff5630] px-6 py-3 text-sm font-semibold text-white"
-                >
-                  Start planning
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-                <Link
-                  href="/community-guides"
-                  className="theme-button-secondary inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold"
-                >
-                  <Globe2 className="h-4 w-4" />
-                  Ask a local
-                </Link>
-              </div>
+      <section className="relative z-10 mx-auto -mt-16 max-w-7xl px-4 sm:px-6 lg:px-8">
+        <div className="rounded-xl border border-black/10 bg-white p-3 shadow-[0_12px_36px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-[#101010]">
+          <div className="grid gap-2 lg:grid-cols-[1.25fr_0.78fr_auto]">
+            <label className="flex min-h-12 items-center gap-3 rounded-lg border-2 border-[#ffca74] bg-white px-3 dark:bg-[#171717]">
+              <Search className="h-5 w-5 shrink-0 text-[#ff5630]" />
+              <span className="sr-only">Search destinations</span>
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(event) => setSearchTerm(event.target.value)}
+                placeholder="Where in Zimbabwe are you going?"
+                className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-slate-950 outline-none placeholder:text-slate-500 dark:text-white dark:placeholder:text-white/45"
+              />
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              <MetricPill icon={MapPin} label="Destinations" value={destinations.length || "—"} />
+              <MetricPill
+                icon={Globe2}
+                label="Regions"
+                value={destinations.filter((item) => item.region).length || "—"}
+              />
+              <MetricPill icon={Users} label="Featured" value={featuredCount || "—"} />
             </div>
+            <Link
+              href="#destinations"
+              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[#ff5630] px-5 text-sm font-semibold text-white"
+            >
+              Search
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
 
-            <div
-              className="min-h-[320px] bg-cover bg-center"
-              style={{
-                backgroundImage:
-                  "linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.45)), url('/images/victoria-falls.jpg')",
-              }}
-            />
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {seasons.map((season) => {
+              const Icon = season.icon;
+
+              return (
+                <button
+                  key={season.name}
+                  type="button"
+                  onClick={() => setSearchTerm(season.months)}
+                  title={season.description}
+                  className="flex min-w-[190px] items-center gap-3 rounded-lg border border-black/10 px-3 py-2 text-left transition hover:border-[#ff5630] dark:border-white/10"
+                >
+                  <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${season.accent}`}>
+                    <Icon className="h-4 w-4" />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="theme-heading block truncate text-sm font-semibold">{season.name}</span>
+                    <span className="theme-muted block truncate text-xs">
+                      {season.months} · {season.temperature}
+                    </span>
+                  </span>
+                </button>
+              );
+            })}
+            {facts.slice(0, 6).map(([label, value]) => (
+              <button
+                key={label}
+                type="button"
+                title={`${label}: ${value}`}
+                className="flex min-w-[150px] items-center gap-3 rounded-lg border border-black/10 px-3 py-2 text-left dark:border-white/10"
+              >
+                <CalendarDays className="h-4 w-4 shrink-0 text-[#ff5630]" />
+                <span className="min-w-0">
+                  <span className="theme-subtle block truncate text-[10px] uppercase tracking-[0.16em]">{label}</span>
+                  <span className="theme-heading block truncate text-sm font-semibold">{value}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+
+          <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {serviceGroups.map((group) => (
+              <Link
+                key={group.id}
+                href={group.globalBrowse ? getServiceHref(group.id) : "#destinations"}
+                onClick={() => {
+                  if (!group.globalBrowse) setSearchTerm(group.label);
+                }}
+                title={group.description}
+                className="theme-chip inline-flex shrink-0 items-center rounded-lg px-3 py-2 text-xs font-semibold"
+              >
+                {group.label}
+              </Link>
+            ))}
           </div>
         </div>
       </section>
@@ -212,210 +288,190 @@ export default function TravelGuidePage() {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-        <div className="theme-panel rounded-[32px] p-4 md:p-5">
-          <div className="relative mx-auto max-w-3xl">
-            <Search className="theme-subtle absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(event) => setSearchTerm(event.target.value)}
-              placeholder="Search destinations, activities, weather, or planning tips..."
-              className="theme-input w-full rounded-2xl py-3 pl-12 pr-4 text-sm"
-            />
-          </div>
+        <div className="grid gap-3 lg:grid-cols-3">
+          <FacetGroup label="Regions" values={browseFacets.regions} onChoose={setSearchTerm} />
+          <FacetGroup label="Provinces and cities" values={browseFacets.provinces} onChoose={setSearchTerm} />
+          <FacetGroup label="Activities and highlights" values={browseFacets.activities} onChoose={setSearchTerm} />
         </div>
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <SectionHeader
-          eyebrow="Top destinations"
-          title="Browse Zimbabwe by mood, season, and story"
+      <section id="destinations" className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
+        <CompactSectionHeader
+          eyebrow="Choose the place"
+          title="Explore Zimbabwe"
+          count={filteredDestinations.length}
         />
 
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-          {filteredDestinations.map((destination) => (
-            <article key={destination.id} className="theme-card overflow-hidden">
-              <div
-                className="relative h-56 bg-cover bg-center"
-                style={{
-                  backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.06), rgba(0,0,0,0.52)), url('${destination.image}')`,
-                }}
-              >
-                <div className="absolute left-4 top-4 rounded-full bg-black/45 px-3 py-2 text-sm text-white backdrop-blur">
-                  {destination.meta}
-                </div>
-                <FavoriteButton
-                  itemId={destination.name}
-                  itemType="destination"
-                  className="absolute right-4 top-4 rounded-full bg-black/45 p-3 text-white backdrop-blur"
-                  iconClassName="h-4 w-4"
-                />
-                <div className="absolute inset-x-4 bottom-4">
-                  <h3 className="text-2xl font-semibold text-white">{destination.name}</h3>
-                  <p className="mt-2 text-sm text-white/75">{destination.description}</p>
-                </div>
-              </div>
-
-              <div className="p-5">
-                <div className="theme-muted flex items-center gap-3 text-sm">
-                  <span className="inline-flex items-center gap-2">
-                    <Clock3 className="h-4 w-4 text-[#7ddf8c]" />
-                    {destination.bestTime}
-                  </span>
-                  <span className="inline-flex items-center gap-2">
-                    <SunMedium className="h-4 w-4 text-[#ffc247]" />
-                    {destination.climate}
-                  </span>
-                </div>
-
-                <div className="mt-4 inline-flex rounded-full bg-black/[0.04] px-3 py-2 text-sm dark:bg-white/[0.06]">
-                  <WeatherBadge location={destination.name} compact />
-                </div>
-
-                <div className="mt-4 flex flex-wrap gap-2">
-                  {destination.highlights.slice(0, 3).map((highlight) => (
-                    <span key={highlight} className="theme-chip rounded-full px-3 py-2 text-xs">
-                      {highlight}
-                    </span>
-                  ))}
-                </div>
-
-                <Link
-                  href={`/travel-guide/${toSlug(destination.name)}`}
-                  className="mt-5 inline-flex items-center gap-2 text-sm font-semibold text-[#ff5630]"
-                >
-                  Explore {destination.name}
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </div>
-            </article>
-          ))}
-        </div>
-
-        {filteredDestinations.length === 0 ? (
-          <div className="theme-panel mt-5 rounded-[30px] p-6 text-sm text-center">
-            No destinations match that search.
+        {error ? (
+          <div className="theme-panel rounded-[32px] p-8 text-center">
+            <p className="theme-heading text-lg font-semibold">Could not load destinations</p>
+            <p className="theme-muted mt-2 text-sm">{error}</p>
           </div>
-        ) : null}
-      </section>
-
-      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-          <div className="theme-panel rounded-[36px] p-6 md:p-8">
-            <p className="theme-label text-sm uppercase tracking-[0.28em]">
-              Climate & timing
-            </p>
-            <h2 className="theme-heading mt-2 text-3xl font-semibold">
-              Match your route to the season
-            </h2>
-            <div className="mt-6 space-y-4">
-              {seasons.map((season) => {
-                const Icon = season.icon;
-                return (
-                  <div key={season.name} className="theme-card-soft p-5">
-                    <div className="flex items-start gap-4">
-                      <div className={`flex h-12 w-12 items-center justify-center rounded-2xl ${season.accent}`}>
-                        <Icon className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <h3 className="theme-heading text-xl font-semibold">{season.name}</h3>
-                        <p className="mt-1 text-sm font-medium text-[#ff5630]">{season.months}</p>
-                        <p className="theme-muted mt-3 text-sm leading-6">{season.description}</p>
-                        <div className="theme-chip mt-4 inline-flex rounded-full px-3 py-2 text-xs">
-                          Typical range: {season.temperature}
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="theme-panel rounded-[36px] p-6 md:p-8">
-            <p className="theme-label text-sm uppercase tracking-[0.28em]">Essential tips</p>
-            <h2 className="theme-heading mt-2 text-3xl font-semibold">
-              Practical guidance before you book
-            </h2>
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              {travelTips.map((tip) => {
-                const Icon = tip.icon;
-                return (
-                  <div key={tip.category} className="theme-card-soft p-5">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-black/[0.05] dark:bg-white/[0.05]">
-                        <Icon className="h-5 w-5 text-[#ff7352]" />
-                      </div>
-                      <h3 className="theme-heading text-lg font-semibold">{tip.category}</h3>
-                    </div>
-                    <ul className="mt-4 space-y-3">
-                      {tip.tips.map((entry) => (
-                        <li key={entry} className="theme-muted flex items-start gap-3 text-sm leading-6">
-                          <span className="mt-2 h-1.5 w-1.5 rounded-full bg-[#ff5630]" />
-                          <span>{entry}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="theme-panel rounded-[36px] p-6 md:p-8">
-          <div className="mb-6">
-            <p className="theme-label text-sm uppercase tracking-[0.28em]">Quick facts</p>
-            <h2 className="theme-heading mt-2 text-3xl font-semibold">
-              Fast reference for planning and logistics
-            </h2>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-            {facts.map(([label, value]) => (
-              <div key={label} className="theme-card-soft rounded-[24px] p-5 text-center">
-                <div className="text-sm font-medium text-[#ff5630]">{label}</div>
-                <div className="theme-heading mt-2 text-lg font-semibold">{value}</div>
+        ) : loading ? (
+          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, index) => (
+              <div key={index} className="theme-card overflow-hidden animate-pulse">
+                <div className="h-56 bg-white/[0.06]" />
+                <div className="p-5 space-y-3">
+                  <div className="h-4 w-28 rounded-full bg-white/[0.08]" />
+                  <div className="h-5 w-3/4 rounded-full bg-white/[0.08]" />
+                  <div className="h-3 w-full rounded-full bg-white/[0.06]" />
+                </div>
               </div>
             ))}
           </div>
-        </div>
+        ) : filteredDestinations.length === 0 ? (
+          <div className="theme-panel rounded-[32px] p-8 text-center">
+            <p className="theme-heading text-lg font-semibold">No destinations matched your search</p>
+            <p className="theme-muted mt-2 text-sm">
+              Try a destination name, region, season, or travel style.
+            </p>
+          </div>
+        ) : (
+          <HorizontalRail itemClassName="w-[78vw] max-w-[300px] sm:w-[280px]">
+            {filteredDestinations.map((destination) => (
+              <div key={destination.id} className="relative">
+                <CompactRailCard
+                  title={destination.name}
+                  href={`/travel-guide/${destination.id}`}
+                  imageUrl={destination.heroImage}
+                  meta={destination.meta}
+                  detail={destination.region || destination.location || "Zimbabwe"}
+                  badge={destination.bestTime || "Year-round"}
+                  description={
+                    destination.description || "Open this destination to explore what makes it worth visiting."
+                  }
+                  actionLabel="View destination"
+                >
+                  <div className="mt-2 grid grid-cols-3 gap-1 rounded-lg bg-black/35 p-2 text-center text-white backdrop-blur">
+                    <DestinationCount label="Stays" value={destination.stays_count} />
+                    <DestinationCount label="Things" value={destination.activities_count} />
+                    <DestinationCount
+                      label="More"
+                      value={
+                        (destination.transport_count || 0) +
+                        (destination.dining_count || 0) +
+                        (destination.events_count || 0)
+                      }
+                    />
+                  </div>
+                </CompactRailCard>
+                <div className="absolute right-3 top-3">
+                  <FavoriteButton
+                    itemId={destination.name}
+                    itemType="destination"
+                    className="rounded-full bg-black/45 p-2 text-white backdrop-blur"
+                    iconClassName="h-4 w-4"
+                  />
+                </div>
+                <div className="absolute left-3 bottom-3">
+                  <WeatherBadge location={destination.name} compact />
+                </div>
+              </div>
+            ))}
+          </HorizontalRail>
+        )}
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="rounded-[36px] border border-[#ff5630]/20 bg-[linear-gradient(135deg,rgba(255,86,48,0.16),rgba(17,17,17,0.95))] p-6 md:p-8">
-          <div className="mx-auto max-w-3xl text-center">
-            <div className="inline-flex items-center gap-2 rounded-full bg-black/25 px-4 py-2 text-sm text-white/80 backdrop-blur">
-              <Camera className="h-4 w-4 text-[#ffc247]" />
-              Destination-ready planning
-            </div>
-            <h2 className="mt-5 text-3xl font-semibold text-white md:text-4xl">
-              Move from destination research into a real itinerary
-            </h2>
-            <p className="mt-4 text-base leading-7 text-white/75">
-              Browse the destination mood here, then use trip planner and community
-              guides to turn inspiration into a route that actually works.
-            </p>
-            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row">
-              <Link
-                href="/trip-planner"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-white px-6 py-3 text-sm font-semibold text-black"
-              >
-                Plan your route
-              </Link>
-              <Link
-                href="/community-guides"
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-white/20 bg-white/10 px-6 py-3 text-sm font-semibold text-white"
-              >
-                <MapPin className="h-4 w-4" />
-                Talk to local guides
-              </Link>
-            </div>
-          </div>
-        </div>
+        <CompactSectionHeader
+          eyebrow="Travel essentials"
+          title="Before you go"
+        />
+        <HorizontalRail itemClassName="w-[72vw] max-w-[240px] sm:w-[220px]">
+          {travelTips.map((tip) => {
+            const Icon = tip.icon;
+
+            return (
+              <CompactRailCard
+                key={tip.category}
+                title={tip.category}
+                icon={Icon}
+                meta="Guide"
+                description={tip.tips.join(" ")}
+              />
+            );
+          })}
+        </HorizontalRail>
       </section>
+    </div>
+  );
+}
+
+function DestinationCount({
+  label,
+  value,
+}: {
+  label: string;
+  value?: number;
+}) {
+  return (
+    <div>
+      <div className="text-base font-semibold">{value || 0}</div>
+      <div className="text-[10px] uppercase tracking-[0.18em] opacity-70">{label}</div>
+    </div>
+  );
+}
+
+function MetricPill({
+  icon: Icon,
+  label,
+  value,
+}: {
+  icon: typeof MapPin;
+  label: string;
+  value: number | string;
+}) {
+  return (
+    <div className="flex min-h-12 items-center gap-2 rounded-lg border border-black/10 px-3 py-2 dark:border-white/10">
+      <Icon className="h-4 w-4 shrink-0 text-[#ff5630]" />
+      <span className="min-w-0">
+        <span className="theme-heading block text-sm font-semibold">{value}</span>
+        <span className="theme-subtle block truncate text-[10px] uppercase tracking-[0.16em]">
+          {label}
+        </span>
+      </span>
+    </div>
+  );
+}
+
+function getServiceHref(groupId: string) {
+  if (groupId === "stays") return "/accommodation";
+  if (groupId === "dining") return "/restaurants";
+  return `/${groupId}`;
+}
+
+function FacetGroup({
+  label,
+  values,
+  onChoose,
+}: {
+  label: string;
+  values: Array<string | null | undefined>;
+  onChoose: (value: string) => void;
+}) {
+  const cleanValues = values.filter(Boolean) as string[];
+
+  if (cleanValues.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="rounded-xl border border-black/10 bg-white px-3 py-3 dark:border-white/10 dark:bg-white/[0.03]">
+      <p className="theme-subtle text-xs uppercase tracking-[0.22em]">{label}</p>
+      <div className="mt-2 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {cleanValues.map((value) => (
+          <button
+            key={value}
+            type="button"
+            onClick={() => onChoose(value)}
+            title={`Filter destinations by ${value}`}
+            className="shrink-0 rounded-lg border border-black/10 px-3 py-1.5 text-xs theme-muted transition hover:border-[#ff5630] hover:text-[#ff5630] dark:border-white/10"
+          >
+            {value}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

@@ -52,6 +52,16 @@ const UserDashboard = () => {
     loadBookings();
   }, [user]);
 
+  const bookingMetrics = useMemo(() => {
+    const confirmed = bookings.filter((booking) =>
+      ["CONFIRMED", "REQUESTED"].includes(booking.status)
+    ).length;
+    const totalSpend = bookings.reduce((sum, booking) => sum + booking.totalAmount, 0);
+    const completed = bookings.filter((booking) => booking.status === "COMPLETED").length;
+
+    return { confirmed, totalSpend, completed };
+  }, [bookings]);
+
   if (!user) return null;
 
   const handleSaveProfile = async () => {
@@ -62,16 +72,6 @@ const UserDashboard = () => {
       console.error("Failed to update profile:", error);
     }
   };
-
-  const bookingMetrics = useMemo(() => {
-    const confirmed = bookings.filter((booking) =>
-      ["CONFIRMED", "REQUESTED"].includes(booking.status)
-    ).length;
-    const totalSpend = bookings.reduce((sum, booking) => sum + booking.totalAmount, 0);
-    const completed = bookings.filter((booking) => booking.status === "COMPLETED").length;
-
-    return { confirmed, totalSpend, completed };
-  }, [bookings]);
 
   const tabs = [
     { id: "overview", label: "Overview" },

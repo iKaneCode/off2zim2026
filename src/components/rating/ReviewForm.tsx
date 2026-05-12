@@ -14,7 +14,15 @@ interface RatingCriteria {
 interface ReviewFormProps {
   reviewType: "service" | "explorer" | "guide";
   targetName: string;
-  onSubmit: (reviewData: any) => void;
+  onSubmit: (reviewData: {
+    overallRating: number;
+    title: string;
+    comment: string;
+    criteria: Record<string, number>;
+    photos: File[];
+    reviewType: "service" | "explorer" | "guide";
+    targetName: string;
+  }) => void;
   onCancel: () => void;
   isSubmitting?: boolean;
 }

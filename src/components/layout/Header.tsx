@@ -1,13 +1,17 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ChevronDown,
   Compass,
+  LogOut,
   MapPinned,
+  Settings,
   Menu,
   ShoppingBag,
+  LayoutDashboard,
   User,
 } from "lucide-react";
 import { MobileMenu } from "../ui/MobileMenu";
@@ -32,27 +36,12 @@ const navGroups: NavGroup[] = [
       {
         label: "Destinations",
         href: "/travel-guide",
-        description: "Cities, parks, and places worth the trip.",
+        description: "Explore cities, parks, heritage sites, and scenic places across Zimbabwe.",
       },
       {
-        label: "Stays",
-        href: "/accommodation",
-        description: "Hotels, lodges, camps, and guest houses.",
-      },
-      {
-        label: "Experiences",
-        href: "/activities",
-        description: "Things to do across Zimbabwe.",
-      },
-      {
-        label: "Restaurants",
-        href: "/restaurants",
-        description: "Dining worth adding to the itinerary.",
-      },
-      {
-        label: "Ask a Local",
-        href: "/community-guides",
-        description: "Local guidance when you want sharper context.",
+        label: "Events",
+        href: "/events",
+        description: "Find festivals, shows, and travel dates worth planning around.",
       },
     ],
   },
@@ -63,7 +52,7 @@ const navGroups: NavGroup[] = [
       {
         label: "Trip Planner",
         href: "/trip-planner",
-        description: "Build and organize your itinerary in one studio.",
+        description: "Build your itinerary, organize each day, and keep your route on track.",
       },
       {
         label: "Transport",
@@ -73,12 +62,17 @@ const navGroups: NavGroup[] = [
       {
         label: "Flights",
         href: "/transport/flights",
-        description: "Flight routing and air travel options.",
+        description: "Compare air travel options for local and international trips.",
       },
       {
         label: "Events",
         href: "/events",
         description: "Tickets, festivals, and live dates.",
+      },
+      {
+        label: "Destination services",
+        href: "/travel-guide",
+        description: "Choose a destination first, then see its stays, dining, and local travel help.",
       },
     ],
   },
@@ -143,15 +137,56 @@ function DesktopDropdown({
 }
 
 export default function Header() {
-  const { user } = useAuth();
+  const { user, isLoading, logout } = useAuth();
+  const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [openGroup, setOpenGroup] = useState<string | null>(null);
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef<HTMLDivElement | null>(null);
   const accountRoute = getAccountRoute(user);
 
   const userInitials = useMemo(() => {
     if (!user) return "";
     return `${user.firstName[0] ?? ""}${user.lastName[0] ?? ""}`;
   }, [user]);
+
+  const userDisplayName = useMemo(() => {
+    if (!user) return "";
+    return [user.firstName, user.lastName].filter(Boolean).join(" ").trim() || user.email;
+  }, [user]);
+
+  useEffect(() => {
+    if (!isAccountMenuOpen) {
+      return;
+    }
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!accountMenuRef.current?.contains(event.target as Node)) {
+        setIsAccountMenuOpen(false);
+      }
+    };
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsAccountMenuOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handlePointerDown);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handlePointerDown);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, [isAccountMenuOpen]);
+
+  const handleLogout = async () => {
+    setIsAccountMenuOpen(false);
+    await logout();
+    router.push(getSurfaceHref("explorer", "/"));
+    router.refresh();
+  };
 
   return (
     <>
@@ -204,13 +239,13 @@ export default function Header() {
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            {!user ? (
+            {!isLoading && !user ? (
               <>
                 <Link
                   href={getSurfaceHref("explorer", "/login")}
                   className="hidden items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-black/[0.06] hover:text-slate-950 dark:text-white dark:hover:bg-white/10 dark:hover:text-white md:inline-flex"
                 >
-                  Sign in
+                  Traveler login
                 </Link>
                 <Link
                   href={getSurfaceHref("explorer", "/register")}
@@ -227,29 +262,76 @@ export default function Header() {
               <CartComponent />
             </div>
 
-            <Link
-              href={user ? accountRoute : getSurfaceHref("explorer", "/login")}
-              className="inline-flex h-11 min-w-11 items-center justify-center rounded-full border border-black/10 bg-white px-3 text-slate-800 transition hover:bg-slate-50 dark:border-white/10 dark:bg-[#161616] dark:text-white dark:hover:bg-[#1d1d1d] md:px-4"
-              aria-label={user ? "Open workspace" : "Sign in"}
-            >
-              {user ? (
-                <span className="flex items-center gap-2">
+            {user ? (
+              <div className="relative hidden md:block" ref={accountMenuRef}>
+                <button
+                  type="button"
+                  onClick={() => setIsAccountMenuOpen((current) => !current)}
+                  className="inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-full border border-black/10 bg-white px-3 text-slate-800 transition hover:bg-slate-50 dark:border-white/10 dark:bg-[#161616] dark:text-white dark:hover:bg-[#1d1d1d] md:px-4"
+                  aria-label="Open account menu"
+                  aria-expanded={isAccountMenuOpen}
+                >
                   <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#0f3f87] text-xs font-semibold text-white">
                     {userInitials}
                   </span>
                   <span className="hidden text-sm font-medium sm:inline">
                     {user.firstName}
                   </span>
-                </span>
-              ) : (
+                  <ChevronDown className={`h-4 w-4 transition ${isAccountMenuOpen ? "rotate-180" : ""}`} />
+                </button>
+
+                {isAccountMenuOpen ? (
+                  <div className="absolute right-0 top-[calc(100%+0.9rem)] z-50 w-[18rem] rounded-[28px] border border-black/12 bg-white p-3 shadow-[0_28px_80px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-[#0e0e0e] dark:shadow-[0_28px_80px_rgba(0,0,0,0.6)]">
+                    <div className="rounded-[22px] bg-black/[0.035] px-4 py-4 dark:bg-white/[0.04]">
+                      <div className="text-sm font-semibold text-black dark:text-white">{userDisplayName}</div>
+                      <div className="mt-1 text-xs uppercase tracking-[0.18em] text-black/45 dark:text-white/45">
+                        {user.role} account
+                      </div>
+                    </div>
+
+                    <div className="mt-2 grid gap-1">
+                      <Link
+                        href={accountRoute}
+                        onClick={() => setIsAccountMenuOpen(false)}
+                        className="flex items-center gap-3 rounded-[20px] px-3 py-3 text-sm font-medium text-slate-900 transition hover:bg-black/[0.055] dark:text-white/90 dark:hover:bg-white/7"
+                      >
+                        <LayoutDashboard className="h-4 w-4 text-[#ff5630]" />
+                        Workspace
+                      </Link>
+                      <Link
+                        href={getSurfaceHref("explorer", "/profile")}
+                        onClick={() => setIsAccountMenuOpen(false)}
+                        className="flex items-center gap-3 rounded-[20px] px-3 py-3 text-sm font-medium text-slate-900 transition hover:bg-black/[0.055] dark:text-white/90 dark:hover:bg-white/7"
+                      >
+                        <Settings className="h-4 w-4 text-[#ff5630]" />
+                        Profile settings
+                      </Link>
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="flex w-full items-center gap-3 rounded-[20px] px-3 py-3 text-left text-sm font-medium text-slate-900 transition hover:bg-black/[0.055] dark:text-white/90 dark:hover:bg-white/7"
+                      >
+                        <LogOut className="h-4 w-4 text-[#ff5630]" />
+                        Sign out
+                      </button>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            ) : (
+              <Link
+                href={getSurfaceHref("explorer", "/login")}
+                className="inline-flex h-11 min-w-11 items-center justify-center rounded-full border border-black/10 bg-white px-3 text-slate-800 transition hover:bg-slate-50 dark:border-white/10 dark:bg-[#161616] dark:text-white dark:hover:bg-[#1d1d1d] md:px-4"
+                aria-label="Traveler login"
+              >
                 <span className="flex items-center gap-2">
                   <User className="h-5 w-5" />
                   <span className="hidden text-sm font-medium md:inline">
                     Account
                   </span>
                 </span>
-              )}
-            </Link>
+              </Link>
+            )}
 
             <Link
               href="/checkout"

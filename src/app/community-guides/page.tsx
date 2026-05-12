@@ -4,7 +4,9 @@ import { useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import AppServiceStrip from "@/components/ui/AppServiceStrip";
-import SectionHeader from "@/components/ui/SectionHeader";
+import CompactPageHero from "@/components/ui/CompactPageHero";
+import CompactSectionHeader from "@/components/ui/CompactSectionHeader";
+import HorizontalRail from "@/components/ui/HorizontalRail";
 import {
   ArrowRight,
   BadgeCheck,
@@ -127,8 +129,7 @@ function AskQuestionModal({ onClose }: { onClose: () => void }) {
             </div>
             <h3 className="theme-heading mt-4 text-lg font-semibold">Question submitted!</h3>
             <p className="theme-muted mt-2 text-sm">
-              Your question has been posted to the forum. Local guides and community
-              members will respond shortly.
+              Your question is now live in the forum. Local guides and fellow travelers will reply soon.
             </p>
             <button
               onClick={onClose}
@@ -159,8 +160,7 @@ function AskQuestionModal({ onClose }: { onClose: () => void }) {
               />
             </div>
             <p className="theme-subtle text-xs">
-              Questions are answered by verified Community Guides and fellow travelers.
-              Typically within 2–3 hours.
+              Questions are answered by verified Community Guides and fellow travelers, usually within 2 to 3 hours.
             </p>
             <div className="flex flex-col gap-2.5">
               <button
@@ -191,7 +191,6 @@ function GuideProfileModal({ guide, onClose }: { guide: Guide; onClose: () => vo
   const [people, setPeople] = useState(1);
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [notes, setNotes] = useState("");
-  const [step, setStep] = useState<"profile" | "booked">("profile");
 
   const total = guide.pricePerSession * people;
 
@@ -358,125 +357,104 @@ export default function CommunityGuidesPage() {
       {showAskModal && <AskQuestionModal onClose={() => setShowAskModal(false)} />}
       {activeGuide && <GuideProfileModal guide={activeGuide} onClose={() => setActiveGuide(null)} />}
 
-      <section className="mx-auto max-w-7xl px-4 pb-8 pt-8 sm:px-6 lg:px-8">
-        <div className="theme-panel-strong overflow-hidden rounded-[38px]">
-          <div className="grid lg:grid-cols-[1.02fr_0.98fr]">
-            <div className="p-6 md:p-8 lg:p-10">
-              <div className="theme-chip inline-flex rounded-full px-4 py-2 text-xs uppercase tracking-[0.28em]">
-                Ask a Local
-              </div>
-              <h1 className="theme-heading mt-4 max-w-3xl text-4xl font-bold leading-tight md:text-6xl">
-                Ask locals. Book with confidence.
-              </h1>
-              <p className="theme-muted mt-4 max-w-2xl text-base leading-7 md:text-lg">
-                Get trusted local insight, practical answers, and Guide+ support in one place.
-              </p>
-
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <button
-                  onClick={() => setShowAskModal(true)}
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[#ff5630] px-6 py-3 text-sm font-semibold text-white hover:bg-[#ff7352] transition-colors"
-                >
-                  <MessageCircle className="h-4 w-4" />
-                  Ask a question
-                </button>
-                <button
-                  onClick={scrollToGuides}
-                  className="theme-button-secondary inline-flex items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold"
-                >
-                  <Sparkles className="h-4 w-4" />
-                  Browse Guide+ services
-                </button>
-              </div>
-            </div>
-
-            <div
-              className="min-h-[320px] bg-cover bg-center"
-              style={{
-                backgroundImage:
-                  "linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.42)), url('/images/great-zimbabwe.jpg')",
-              }}
-            />
-          </div>
+      <CompactPageHero
+        eyebrow="Ask a Local"
+        title="Ask locals. Book with confidence."
+        description="Get practical local advice, trusted answers, and Guide+ support in one place."
+        imageUrl="/images/great-zimbabwe.jpg"
+      >
+        <div className="flex flex-col gap-2 sm:flex-row">
+          <button
+            onClick={() => setShowAskModal(true)}
+            className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#ff5630] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#ff7352] transition-colors"
+          >
+            <MessageCircle className="h-4 w-4" />
+            Ask a question
+          </button>
+          <button
+            onClick={scrollToGuides}
+            className="inline-flex items-center justify-center gap-2 rounded-lg border border-white/14 bg-black/35 px-4 py-2.5 text-sm font-semibold text-white backdrop-blur hover:bg-black/45"
+          >
+            <Sparkles className="h-4 w-4" />
+            Browse Guide+
+          </button>
         </div>
-      </section>
+      </CompactPageHero>
 
       <section className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
         <AppServiceStrip activeLabel="Ask a Local" />
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-          <div className="theme-panel rounded-[30px] p-5">
-            <div className="theme-heading text-3xl font-bold">1,247</div>
+        <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-4">
+          <div className="theme-panel rounded-xl p-4">
+            <div className="theme-heading text-2xl font-bold">1,247</div>
             <div className="theme-subtle mt-1 text-sm">Questions answered</div>
           </div>
-          <div className="theme-panel rounded-[30px] p-5">
-            <div className="theme-heading text-3xl font-bold">856</div>
+          <div className="theme-panel rounded-xl p-4">
+            <div className="theme-heading text-2xl font-bold">856</div>
             <div className="theme-subtle mt-1 text-sm">Active local guides</div>
           </div>
-          <div className="theme-panel rounded-[30px] p-5">
-            <div className="theme-heading text-3xl font-bold">94%</div>
+          <div className="theme-panel rounded-xl p-4">
+            <div className="theme-heading text-2xl font-bold">94%</div>
             <div className="theme-subtle mt-1 text-sm">Questions get answered</div>
           </div>
-          <div className="theme-panel rounded-[30px] p-5">
-            <div className="theme-heading text-3xl font-bold">2.3h</div>
+          <div className="theme-panel rounded-xl p-4">
+            <div className="theme-heading text-2xl font-bold">2.3h</div>
             <div className="theme-subtle mt-1 text-sm">Average response time</div>
           </div>
         </div>
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <div className="grid gap-6 lg:grid-cols-[0.95fr_1.05fr]">
-          <div className="theme-panel rounded-[36px] p-6 md:p-8">
-            <p className="theme-label text-sm uppercase tracking-[0.28em]">Two ways to get help</p>
-            <h2 className="theme-heading mt-2 text-3xl font-semibold">
-              Community wisdom or personal guidance
+        <div className="grid gap-3 lg:grid-cols-[0.95fr_1.05fr]">
+          <div className="theme-panel rounded-2xl p-4 md:p-5">
+            <p className="theme-label text-xs uppercase tracking-[0.24em]">Two ways to get help</p>
+            <h2 className="theme-heading mt-2 text-xl font-semibold">
+              Free advice or one-on-one help
             </h2>
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <div className="theme-card-soft p-5">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#122116]">
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
+              <div className="theme-card-soft rounded-xl p-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#122116]">
                   <MessageCircle className="h-5 w-5 text-[#8cf0a1]" />
                 </div>
-                <h3 className="theme-heading mt-4 text-xl font-semibold">Forum</h3>
-                <p className="theme-muted mt-2 text-sm leading-6">
-                  Post a question and get answers from verified locals and fellow
-                  travelers who know the destination first-hand.
+                <h3 className="theme-heading mt-3 text-base font-semibold">Forum</h3>
+                <p className="theme-muted mt-2 text-sm leading-5">
+                  Post a question and get answers from verified locals and fellow travelers who know the destination first-hand.
                 </p>
               </div>
-              <div className="rounded-[28px] border border-[#ff5630]/20 bg-[#1a120f] p-5">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-[#2d1714]">
+              <div className="rounded-xl border border-[#ff5630]/20 bg-[#1a120f] p-4">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#2d1714]">
                   <Star className="h-5 w-5 text-[#ff8a63]" />
                 </div>
-                <h3 className="mt-4 text-xl font-semibold text-white">Guide+</h3>
-                <p className="mt-2 text-sm leading-6 text-white/60">
-                  Personalized planning, video consultations, and guided experiences
-                  for travelers who want more context and confidence.
+                <h3 className="mt-3 text-base font-semibold text-white">Guide+</h3>
+                <p className="mt-2 text-sm leading-5 text-white/60">
+                  Personalized planning, video consultations, and guided experiences for travelers who want more direct support.
                 </p>
               </div>
             </div>
           </div>
 
-          <div className="theme-panel rounded-[36px] p-6 md:p-8">
-            <p className="theme-label text-sm uppercase tracking-[0.28em]">Trust model</p>
-            <h2 className="theme-heading mt-2 text-3xl font-semibold">
-              Why Community Guides matter
+          <div className="theme-panel rounded-2xl p-4 md:p-5">
+            <p className="theme-label text-xs uppercase tracking-[0.24em]">Trust model</p>
+            <h2 className="theme-heading mt-2 text-xl font-semibold">
+              Why local guides add value
             </h2>
-            <div className="mt-6 space-y-4">
+            <div className="mt-4 space-y-3">
               <TrustRow
                 icon={<BadgeCheck className="h-4 w-4 text-[#5aa7ff]" />}
                 title="Verified expertise"
-                body="Guides are vetted and highlighted, which reduces uncertainty for travelers."
+                body="Guides are reviewed before being featured, which gives travelers more confidence."
               />
               <TrustRow
                 icon={<ShieldCheck className="h-4 w-4 text-[#7ddf8c]" />}
-                title="Safer discovery"
-                body="Advice becomes part of the trust system, not just content hidden in a blog."
+                title="More reliable travel advice"
+                body="Advice becomes part of the platform experience, not something buried in scattered blog posts."
               />
               <TrustRow
                 icon={<Video className="h-4 w-4 text-[#ffc247]" />}
-                title="Higher-value support"
-                body="Guide+ services create a clear monetizable layer beyond listings and bookings."
+                title="Paid help when needed"
+                body="Guide+ gives travelers a clear way to book extra planning help, consultations, and local support."
               />
             </div>
           </div>
@@ -484,10 +462,10 @@ export default function CommunityGuidesPage() {
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        <SectionHeader eyebrow="Forum snapshot" title="Popular traveler questions" />
-        <div className="mt-5 space-y-4">
+        <CompactSectionHeader eyebrow="Forum snapshot" title="Popular traveler questions" />
+        <div className="mt-4 space-y-2">
           {featuredQuestions.map((question) => (
-            <article key={question.title} className="theme-panel rounded-[32px] p-5">
+            <article key={question.title} className="theme-panel rounded-xl p-4">
               <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                 <div>
                   <h3 className="theme-heading text-xl font-semibold">{question.title}</h3>
@@ -504,7 +482,7 @@ export default function CommunityGuidesPage() {
                   <div className="theme-chip rounded-full px-4 py-2 text-sm">{question.status}</div>
                   <button
                     onClick={() => setShowAskModal(true)}
-                    className="theme-button-secondary rounded-full px-4 py-2 text-xs font-semibold"
+                    className="theme-button-secondary rounded-lg px-3 py-2 text-xs font-semibold"
                   >
                     Reply
                   </button>
@@ -516,7 +494,7 @@ export default function CommunityGuidesPage() {
         <div className="mt-5">
           <button
             onClick={() => setShowAskModal(true)}
-            className="inline-flex items-center gap-2 rounded-full bg-[#ff5630] px-6 py-3 text-sm font-semibold text-white hover:bg-[#ff7352] transition-colors"
+            className="inline-flex items-center gap-2 rounded-lg bg-[#ff5630] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#ff7352] transition-colors"
           >
             <MessageCircle className="h-4 w-4" />
             Ask your own question
@@ -526,7 +504,7 @@ export default function CommunityGuidesPage() {
 
       <section ref={guidePlusSectionRef} className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         <div className="mb-6 flex items-end justify-between">
-          <SectionHeader eyebrow="Guide+ services" title="Featured local experts" />
+          <CompactSectionHeader eyebrow="Guide+ services" title="Featured local experts" />
           <Link
             href="/register"
             className="theme-muted hidden items-center gap-2 text-sm hover:text-slate-950 dark:hover:text-white md:inline-flex"
@@ -536,9 +514,9 @@ export default function CommunityGuidesPage() {
           </Link>
         </div>
 
-        <div className="grid gap-5 lg:grid-cols-3">
+        <HorizontalRail itemClassName="w-[82vw] max-w-[320px] sm:w-[300px]">
           {guides.map((guide) => (
-            <article key={guide.id} className="theme-panel rounded-[32px] p-5 flex flex-col">
+            <article key={guide.id} className="theme-panel flex h-[360px] flex-col rounded-xl p-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-3">
                   <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#ff5630]/15 text-base font-bold text-[#ff5630]">
@@ -562,7 +540,7 @@ export default function CommunityGuidesPage() {
 
               <p className="theme-muted mt-3 flex-1 text-xs leading-5 line-clamp-2">{guide.bio}</p>
 
-              <div className="theme-card-soft mt-4 rounded-[24px] p-4">
+              <div className="theme-card-soft mt-3 rounded-xl p-3">
                 <div className="theme-label text-xs">Featured service</div>
                 <div className="theme-heading mt-1.5 text-base font-semibold">{guide.service}</div>
                 <div className="theme-heading mt-1 text-lg font-bold">
@@ -573,13 +551,13 @@ export default function CommunityGuidesPage() {
 
               <button
                 onClick={() => setActiveGuide(guide)}
-                className="mt-4 w-full rounded-full bg-[#ff5630] px-5 py-3 text-sm font-semibold text-white hover:bg-[#ff7352] transition-colors"
+                className="mt-3 w-full rounded-lg bg-[#ff5630] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#ff7352] transition-colors"
               >
                 View &amp; book with {guide.name.split(" ")[0]}
               </button>
             </article>
           ))}
-        </div>
+        </HorizontalRail>
       </section>
     </div>
   );

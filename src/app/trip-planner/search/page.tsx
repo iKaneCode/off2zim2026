@@ -94,6 +94,11 @@ function TripPlannerSearchPageContent() {
     return filtered;
   }, [activeTab, results, selectedLocation, sortBy]);
 
+  const plannerHref = useMemo(() => {
+    const query = searchParams?.toString();
+    return query ? `/trip-planner?${query}` : "/trip-planner";
+  }, [searchParams]);
+
   const resultCounts = useMemo(
     () => ({
       all: results.length,
@@ -160,7 +165,7 @@ function TripPlannerSearchPageContent() {
               <option value="rating">Top rated</option>
             </select>
             <Link
-              href="/trip-planner"
+              href={plannerHref}
               className="inline-flex items-center justify-center rounded-2xl bg-[#ff5630] px-5 py-3 text-sm font-semibold text-white"
             >
               Open planner

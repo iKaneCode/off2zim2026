@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, ReactNode } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
+import {
+  type AppSurface,
+  getSurfaceHref,
+  resolveSurfaceFromPath,
+} from "@/lib/app-surface";
 import { UserRole } from "@/types/auth";
 import { getAccountRoute } from "@/lib/auth-routing";
 
@@ -10,6 +17,7 @@ interface ProtectedRouteProps {
   requiredRole?: UserRole;
   requiredVerification?: boolean;
   fallback?: ReactNode;
+  surface?: AppSurface;
 }
 
 const ProtectedRoute = ({
@@ -17,23 +25,42 @@ const ProtectedRoute = ({
   requiredRole,
   requiredVerification = false,
   fallback,
+  surface,
 }: ProtectedRouteProps) => {
   const { user, isLoading, hasRole, isVerified } = useAuth();
+  const router = useRouter();
   const accountRoute = getAccountRoute(user);
+  const currentSurface =
+    surface ||
+    (typeof window !== "undefined"
+      ? resolveSurfaceFromPath(window.location.pathname)
+      : "public");
+  const signInHref = getSurfaceHref(currentSurface, "/login");
+  const verifyEmailHref = getSurfaceHref(currentSurface, "/auth/verify-email/request");
 
   useEffect(() => {
     if (!isLoading && !user) {
-      // Redirect to login if not authenticated
-      window.location.href = `/login?redirect=${encodeURIComponent(window.location.pathname)}`;
+      const nextPath = `${window.location.pathname}${window.location.search}`;
+      const notice =
+        typeof window !== "undefined"
+          ? sessionStorage.getItem("off2zim_auth_notice")
+          : null;
+      const reason = notice === "session-expired" ? "&reason=session-expired" : "";
+
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem("off2zim_auth_notice");
+      }
+
+      router.replace(`${signInHref}?redirect=${encodeURIComponent(nextPath)}${reason}`);
     }
-  }, [user, isLoading]);
+  }, [isLoading, router, signInHref, user]);
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="flex items-center space-x-2">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          <span className="text-gray-600">Loading...</span>
+      <div className="theme-page min-h-screen flex items-center justify-center px-4">
+        <div className="theme-panel rounded-[28px] px-8 py-6 text-center">
+          <div className="mx-auto h-8 w-8 animate-spin rounded-full border-b-2 border-[#ff5630]" />
+          <p className="theme-muted mt-4 text-sm">Checking your account access...</p>
         </div>
       </div>
     );
@@ -42,20 +69,18 @@ const ProtectedRoute = ({
   if (!user) {
     return (
       fallback || (
-        <div className="min-h-screen flex items-center justify-center">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold text-gray-900 mb-4">
-              Authentication Required
-            </h2>
-            <p className="text-gray-600 mb-6">
-              Please sign in to access this page.
+        <div className="theme-page min-h-screen flex items-center justify-center px-4">
+          <div className="theme-panel max-w-md rounded-[32px] p-8 text-center">
+            <h2 className="theme-heading text-2xl font-semibold">Sign in required</h2>
+            <p className="theme-muted mt-3 text-sm leading-6">
+              This part of Off2Zim is only available inside an active account session.
             </p>
-            <a
-              href="/login"
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            <Link
+              href={signInHref}
+              className="mt-6 inline-flex items-center justify-center rounded-full bg-[#ff5630] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#ff6f4d]"
             >
-              Sign In
-            </a>
+              Go to sign in
+            </Link>
           </div>
         </div>
       )
@@ -65,21 +90,18 @@ const ProtectedRoute = ({
   // Check role requirement
   if (requiredRole && !hasRole(requiredRole)) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            Access Denied
-          </h2>
-          <p className="text-gray-600 mb-6">
-            You don&apos;t have permission to access this page. Required role:{" "}
-            {requiredRole}
+      <div className="theme-page min-h-screen flex items-center justify-center px-4">
+        <div className="theme-panel max-w-md rounded-[32px] p-8 text-center">
+          <h2 className="theme-heading text-2xl font-semibold">Access denied</h2>
+          <p className="theme-muted mt-3 text-sm leading-6">
+            This page requires a different account role. Sign in with the correct workspace or return to your dashboard.
           </p>
-          <a
+          <Link
             href={accountRoute}
-            className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            className="mt-6 inline-flex items-center justify-center rounded-full bg-[#ff5630] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#ff6f4d]"
           >
             Go to workspace
-          </a>
+          </Link>
         </div>
       </div>
     );
@@ -88,27 +110,25 @@ const ProtectedRoute = ({
   // Check verification requirement
   if (requiredVerification && !isVerified()) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">
-            Verification Required
-          </h2>
-          <p className="text-gray-600 mb-6">
-            You need to verify your account to access this feature.
+      <div className="theme-page min-h-screen flex items-center justify-center px-4">
+        <div className="theme-panel max-w-md rounded-[32px] p-8 text-center">
+          <h2 className="theme-heading text-2xl font-semibold">Verification required</h2>
+          <p className="theme-muted mt-3 text-sm leading-6">
+            Verify your account to continue with this feature.
           </p>
-          <div className="space-x-4">
-            <a
-              href="/verify"
-              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+            <Link
+              href={verifyEmailHref}
+              className="inline-flex items-center justify-center rounded-full bg-[#ff5630] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#ff6f4d]"
             >
-              Verify Account
-            </a>
-            <a
+              Send verification email
+            </Link>
+            <Link
               href={accountRoute}
-              className="bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 transition-colors"
+              className="theme-button-secondary inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold"
             >
               Go to workspace
-            </a>
+            </Link>
           </div>
         </div>
       </div>

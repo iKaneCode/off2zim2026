@@ -30,6 +30,11 @@ export async function GET() {
           include: {
             listing: true,
             provider: true,
+            payments: {
+              orderBy: {
+                createdAt: "desc",
+              },
+            },
           },
         },
         openedBy: true,

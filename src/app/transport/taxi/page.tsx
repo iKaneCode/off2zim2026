@@ -48,10 +48,10 @@ export default function TaxiPage() {
             <div className="p-6 md:p-8 lg:p-10">
               <div className="theme-chip inline-flex rounded-full px-4 py-2 text-xs uppercase tracking-[0.28em]">Taxi services</div>
               <h1 className="theme-heading mt-4 text-4xl font-semibold md:text-5xl">
-                Reliable last-mile movement across city and airport moments
+                Book taxis for airport transfers and local travel
               </h1>
               <p className="theme-muted mt-4 max-w-2xl text-sm leading-7 md:text-base">
-                Taxis help the itinerary stay realistic by solving transfers, airport connections, and local movement without adding planning stress.
+                Use taxis for airport pickup, city rides, and simple local transfers without extra planning stress.
               </p>
             </div>
             <div
@@ -76,7 +76,7 @@ export default function TaxiPage() {
                 <p className="theme-muted mt-3 text-sm leading-6">{taxi.description}</p>
                 <div className="theme-muted mt-4 space-y-2 text-sm">
                   <div className="flex items-center gap-2"><Navigation className="h-4 w-4 text-[#5aa7ff]" />Station, hotel, and airport transfers</div>
-                  <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#8cf0a1]" />Safer, clearer traveler movement</div>
+                  <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#8cf0a1]" />Clear, reliable transfer options</div>
                   <div className="flex items-center gap-2"><CreditCard className="h-4 w-4 text-[#ffca74]" />${taxi.price}/ride</div>
                 </div>
 

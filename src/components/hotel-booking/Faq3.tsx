@@ -19,7 +19,7 @@ export const Faq3: React.FC = () => {
             </h3>
             <p className="text-gray-600">
               Free cancellation up to 24 hours before check-in. After that, one
-              night's rate applies.
+              night&apos;s rate applies.
             </p>
           </div>
           <div className="border border-gray-200 rounded-lg p-6">

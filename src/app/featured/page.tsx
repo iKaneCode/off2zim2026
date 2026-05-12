@@ -49,8 +49,7 @@ export default function FeaturedPage() {
             Featured across Zimbabwe
           </h1>
           <p className="theme-muted mt-2 max-w-xl text-sm leading-6">
-            Editor's picks, top-rated providers, and exceptional experiences — selected
-            from across Zimbabwe's destinations and refreshed every week.
+            Editors picks, top-rated providers, and standout experiences from across Zimbabwe, refreshed every week.
           </p>
         </div>
 
@@ -82,7 +81,7 @@ export default function FeaturedPage() {
             <Sparkles className="mx-auto h-10 w-10 text-white/15" />
             <p className="font-semibold text-white/50">No featured listings yet</p>
             <p className="text-sm text-white/30 max-w-xs mx-auto">
-              Our editorial team refreshes this selection weekly. Browse the full catalog in the meantime.
+              This collection is updated every week. Browse the full catalog in the meantime.
             </p>
             <a
               href="/marketplace"

@@ -53,10 +53,9 @@ export default function GuidePlusPage() {
           <div className="inline-flex items-center gap-2 rounded-full border border-[#ff5630]/25 bg-[#ff5630]/8 px-4 py-2 text-sm font-medium text-[#ff5630]">
             Guide+
           </div>
-          <h1 className="theme-heading mt-4 text-4xl font-semibold">Book a local expert</h1>
+          <h1 className="theme-heading mt-4 text-4xl font-semibold">Book a local guide</h1>
           <p className="theme-muted mt-4 text-sm leading-7">
-            Connect with vetted Community Guides who live in Zimbabwe. Book personalized trip
-            planning, video consultations, or in-person tours.
+            Connect with vetted Community Guides in Zimbabwe for trip planning, video consultations, and in-person tours.
           </p>
           <Link
             href="/community-guides/apply"
@@ -84,7 +83,7 @@ export default function GuidePlusPage() {
           </div>
         ) : guides.length === 0 ? (
           <div className="theme-panel rounded-[28px] p-8 text-center">
-            <p className="theme-muted text-sm">No guides are available yet. Check back soon.</p>
+            <p className="theme-muted text-sm">No guides are available right now. Check back soon.</p>
           </div>
         ) : (
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
@@ -139,7 +138,7 @@ export default function GuidePlusPage() {
                   <div className="mt-4 space-y-2 border-t border-white/8 pt-4">
                     {guide.services.slice(0, 2).map((service) => (
                       <div key={service.id} className="flex items-center justify-between text-sm">
-                        <div className="flex items-center gap-2 text-white/70">
+                      <div className="flex items-center gap-2 text-white/70">
                           <Clock className="h-3.5 w-3.5 text-white/35" />
                           <span>{SERVICE_TYPE_LABELS[service.serviceType] ?? service.serviceType}</span>
                         </div>

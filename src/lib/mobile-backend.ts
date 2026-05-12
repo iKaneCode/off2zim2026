@@ -1,4 +1,10 @@
 import { prisma } from '@/lib/prisma';
+import {
+  mergeWithCuratedDestinations,
+  type ExplorerDestinationSummary,
+} from '@/lib/destination-explorer';
+import { inferServiceGroup } from '@/lib/taxonomy';
+import { getDemoPublicListings } from '@/lib/demo-taxonomy-listings';
 
 type FavoriteRecord = {
   itemId: string;
@@ -49,7 +55,7 @@ export function buildMobileProfile(user: {
   preferences: string | null;
 }) {
   const preferences = parseUserPreferences(user.preferences);
-  const extras = getProfileExtras(preferences) as Record<string, any>;
+  const extras = getProfileExtras(preferences) as Record<string, unknown>;
   const fullName =
     (typeof extras.full_name === 'string' && extras.full_name.trim()) ||
     [user.firstName, user.lastName].filter(Boolean).join(' ').trim() ||
@@ -141,7 +147,8 @@ function handleMobileDataFallback<T>(dataset: string, error: unknown, fallback: 
 
 export async function getMobileDestinations() {
   try {
-    const storedDestinations = await prisma.destination.findMany({
+    const [storedDestinations, providerListings] = await Promise.all([
+      prisma.destination.findMany({
       orderBy: [{ featured: 'desc' }, { displayOrder: 'asc' }, { createdAt: 'desc' }],
       include: {
         hotels: { select: { id: true } },
@@ -149,11 +156,31 @@ export async function getMobileDestinations() {
         restaurants: { select: { id: true } },
         events: { select: { id: true } },
       },
-    });
+      }),
+      prisma.providerListing.findMany({
+        where: {
+          visibility: 'public',
+          status: { in: ['active', 'approved'] },
+        },
+        select: {
+          title: true,
+          category: true,
+          listingType: true,
+          location: true,
+          metadata: true,
+        },
+      }),
+    ]);
+    const providerCounts = buildProviderDestinationCounts(providerListings);
 
     if (storedDestinations.length > 0) {
-      return storedDestinations.map(destination => {
+      return mergeWithCuratedDestinations(storedDestinations.map(destination => {
         const images = safeJsonParse<string[]>(destination.images, []);
+        const counts = getProviderCountsForDestination(providerCounts, {
+          id: destination.slug || destination.id,
+          name: destination.name,
+          location: destination.location,
+        });
         return {
           id: destination.slug || destination.id,
           name: destination.name,
@@ -164,18 +191,18 @@ export async function getMobileDestinations() {
           latitude: null,
           longitude: null,
           created_at: destination.createdAt.toISOString(),
-          stays_count: destination.hotels.length,
-          activities_count:
-            destination.activities.length +
-            destination.restaurants.length +
-            destination.events.length,
+          stays_count: destination.hotels.length + counts.stays,
+          activities_count: destination.activities.length + counts.activities,
+          transport_count: counts.transport,
+          dining_count: destination.restaurants.length + counts.dining,
+          events_count: destination.events.length + counts.events,
           featured: destination.featured,
           category: destination.category,
           price_range: destination.priceRange,
           rating: destination.rating,
           weather: destination.weather,
         };
-      });
+      }));
     }
 
     const [hotels, activities, restaurants, events] = await Promise.all([
@@ -187,7 +214,7 @@ export async function getMobileDestinations() {
 
     const locations = new Map<
       string,
-      { description: string | null; images: string[]; stays: number; activities: number }
+      { description: string | null; images: string[]; stays: number; activities: number; transport: number; dining: number; events: number }
     >();
 
     const addLocation = (
@@ -202,6 +229,9 @@ export async function getMobileDestinations() {
         images: [],
         stays: 0,
         activities: 0,
+        transport: 0,
+        dining: 0,
+        events: 0,
       };
 
       if (!existing.description && description) {
@@ -240,8 +270,28 @@ export async function getMobileDestinations() {
     events.forEach(event =>
       addLocation(event.location, event.description, safeJsonParse(event.images, []), 'activity')
     );
+    for (const listing of providerListings) {
+      const metadata = safeJsonParse<Record<string, unknown>>(listing.metadata, {});
+      const name =
+        (typeof metadata.destinationName === 'string' && metadata.destinationName) ||
+        listing.location;
+      const key = name.trim();
+      const existing = locations.get(key) || {
+        description: null,
+        images: [],
+        stays: 0,
+        activities: 0,
+        transport: 0,
+        dining: 0,
+        events: 0,
+      };
+      const group = inferServiceGroup({ ...listing, metadata });
 
-    return Array.from(locations.entries()).map(([name, data]) => ({
+      existing[group.id] += 1;
+      locations.set(key, existing);
+    }
+
+    return mergeWithCuratedDestinations(Array.from(locations.entries()).map(([name, data]) => ({
       id: name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
       name,
       description: data.description,
@@ -253,10 +303,130 @@ export async function getMobileDestinations() {
       created_at: new Date().toISOString(),
       stays_count: data.stays,
       activities_count: data.activities,
-    }));
+      transport_count: data.transport,
+      dining_count: data.dining,
+      events_count: data.events,
+    })));
   } catch (error) {
-    return handleMobileDataFallback('destinations', error, []);
+    const fallbackDestinations = mergeWithCuratedDestinations(
+      [] as ExplorerDestinationSummary[]
+    );
+    const fallbackCounts = buildDemoDestinationCounts();
+
+    return handleMobileDataFallback(
+      'destinations',
+      error,
+      fallbackDestinations.map(destination => {
+        const counts = getProviderCountsForDestination(fallbackCounts, {
+          id: destination.id,
+          name: destination.name,
+          location: destination.location || null,
+        });
+
+        return {
+          ...destination,
+          stays_count: counts.stays,
+          activities_count: counts.activities,
+          transport_count: counts.transport,
+          dining_count: counts.dining,
+          events_count: counts.events,
+        };
+      })
+    );
   }
+}
+
+type ProviderDestinationCount = {
+  stays: number;
+  transport: number;
+  dining: number;
+  activities: number;
+  events: number;
+};
+
+function emptyProviderDestinationCount(): ProviderDestinationCount {
+  return {
+    stays: 0,
+    transport: 0,
+    dining: 0,
+    activities: 0,
+    events: 0,
+  };
+}
+
+function buildProviderDestinationCounts(
+  listings: Array<{
+    title: string;
+    category: string;
+    listingType: string;
+    location: string;
+    metadata: string | null;
+  }>
+) {
+  const counts = new Map<string, ProviderDestinationCount>();
+
+  for (const listing of listings) {
+    const metadata = safeJsonParse<Record<string, unknown>>(listing.metadata, {});
+    const group = inferServiceGroup({ ...listing, metadata });
+    const key = [
+      typeof metadata.destinationId === 'string' ? metadata.destinationId : null,
+      typeof metadata.destinationName === 'string' ? metadata.destinationName : null,
+      typeof metadata.destinationLocation === 'string' ? metadata.destinationLocation : null,
+      listing.location,
+    ]
+      .map(normalizeCountKey)
+      .find(Boolean);
+
+    if (!key) continue;
+    const current = counts.get(key) || emptyProviderDestinationCount();
+    current[group.id] += 1;
+    counts.set(key, current);
+  }
+
+  return counts;
+}
+
+function getProviderCountsForDestination(
+  counts: Map<string, ProviderDestinationCount>,
+  destination: { id: string; name: string; location: string | null }
+) {
+  const merged = emptyProviderDestinationCount();
+
+  for (const key of [
+    destination.id,
+    destination.name,
+    destination.location,
+  ].map(normalizeCountKey).filter(Boolean)) {
+    const count = counts.get(key);
+    if (!count) continue;
+    merged.stays += count.stays;
+    merged.transport += count.transport;
+    merged.dining += count.dining;
+    merged.activities += count.activities;
+    merged.events += count.events;
+  }
+
+  return merged;
+}
+
+function normalizeCountKey(value: string | null | undefined) {
+  return (value || '').trim().toLowerCase();
+}
+
+function buildDemoDestinationCounts() {
+  const counts = new Map<string, ProviderDestinationCount>();
+
+  for (const listing of getDemoPublicListings()) {
+    const key = normalizeCountKey(
+      listing.destinationId || listing.destinationName || listing.location
+    );
+    if (!key) continue;
+    const current = counts.get(key) || emptyProviderDestinationCount();
+    current[inferServiceGroup(listing).id] += 1;
+    counts.set(key, current);
+  }
+
+  return counts;
 }
 
 export async function getMobileStays() {

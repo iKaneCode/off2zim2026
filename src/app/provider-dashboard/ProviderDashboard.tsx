@@ -84,19 +84,19 @@ export default function ProviderDashboard() {
       id: "overview",
       label: "Overview",
       icon: BarChart3,
-      description: "Performance metrics and recent activity",
+      description: "Performance, activity, and business updates",
     },
     {
       id: "profile",
       label: "Company Profile",
       icon: Building2,
-      description: "Manage business information and settings",
+      description: "Manage your business details and settings",
     },
     {
       id: "listings",
       label: "Listings",
       icon: Package,
-      description: "Manage your services and products",
+      description: "Manage your services, stays, and products",
       badge:
         notificationData.pendingListings > 0
           ? notificationData.pendingListings
@@ -106,7 +106,7 @@ export default function ProviderDashboard() {
       id: "orders",
       label: "Orders & Disputes",
       icon: Users,
-      description: "Handle bookings and customer disputes",
+      description: "Manage bookings, customer requests, and disputes",
       badge: notificationData.pendingOrders + notificationData.activeDisputes,
       badgeColor:
         notificationData.activeDisputes > 0
@@ -115,21 +115,21 @@ export default function ProviderDashboard() {
     },
     {
       id: "shop",
-      label: "Shop Products",
+      label: "Products",
       icon: ShoppingBag,
-      description: "Manage purchasable products and stock",
+      description: "Manage products, stock, and product sales",
     },
     {
       id: "subscriptions",
       label: "Subscriptions",
       icon: BadgeCheck,
-      description: "Verified Badge, Featured Placement, and earnings",
+      description: "Manage plans, featured placement, and related earnings",
     },
     {
       id: "verification",
       label: "Verification",
       icon: Shield,
-      description: "Complete verification process",
+      description: "Complete your business verification steps",
       badge: `${notificationData.verificationProgress}%`,
       badgeColor:
         notificationData.verificationProgress === 100
@@ -238,31 +238,30 @@ export default function ProviderDashboard() {
           {/* Welcome Message for New Users */}
           {notificationData.verificationProgress < 50 &&
             activeTab === "overview" && (
-              <div className="mb-6 rounded-[28px] border border-[#ff5630]/20 bg-[#1a100b] p-6">
+              <div className="theme-panel-soft mb-6 rounded-[24px] p-6">
                 <div className="flex items-start gap-4">
                   <div className="rounded-2xl bg-[#2d1714] p-3 shrink-0">
                     <Star className="w-5 h-5 text-[#ff7352]" />
                   </div>
                   <div className="flex-1">
-                    <h3 className="mb-2 text-lg font-semibold text-white">
-                      Welcome to Off2Zim
+                    <h3 className="mb-2 text-lg font-semibold theme-heading">
+                      Complete your provider setup
                     </h3>
-                    <p className="mb-4 text-sm text-white/60 leading-6">
-                      Get started by completing your company profile and
-                      verification process to unlock all features.
+                    <p className="mb-4 text-sm theme-muted leading-6">
+                      Finish your company profile and verification steps to start listing confidently and manage orders more smoothly.
                     </p>
                     <div className="flex flex-wrap gap-2">
                       <button
                         onClick={() => setActiveTab("profile")}
                         className="rounded-full bg-[#ff5630] px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#ff7352]"
                       >
-                        Complete Profile
+                        Complete profile
                       </button>
                       <button
                         onClick={() => setActiveTab("verification")}
-                        className="rounded-full border border-[#ff5630]/40 px-5 py-2 text-sm font-medium text-[#ff7352] transition-colors hover:bg-[#ff5630]/10"
+                        className="theme-button-secondary rounded-full px-5 py-2 text-sm font-medium"
                       >
-                        Start Verification
+                        Start verification
                       </button>
                     </div>
                   </div>
@@ -272,14 +271,14 @@ export default function ProviderDashboard() {
 
           {/* Tab Description */}
           <div className="mb-6">
-            <div className="theme-panel rounded-[28px] p-5">
+            <div className="theme-panel-soft rounded-[24px] p-5">
               <div className="flex items-center gap-3">
                 {tabs.map((tab) => {
                   if (tab.id === activeTab) {
                     const Icon = tab.icon;
                     return (
                       <React.Fragment key={tab.id}>
-                        <div className="rounded-2xl bg-[#2d1714] p-3">
+                        <div className="rounded-2xl bg-black/[0.05] p-3 dark:bg-white/[0.05]">
                           <Icon className="w-5 h-5 text-[#ff7352]" />
                         </div>
                         <div>

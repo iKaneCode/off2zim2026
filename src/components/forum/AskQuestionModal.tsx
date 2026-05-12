@@ -25,6 +25,8 @@ interface ForumQuestion {
 interface AskQuestionModalProps {
   onClose: () => void;
   onPosted: (question: ForumQuestion) => void;
+  destinationId?: string | null;
+  destinationName?: string | null;
 }
 
 const TAG_SUGGESTIONS = [
@@ -40,7 +42,12 @@ const TAG_SUGGESTIONS = [
   "culture",
 ];
 
-export default function AskQuestionModal({ onClose, onPosted }: AskQuestionModalProps) {
+export default function AskQuestionModal({
+  onClose,
+  onPosted,
+  destinationId,
+  destinationName,
+}: AskQuestionModalProps) {
   const [title, setTitle] = useState("");
   const [body, setBody] = useState("");
   const [tagInput, setTagInput] = useState("");
@@ -63,7 +70,7 @@ export default function AskQuestionModal({ onClose, onPosted }: AskQuestionModal
     try {
       const payload = await apiFetch<{ question: ForumQuestion }>("/api/forum/questions", {
         method: "POST",
-        body: JSON.stringify({ title, body, tags }),
+        body: JSON.stringify({ title, body, tags, destinationId: destinationId || undefined }),
       });
       onPosted(payload.question);
     } catch (err) {
@@ -80,7 +87,12 @@ export default function AskQuestionModal({ onClose, onPosted }: AskQuestionModal
     >
       <div className="theme-panel w-full max-w-xl rounded-[32px] p-6">
         <div className="flex items-center justify-between">
-          <h2 className="theme-heading text-xl font-semibold">Ask the community</h2>
+          <div>
+            <h2 className="theme-heading text-xl font-semibold">Ask the community</h2>
+            {destinationName ? (
+              <p className="theme-muted mt-1 text-sm">This question will be linked to {destinationName}.</p>
+            ) : null}
+          </div>
           <button
             onClick={onClose}
             className="rounded-full border border-white/10 p-2 text-white/50 hover:bg-white/8"

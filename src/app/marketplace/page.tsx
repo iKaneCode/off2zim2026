@@ -7,7 +7,16 @@ import { useSearchParams } from "next/navigation";
 import { apiFetch } from "@/lib/client-api";
 import type { PublicListingRecord } from "@/types/platform";
 import FilterChips from "@/components/ui/FilterChips";
+import ServiceSubtypeChips from "@/components/ui/ServiceSubtypeChips";
 import { SkeletonGrid } from "@/components/ui/Skeleton";
+import {
+  getServiceGroup,
+  getSubtypesForGroup,
+  inferServiceGroup,
+  inferServiceSubtype,
+  serviceGroups,
+  type ServiceGroupId,
+} from "@/lib/taxonomy";
 
 function MarketplacePageContent() {
   const searchParams = useSearchParams();
@@ -15,6 +24,11 @@ function MarketplacePageContent() {
   const [selectedCategory, setSelectedCategory] = useState(
     searchParams?.get("category") || "all"
   );
+  const [selectedServiceGroup, setSelectedServiceGroup] = useState(
+    searchParams?.get("serviceGroup") || "all"
+  );
+  const [selectedSubtype, setSelectedSubtype] = useState(searchParams?.get("subtype") || "all");
+  const [destinationFilter] = useState(searchParams?.get("destination") || "");
   const [listingType] = useState(searchParams?.get("listingType") || "all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [showFilters, setShowFilters] = useState(false);
@@ -26,7 +40,7 @@ function MarketplacePageContent() {
     const loadListings = async () => {
       try {
         const payload = await apiFetch<{ listings: PublicListingRecord[] }>(
-          `/api/listings?search=${encodeURIComponent(searchQuery)}&category=${encodeURIComponent(selectedCategory)}&listingType=${encodeURIComponent(listingType)}`
+          `/api/listings?search=${encodeURIComponent(searchQuery)}&category=${encodeURIComponent(selectedCategory)}&listingType=${encodeURIComponent(listingType)}&serviceGroup=${encodeURIComponent(selectedServiceGroup)}&subtype=${encodeURIComponent(selectedSubtype)}&destination=${encodeURIComponent(destinationFilter)}`
         );
         setListings(payload.listings);
         setError("");
@@ -39,7 +53,7 @@ function MarketplacePageContent() {
 
     const timeout = window.setTimeout(loadListings, 200);
     return () => window.clearTimeout(timeout);
-  }, [searchQuery, selectedCategory]);
+  }, [destinationFilter, listingType, searchQuery, selectedCategory, selectedServiceGroup, selectedSubtype]);
 
   const categories = useMemo(() => {
     const counts = new Map<string, number>();
@@ -56,27 +70,36 @@ function MarketplacePageContent() {
       })),
     ];
   }, [listings]);
+  const activeGroup =
+    selectedServiceGroup !== "all"
+      ? getServiceGroup(selectedServiceGroup as ServiceGroupId)
+      : null;
+  const subtypeOptions = activeGroup ? getSubtypesForGroup(activeGroup.id) : [];
+  const listingSummary = destinationFilter
+    ? `Showing destination-linked listings for ${destinationFilter.replace(/-/g, " ")}.`
+    : "Shop trusted stays, experiences, services, and travel essentials.";
 
   return (
     <div className="theme-page min-h-screen">
       <div className="border-b border-black/10 bg-white/88 backdrop-blur-xl dark:border-white/10 dark:bg-[#0a0a0a]/94">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="flex items-center gap-4 mb-6">
+        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+          <div className="mb-4 flex items-center gap-3">
             <Link
               href="/"
-              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-black/10 bg-white text-slate-700 transition hover:bg-slate-50 hover:text-slate-950 dark:border-white/10 dark:bg-[#151515] dark:text-white/72 dark:hover:bg-[#1b1b1b] dark:hover:text-white"
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-black/10 bg-white text-slate-700 transition hover:bg-slate-50 hover:text-slate-950 dark:border-white/10 dark:bg-[#151515] dark:text-white/72 dark:hover:bg-[#1b1b1b] dark:hover:text-white"
+              title="Back to home"
             >
               <ArrowLeft className="h-5 w-5" />
             </Link>
             <div>
-              <h1 className="text-3xl font-bold theme-heading">Marketplace</h1>
-              <p className="mt-1 text-sm text-slate-600 dark:text-white/60">
-                Shop trusted stays, experiences, services, and travel essentials.
+              <h1 className="text-2xl font-bold theme-heading">Marketplace</h1>
+              <p className="mt-0.5 text-sm text-slate-600 dark:text-white/60">
+                {listingSummary}
               </p>
             </div>
           </div>
 
-          <div className="flex flex-col lg:flex-row gap-4">
+          <div className="flex flex-col gap-3 lg:flex-row">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 dark:text-white/35" />
               <input
@@ -84,23 +107,24 @@ function MarketplacePageContent() {
                 placeholder="Search listings, locations, or experiences..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full rounded-2xl border border-black/10 bg-white pl-10 pr-4 py-3 text-slate-950 placeholder:text-slate-400 focus:border-[#ff5630] focus:outline-none focus:ring-2 focus:ring-[#ff5630]/20 dark:border-white/10 dark:bg-[#151515] dark:text-white dark:placeholder:text-white/28"
+                className="h-11 w-full rounded-xl border border-black/10 bg-white pl-10 pr-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-[#ff5630] focus:outline-none focus:ring-2 focus:ring-[#ff5630]/20 dark:border-white/10 dark:bg-[#151515] dark:text-white dark:placeholder:text-white/28"
               />
             </div>
 
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex items-center gap-2 rounded-2xl border border-black/10 bg-white px-4 py-3 text-slate-800 transition hover:bg-slate-50 dark:border-white/10 dark:bg-[#151515] dark:text-white dark:hover:bg-[#1c1c1c]"
+                className="flex h-11 items-center gap-2 rounded-xl border border-black/10 bg-white px-3 text-sm text-slate-800 transition hover:bg-slate-50 dark:border-white/10 dark:bg-[#151515] dark:text-white dark:hover:bg-[#1c1c1c]"
+                title="Show category filters"
               >
-                <Filter className="h-5 w-5" />
+                <Filter className="h-4 w-4" />
                 Filters
               </button>
 
-              <div className="flex rounded-2xl border border-black/10 bg-white p-1 dark:border-white/10 dark:bg-[#151515]">
+              <div className="flex rounded-xl border border-black/10 bg-white p-1 dark:border-white/10 dark:bg-[#151515]">
                 <button
                   onClick={() => setViewMode("grid")}
-                  className={`rounded-xl p-2 transition ${
+                    className={`rounded-lg p-2 transition ${
                     viewMode === "grid"
                       ? "bg-[#ff5630]/12 text-[#ff5630] dark:bg-[#ff5630]/18"
                       : "text-slate-500 hover:bg-slate-100 dark:text-white/55 dark:hover:bg-white/7"
@@ -110,7 +134,7 @@ function MarketplacePageContent() {
                 </button>
                 <button
                   onClick={() => setViewMode("list")}
-                  className={`rounded-xl p-2 transition ${
+                    className={`rounded-lg p-2 transition ${
                     viewMode === "list"
                       ? "bg-[#ff5630]/12 text-[#ff5630] dark:bg-[#ff5630]/18"
                       : "text-slate-500 hover:bg-slate-100 dark:text-white/55 dark:hover:bg-white/7"
@@ -121,21 +145,43 @@ function MarketplacePageContent() {
               </div>
             </div>
           </div>
+          <div className="mt-4 space-y-2">
+            <FilterChips
+              options={[
+                { id: "all", label: "All services" },
+                ...serviceGroups.map((group) => ({ id: group.id, label: group.label })),
+              ]}
+              selected={selectedServiceGroup}
+              onSelect={(groupId) => {
+                setSelectedServiceGroup(groupId);
+                setSelectedSubtype("all");
+                setSelectedCategory("all");
+              }}
+            />
+            {activeGroup ? (
+              <ServiceSubtypeChips
+                subtypes={subtypeOptions}
+                activeSubtype={selectedSubtype}
+                onSelect={setSelectedSubtype}
+                allLabel={`All ${activeGroup.label.toLowerCase()}`}
+              />
+            ) : null}
+          </div>
         </div>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="flex flex-col lg:flex-row gap-8">
+      <div className="max-w-7xl mx-auto px-4 py-5 sm:px-6 lg:px-8">
+        <div className="flex flex-col gap-5 lg:flex-row">
           {showFilters && (
-            <aside className="lg:w-80 space-y-6">
-              <div className="theme-panel-strong rounded-[28px] p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.24)]">
-                <h3 className="mb-4 font-semibold theme-heading">Categories</h3>
-                <div className="space-y-2">
+            <aside className="lg:w-72 space-y-4">
+              <div className="theme-panel-strong rounded-xl p-3 shadow-[0_20px_60px_rgba(15,23,42,0.08)] dark:shadow-[0_20px_60px_rgba(0,0,0,0.24)]">
+                <h3 className="mb-3 text-sm font-semibold theme-heading">Categories</h3>
+                <div className="space-y-1.5">
                   {categories.map((category) => (
                     <button
                       key={category.id}
                       onClick={() => setSelectedCategory(category.id)}
-                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left ${
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-left text-sm ${
                         selectedCategory === category.id
                           ? "bg-[#ff5630]/10 text-[#ff5630] dark:bg-[#ff5630]/16"
                           : "text-slate-700 hover:bg-black/[0.045] dark:text-white/78 dark:hover:bg-white/7"
@@ -180,14 +226,14 @@ function MarketplacePageContent() {
               <div
                 className={
                   viewMode === "grid"
-                    ? "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5"
-                    : "space-y-4"
+                    ? "grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3"
+                    : "space-y-3"
                 }
               >
                 {listings.map((listing) => (
                   <article
                     key={listing.id}
-                    className={`group theme-panel overflow-hidden rounded-[28px] transition hover:shadow-[0_20px_60px_rgba(0,0,0,0.22)] ${
+                    className={`group theme-panel overflow-hidden rounded-xl transition hover:shadow-[0_16px_42px_rgba(0,0,0,0.18)] ${
                       viewMode === "list" ? "flex flex-col md:flex-row" : "flex flex-col"
                     }`}
                   >
@@ -198,7 +244,7 @@ function MarketplacePageContent() {
                     >
                       <div
                         className={`relative bg-gradient-to-br from-[#2a1f18] via-[#1c1815] to-[#141218] ${
-                          viewMode === "list" ? "h-full min-h-[140px]" : "h-44"
+                          viewMode === "list" ? "h-full min-h-[118px]" : "h-32"
                         } overflow-hidden`}
                       >
                         {listing.images?.[0] ? (
@@ -210,7 +256,7 @@ function MarketplacePageContent() {
                         ) : (
                           <div className="flex h-full items-end p-4">
                             <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white/70 backdrop-blur-sm">
-                              {listing.category}
+                              {inferServiceGroup(listing).label}
                             </span>
                           </div>
                         )}
@@ -222,7 +268,7 @@ function MarketplacePageContent() {
                       </div>
                     </Link>
 
-                    <div className="flex flex-1 flex-col p-5">
+                    <div className="flex flex-1 flex-col p-3">
                       {/* Linked title + description */}
                       <Link href={`/marketplace/${listing.slug}`} className="block flex-1">
                         <div className="flex items-start justify-between gap-2">
@@ -234,11 +280,14 @@ function MarketplacePageContent() {
                           </span>
                         </div>
 
-                        <p className="theme-muted mt-1.5 line-clamp-2 text-xs leading-5">
+                        <p
+                          className="theme-muted mt-1.5 line-clamp-1 text-xs leading-5"
+                          title={listing.shortDescription || listing.description}
+                        >
                           {listing.shortDescription || listing.description}
                         </p>
 
-                        <div className="mt-3 flex flex-wrap items-center gap-3 text-xs text-white/50">
+                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-white/50">
                           <span className="inline-flex items-center gap-1">
                             <MapPin className="h-3.5 w-3.5 text-[#ff7352]" />
                             {listing.location}
@@ -250,13 +299,13 @@ function MarketplacePageContent() {
                             </span>
                           ) : null}
                           <span className="ml-auto text-white/30">
-                            {listing.provider.companyName}
+                            {inferServiceSubtype(listing)?.label || listing.provider.companyName}
                           </span>
                         </div>
                       </Link>
 
                       {/* CTA row */}
-                      <div className="mt-4 flex items-center gap-2 border-t border-white/[0.06] pt-4">
+                      <div className="mt-3 flex items-center gap-2 border-t border-white/[0.06] pt-3">
                         <Link
                           href={`/marketplace/${listing.slug}`}
                           className="theme-button-secondary flex-1 rounded-full px-4 py-2.5 text-center text-xs font-semibold transition"

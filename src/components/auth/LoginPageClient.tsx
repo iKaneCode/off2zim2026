@@ -18,26 +18,33 @@ export default function LoginPageClient({
   surface,
   redirect,
 }: LoginPageClientProps) {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const reason = searchParams?.get("reason");
   const redirectTo =
     redirect ||
     searchParams?.get("redirect") ||
     (user ? getPostAuthRoute(user) : getDefaultPostAuthRoute(surface, null));
   const panelCopy = authSurfaceCopy[surface].login;
+  const shouldRedirectAuthenticatedUser =
+    !!user &&
+    (surface === "public" ||
+      (surface === "explorer" && user.role === "explorer") ||
+      (surface === "provider" && user.role === "provider") ||
+      (surface === "admin" && user.role === "admin"));
 
   useEffect(() => {
-    if (user) {
+    if (!isLoading && shouldRedirectAuthenticatedUser) {
       router.push(redirectTo);
     }
-  }, [redirectTo, router, user]);
+  }, [redirectTo, isLoading, router, shouldRedirectAuthenticatedUser]);
 
-  if (user) {
+  if (isLoading || shouldRedirectAuthenticatedUser) {
     return (
       <div className="theme-page flex min-h-screen items-center justify-center p-8">
         <div className="theme-panel rounded-[28px] px-8 py-6 text-center">
-          <p className="theme-muted text-sm">Redirecting to your workspace...</p>
+          <p className="theme-muted text-sm">Redirecting to your account...</p>
         </div>
       </div>
     );
@@ -47,13 +54,18 @@ export default function LoginPageClient({
     <div className="theme-page min-h-screen">
       {surface === "admin" ? (
         <div className="mx-auto flex min-h-screen max-w-3xl items-center justify-center px-4 py-8 sm:px-6 lg:px-8">
-          <LoginForm
-            redirectTo={redirectTo}
-            title="Admin sign in"
-            body=""
-            helpHref="mailto:info@off2zim.co.zw"
-            helpLabel="Request admin support"
-            signupHref=""
+            <LoginForm
+              surface={surface}
+              redirectTo={redirectTo}
+              title="Admin sign in"
+              body={
+                user && user.role !== "admin"
+                  ? "You are currently signed in with a different account role. Sign in with an admin account to open the admin workspace."
+                  : ""
+              }
+              helpHref="mailto:info@off2zim.co.zw"
+              helpLabel="Request admin support"
+              signupHref=""
             signupLabel=""
             showSocialButtons={false}
             compactHeader
@@ -106,7 +118,20 @@ export default function LoginPageClient({
           </section>
 
           <aside className="flex items-center justify-center px-0 py-2 lg:px-10">
-            <LoginForm redirectTo={redirectTo} />
+            <LoginForm
+              surface={surface}
+              redirectTo={redirectTo}
+              showSocialButtons={false}
+              body={
+                reason === "session-expired"
+                  ? "Your session expired, so we signed you out safely. Sign in again to continue your trip planning."
+                  : user && user.role !== surface
+                    ? `You are currently signed in as ${user.role}. Sign in with your ${
+                        surface === "provider" ? "provider" : "traveler"
+                      } account to continue here.`
+                  : undefined
+              }
+            />
           </aside>
         </div>
       )}

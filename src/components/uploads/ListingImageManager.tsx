@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { apiFetch } from "@/lib/client-api";
-import { Camera, GripVertical, Loader2, Trash2, X } from "lucide-react";
+import { Camera, Loader2, X } from "lucide-react";
 
 interface ListingImageManagerProps {
   listingId: string;

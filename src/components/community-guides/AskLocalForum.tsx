@@ -4,10 +4,8 @@ import React, { useState } from "react";
 import {
   MessageCircle,
   Search,
-  Filter,
   Heart,
   Reply,
-  Calendar,
   MapPin,
   Star,
   Badge,
@@ -120,7 +118,7 @@ const categories = [
 export default function AskLocalForum() {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All Categories");
-  const [showNewPostForm, setShowNewPostForm] = useState(false);
+  const [, setShowNewPostForm] = useState(false);
 
   const filteredPosts = mockPosts.filter((post) => {
     const matchesSearch =

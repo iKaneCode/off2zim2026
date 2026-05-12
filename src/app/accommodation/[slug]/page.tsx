@@ -157,7 +157,7 @@ export default function AccommodationDetailPage() {
       <div className="theme-page min-h-screen flex items-center justify-center px-4">
         <div className="theme-panel rounded-[32px] p-10 text-center max-w-md">
           <h1 className="theme-heading text-2xl font-semibold">Stay not found</h1>
-          <p className="theme-muted mt-2 text-sm">This accommodation doesn't exist or has been removed.</p>
+          <p className="theme-muted mt-2 text-sm">This accommodation is not available or may have been removed.</p>
           <Link href="/accommodation" className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#ff5630] px-5 py-3 text-sm font-semibold text-white hover:bg-[#ff7352] transition-colors">
             <ArrowLeft className="h-4 w-4" />
             Back to stays
@@ -249,7 +249,7 @@ export default function AccommodationDetailPage() {
             </div>
 
             <div className="theme-panel rounded-[24px] p-5">
-              <h2 className="theme-heading font-semibold mb-4">What's included</h2>
+              <h2 className="theme-heading font-semibold mb-4">What&apos;s included</h2>
               <div className="grid grid-cols-2 gap-2.5">
                 {stay.amenities.map((amenity) => (
                   <div key={amenity} className="flex items-center gap-2.5 rounded-[12px] bg-white/[0.04] border border-white/[0.06] px-3 py-2.5">
@@ -345,7 +345,7 @@ export default function AccommodationDetailPage() {
                 Reserve this stay
               </button>
 
-              <p className="text-center text-xs theme-subtle">You won't be charged yet — this submits a booking request.</p>
+              <p className="text-center text-xs theme-subtle">You will not be charged yet. This sends a booking request.</p>
             </div>
           </div>
         </div>

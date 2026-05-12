@@ -1,6 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useEffect, useReducer } from "react";
+import toast from "react-hot-toast";
 import {
   AuthContextType,
   AuthState,
@@ -175,6 +176,27 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     hydrateSession();
   }, []);
 
+  useEffect(() => {
+    const handleSessionExpired = (event: Event) => {
+      const detail =
+        event instanceof CustomEvent ? event.detail as { path?: string } : {};
+
+      clearAuth();
+      if (detail?.path && typeof window !== "undefined") {
+        sessionStorage.setItem("off2zim_post_logout_redirect", detail.path);
+      }
+      sessionStorage.setItem("off2zim_auth_notice", "session-expired");
+      dispatch({ type: "LOGOUT" });
+      toast.error("Your session expired. Sign in again to continue.");
+    };
+
+    window.addEventListener("off2zim:session-expired", handleSessionExpired);
+
+    return () => {
+      window.removeEventListener("off2zim:session-expired", handleSessionExpired);
+    };
+  }, []);
+
   const login = async (credentials: LoginCredentials) => {
     dispatch({ type: "LOGIN_START" });
 
@@ -271,6 +293,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // If the session is already gone we can still clear client state safely.
     } finally {
       clearAuth();
+      if (typeof window !== "undefined") {
+        sessionStorage.removeItem("off2zim_auth_notice");
+        sessionStorage.removeItem("off2zim_post_logout_redirect");
+      }
       dispatch({ type: "LOGOUT" });
     }
   };

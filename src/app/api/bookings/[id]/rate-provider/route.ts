@@ -3,7 +3,6 @@ import { z } from "zod";
 import { apiError } from "@/lib/http";
 import { requireSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { recalculateExplorerScore } from "@/lib/explorer-score";
 import { rateLimit, rateLimitResponse, RATING_LIMIT } from "@/lib/rate-limit";
 
 const BLIND_REVEAL_DAYS = 7;

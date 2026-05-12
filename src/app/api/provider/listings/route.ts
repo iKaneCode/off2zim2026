@@ -4,6 +4,12 @@ import { prisma } from "@/lib/prisma";
 import { apiError } from "@/lib/http";
 import { requireSessionUser } from "@/lib/auth";
 import { serializeListing } from "@/lib/platform";
+import {
+  buildDestinationMetadata,
+  getListingDestinationMetadata,
+  listingRequiresDestination,
+  resolveListingDestination,
+} from "@/lib/listing-destination-rules";
 
 export const dynamic = "force-dynamic";
 const listingSchema = z.object({
@@ -34,13 +40,32 @@ const listingSchema = z.object({
       z.object({
         startDate: z.string(),
         endDate: z.string(),
-        unitsAvailable: z.coerce.number().int().optional().nullable(),
+        unitsAvailable: z.coerce.number().int().min(0).optional().nullable(),
         status: z.string().default("available"),
         notes: z.string().optional().nullable(),
       })
     )
     .default([]),
 });
+
+function validateAvailabilitySlots(
+  availability: Array<{ startDate: string; endDate: string }>
+) {
+  for (const slot of availability) {
+    const start = new Date(slot.startDate);
+    const end = new Date(slot.endDate);
+
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+      return "Availability slots must use valid start and end dates.";
+    }
+
+    if (end <= start) {
+      return "Availability slot end dates must be after start dates.";
+    }
+  }
+
+  return null;
+}
 
 function slugify(value: string) {
   return value
@@ -100,6 +125,23 @@ export async function POST(request: NextRequest) {
     }
 
     const payload = listingSchema.parse(await request.json());
+    const availabilityError = validateAvailabilitySlots(payload.availability);
+
+    if (availabilityError) {
+      return apiError(availabilityError, 422);
+    }
+    const submittedDestination = getListingDestinationMetadata(payload.metadata);
+    const destination = resolveListingDestination(submittedDestination.destinationId);
+    const requiresDestination = listingRequiresDestination(payload.category);
+
+    if (requiresDestination && !destination) {
+      return apiError(
+        "Choose the destination this listing belongs to before saving.",
+        422
+      );
+    }
+
+    const destinationMetadata = buildDestinationMetadata(destination);
     const slugBase = slugify(payload.title) || "listing";
 
     let slug = slugBase;
@@ -123,7 +165,7 @@ export async function POST(request: NextRequest) {
         listingType: payload.listingType,
         shortDescription: payload.shortDescription || null,
         description: payload.description,
-        location: payload.location,
+        location: destination?.name ?? payload.location,
         pricingModel: payload.pricingModel,
         basePrice: payload.basePrice ?? null,
         currency: payload.currency,
@@ -137,7 +179,10 @@ export async function POST(request: NextRequest) {
         tags: JSON.stringify(payload.tags),
         amenities: JSON.stringify(payload.amenities),
         policies: JSON.stringify(payload.policies),
-        metadata: JSON.stringify(payload.metadata),
+        metadata: JSON.stringify({
+          ...payload.metadata,
+          ...destinationMetadata,
+        }),
         availability: {
           create: payload.availability.map((slot) => ({
             startDate: new Date(slot.startDate),

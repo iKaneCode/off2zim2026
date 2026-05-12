@@ -11,35 +11,35 @@ export default function TripPlannerFeatures() {
   const features = [
     {
       icon: <UserGroupIcon className="h-8 w-8 text-[#5aa7ff]" />,
-      title: "Community-centric planning",
+      title: "Local advice while you plan",
       description:
-        "Bring verified local recommendations into the same place where you organize your route.",
+        "Bring verified local recommendations into the same place where you organize your trip.",
       benefits: [
-        "Ask locals for better sequencing",
-        "Find hidden gems with context",
-        "Blend logistics with real insight",
+        "Ask locals how to sequence your trip",
+        "Find less obvious places to visit",
+        "Blend logistics with practical local advice",
       ],
     },
     {
       icon: <ShieldCheckIcon className="h-8 w-8 text-[#7ddf8c]" />,
-      title: "Trusted provider layer",
+      title: "Trusted services built in",
       description:
-        "The planner works best because it connects to verified stays, activities, and local suppliers.",
+        "The planner works best because it connects to verified stays, activities, and service providers.",
       benefits: [
-        "Trust signals built into planning",
-        "Clearer booking confidence",
+        "Trust signals visible while planning",
+        "More confidence before booking",
         "Less guesswork across providers",
       ],
     },
     {
       icon: <ClockIcon className="h-8 w-8 text-[#ffc247]" />,
-      title: "Smarter logistics checks",
+      title: "Practical trip checks",
       description:
-        "Warnings, sequencing, and budget visibility make the itinerary feel practical, not just pretty.",
+        "Warnings, sequencing, and budget visibility help make the itinerary practical, not just attractive on screen.",
       benefits: [
         "Spot travel gaps early",
         "Reduce timing conflicts",
-        "Keep cost and flow visible",
+        "Keep timing and cost visible",
       ],
     },
   ];
@@ -52,11 +52,10 @@ export default function TripPlannerFeatures() {
             Why it fits Off2Zim
           </p>
           <h2 className="theme-heading mt-3 text-3xl font-semibold md:text-4xl">
-            Planning should feel as polished as discovery
+            Planning should feel as clear as discovery
           </h2>
           <p className="theme-muted mx-auto mt-4 max-w-2xl text-base leading-7">
-            The planner is strongest when it carries the same trust, destination-first
-            clarity, and human guidance that already shapes the rest of the product.
+            The planner works best when it gives you the same trust, destination focus, and human support found across the rest of Off2Zim.
           </p>
         </div>
 
@@ -83,15 +82,14 @@ export default function TripPlannerFeatures() {
             Need help shaping the route?
           </h3>
           <p className="mx-auto mt-3 max-w-2xl text-sm leading-7 text-slate-700 dark:text-white/75">
-            Pair your itinerary with Community Guides for local recommendations,
-            video consults, or booking confidence on harder multi-stop trips.
+            Pair your itinerary with Community Guides for local recommendations, video consultations, or extra help on more complex multi-stop trips.
           </p>
           <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
             <button className="rounded-full bg-slate-950 px-6 py-3 text-sm font-semibold text-white dark:bg-white dark:text-black">
-              Find a community guide
+              Find a local guide
             </button>
             <button className="rounded-full border border-black/10 bg-white/70 px-6 py-3 text-sm font-semibold text-slate-950 dark:border-white/20 dark:bg-white/10 dark:text-white">
-              Learn about Guide+ services
+              Learn about Guide+ support
             </button>
           </div>
         </div>

@@ -10,17 +10,23 @@ import {
   EyeOff,
   MapPin,
   Plus,
+  Trash2,
   Search,
   Star,
 } from "lucide-react";
 import { apiFetch } from "@/lib/client-api";
 import type { ProviderListingRecord } from "@/types/platform";
 import ListingImageManager from "@/components/uploads/ListingImageManager";
+import {
+  listingRequiresDestination,
+} from "@/lib/listing-destination-rules";
+import type { ExplorerDestinationSummary } from "@/lib/destination-explorer";
+import { inferServiceGroup, serviceGroups } from "@/lib/taxonomy";
 
 const initialForm = {
   title: "",
   category: "Experience",
-  listingType: "experience",
+  listingType: "game-drive",
   description: "",
   shortDescription: "",
   location: "",
@@ -30,6 +36,8 @@ const initialForm = {
   bookingMode: "request",
   visibility: "private" as "private" | "public",
   status: "draft" as ProviderListingRecord["status"],
+  destinationId: "",
+  capacity: "",
 };
 
 // ── ListingCard ───────────────────────────────────────────────────────────────
@@ -38,6 +46,11 @@ interface ListingCardProps {
   listing: ProviderListingRecord;
   onToggleVisibility: (listing: ProviderListingRecord) => Promise<void>;
   onToggleStatus: (listing: ProviderListingRecord) => Promise<void>;
+  onSaveAvailability: (
+    listing: ProviderListingRecord,
+    availability: ProviderListingRecord["availability"],
+    capacity?: number | null
+  ) => Promise<void>;
   onImagesUpdated: (images: string[]) => void;
 }
 
@@ -45,9 +58,51 @@ function ListingCard({
   listing,
   onToggleVisibility,
   onToggleStatus,
+  onSaveAvailability,
   onImagesUpdated,
 }: ListingCardProps) {
   const [showPhotos, setShowPhotos] = useState(false);
+  const [showAvailability, setShowAvailability] = useState(false);
+  const [savingAvailability, setSavingAvailability] = useState(false);
+  const [capacityDraft, setCapacityDraft] = useState(
+    listing.capacity ? String(listing.capacity) : ""
+  );
+  const [availabilityDraft, setAvailabilityDraft] = useState(
+    listing.availability.map((slot) => ({
+      ...slot,
+      startDate: toDateTimeLocal(slot.startDate),
+      endDate: toDateTimeLocal(slot.endDate),
+    }))
+  );
+
+  const availableSlots = listing.availability.filter(
+    (slot) => slot.status === "available"
+  ).length;
+  const listingGroup = inferServiceGroup(listing);
+  const serviceSubtype =
+    typeof listing.metadata.serviceSubtype === "string"
+      ? listing.metadata.serviceSubtype
+      : listing.listingType;
+
+  const handleSaveAvailability = async () => {
+    setSavingAvailability(true);
+    try {
+      await onSaveAvailability(
+        listing,
+        availabilityDraft.map((slot) => ({
+          ...slot,
+          unitsAvailable:
+            slot.unitsAvailable === null || slot.unitsAvailable === undefined
+              ? null
+              : Number(slot.unitsAvailable),
+        })),
+        capacityDraft ? Number(capacityDraft) : null
+      );
+      setShowAvailability(false);
+    } finally {
+      setSavingAvailability(false);
+    }
+  };
 
   return (
     <article className="theme-panel rounded-[32px] p-6">
@@ -66,7 +121,19 @@ function ListingCard({
             </span>
           </div>
           <div className="theme-muted mt-3 flex flex-wrap gap-3 text-sm">
-            <span>{listing.category}</span>
+            <span>{listingGroup.label}</span>
+            <span>{String(serviceSubtype).replace(/-/g, " ")}</span>
+            {listing.requiresDestination ? (
+              <span
+                className={`rounded-full px-2.5 py-1 text-xs font-medium ${
+                  listing.hasDestinationAssignment
+                    ? "bg-[#153220] text-[#8cf0a1]"
+                    : "bg-[#2d1714] text-[#ffb09c]"
+                }`}
+              >
+                {listing.destinationName || "Destination needed"}
+              </span>
+            ) : null}
             <span className="inline-flex items-center gap-2">
               <MapPin className="h-4 w-4 text-[#ff7352]" />
               {listing.location}
@@ -115,6 +182,18 @@ function ListingCard({
               <ChevronDown className="h-3.5 w-3.5" />
             )}
           </button>
+          <button
+            onClick={() => setShowAvailability((value) => !value)}
+            className="theme-button-secondary inline-flex items-center gap-2 rounded-full px-4 py-3 text-sm font-medium"
+          >
+            <Plus className="h-4 w-4" />
+            Availability
+            {showAvailability ? (
+              <ChevronUp className="h-3.5 w-3.5" />
+            ) : (
+              <ChevronDown className="h-3.5 w-3.5" />
+            )}
+          </button>
         </div>
       </div>
 
@@ -128,11 +207,172 @@ function ListingCard({
             : "Private until the provider chooses to publish it."}
         </div>
         <div className="theme-card-soft rounded-[24px] p-4 text-sm">
-          {listing.bookingMode === "instant"
-            ? "Configured for instant confirmation."
-            : "Configured for booking requests and supplier review."}
+          {availableSlots > 0
+            ? `${availableSlots} available slot${availableSlots === 1 ? "" : "s"} configured.`
+            : "Add availability before relying on instant booking."}
         </div>
       </div>
+
+      {showAvailability ? (
+        <div className="mt-5 rounded-[24px] border border-white/10 bg-white/[0.03] p-5">
+          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div>
+              <h4 className="theme-heading text-lg font-semibold">Availability and capacity</h4>
+              <p className="theme-muted mt-1 text-sm">
+                Add the dates or time windows travelers can request or book.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() =>
+                setAvailabilityDraft((current) => [
+                  ...current,
+                  {
+                    id: `new-${Date.now()}`,
+                    startDate: "",
+                    endDate: "",
+                    unitsAvailable: listing.capacity ?? null,
+                    status: "available",
+                    notes: "",
+                  },
+                ])
+              }
+              className="theme-button-secondary inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm"
+            >
+              <Plus className="h-4 w-4" />
+              Add slot
+            </button>
+          </div>
+
+          <label className="mt-4 block">
+            <span className="theme-label mb-1.5 block text-xs uppercase tracking-[0.18em]">
+              Default capacity
+            </span>
+            <input
+              type="number"
+              min={0}
+              value={capacityDraft}
+              onChange={(event) => setCapacityDraft(event.target.value)}
+              className="theme-input w-full rounded-2xl px-4 py-3 text-sm md:max-w-xs"
+              placeholder="Total seats, rooms, or units"
+            />
+          </label>
+
+          <div className="mt-4 grid gap-3">
+            {availabilityDraft.map((slot, index) => (
+              <div
+                key={slot.id || index}
+                className="grid gap-3 rounded-2xl border border-white/10 bg-black/[0.03] p-4 dark:bg-black/20 lg:grid-cols-[1fr_1fr_140px_150px_auto]"
+              >
+                <input
+                  type="datetime-local"
+                  value={slot.startDate}
+                  onChange={(event) =>
+                    setAvailabilityDraft((current) =>
+                      current.map((item, itemIndex) =>
+                        itemIndex === index
+                          ? { ...item, startDate: event.target.value }
+                          : item
+                      )
+                    )
+                  }
+                  className="theme-input rounded-xl px-3 py-2 text-sm"
+                />
+                <input
+                  type="datetime-local"
+                  value={slot.endDate}
+                  onChange={(event) =>
+                    setAvailabilityDraft((current) =>
+                      current.map((item, itemIndex) =>
+                        itemIndex === index
+                          ? { ...item, endDate: event.target.value }
+                          : item
+                      )
+                    )
+                  }
+                  className="theme-input rounded-xl px-3 py-2 text-sm"
+                />
+                <input
+                  type="number"
+                  min={0}
+                  value={slot.unitsAvailable ?? ""}
+                  onChange={(event) =>
+                    setAvailabilityDraft((current) =>
+                      current.map((item, itemIndex) =>
+                        itemIndex === index
+                          ? {
+                              ...item,
+                              unitsAvailable: event.target.value
+                                ? Number(event.target.value)
+                                : null,
+                            }
+                          : item
+                      )
+                    )
+                  }
+                  className="theme-input rounded-xl px-3 py-2 text-sm"
+                  placeholder="Units"
+                />
+                <select
+                  value={slot.status}
+                  onChange={(event) =>
+                    setAvailabilityDraft((current) =>
+                      current.map((item, itemIndex) =>
+                        itemIndex === index ? { ...item, status: event.target.value } : item
+                      )
+                    )
+                  }
+                  className="theme-input rounded-xl px-3 py-2 text-sm"
+                >
+                  <option value="available">Available</option>
+                  <option value="blocked">Blocked</option>
+                  <option value="sold_out">Sold out</option>
+                </select>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setAvailabilityDraft((current) =>
+                      current.filter((_, itemIndex) => itemIndex !== index)
+                    )
+                  }
+                  className="theme-button-secondary rounded-xl p-2"
+                  title="Remove slot"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-5 flex flex-wrap gap-3">
+            <button
+              type="button"
+              disabled={savingAvailability}
+              onClick={handleSaveAvailability}
+              className="rounded-full bg-[#ff5630] px-5 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {savingAvailability ? "Saving..." : "Save availability"}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setAvailabilityDraft(
+                  listing.availability.map((slot) => ({
+                    ...slot,
+                    startDate: toDateTimeLocal(slot.startDate),
+                    endDate: toDateTimeLocal(slot.endDate),
+                  }))
+                );
+                setCapacityDraft(listing.capacity ? String(listing.capacity) : "");
+                setShowAvailability(false);
+              }}
+              className="theme-button-secondary rounded-full px-5 py-3 text-sm"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : null}
 
       {showPhotos && (
         <div className="mt-5 rounded-[24px] border border-white/10 bg-white/[0.03] p-5">
@@ -147,6 +387,16 @@ function ListingCard({
   );
 }
 
+function toDateTimeLocal(value: string) {
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return "";
+  }
+
+  return date.toISOString().slice(0, 16);
+}
+
 // ── ListingManagement ─────────────────────────────────────────────────────────
 
 export default function ListingManagement() {
@@ -157,6 +407,7 @@ export default function ListingManagement() {
   const [showComposer, setShowComposer] = useState(false);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState(initialForm);
+  const [destinations, setDestinations] = useState<ExplorerDestinationSummary[]>([]);
 
   const loadListings = async () => {
     try {
@@ -174,6 +425,9 @@ export default function ListingManagement() {
 
   useEffect(() => {
     loadListings();
+    apiFetch<{ destinations: ExplorerDestinationSummary[] }>("/api/destinations")
+      .then((payload) => setDestinations(payload.destinations))
+      .catch(() => setDestinations([]));
   }, []);
 
   const filteredListings = useMemo(() => {
@@ -189,6 +443,20 @@ export default function ListingManagement() {
   const handleCreateListing = async (event: React.FormEvent) => {
     event.preventDefault();
     setSaving(true);
+    const selectedDestination = destinations.find(
+      (destination) => destination.id === form.destinationId
+    );
+    const requiresDestination = listingRequiresDestination(form.category);
+    const serviceGroup = inferServiceGroup({
+      category: form.category,
+      listingType: form.listingType,
+    });
+
+    if (requiresDestination && !selectedDestination) {
+      setError("Choose the destination this listing belongs to.");
+      setSaving(false);
+      return;
+    }
 
     try {
       const payload = await apiFetch<{ listing: ProviderListingRecord }>(
@@ -197,12 +465,25 @@ export default function ListingManagement() {
           method: "POST",
           body: JSON.stringify({
             ...form,
+            location: selectedDestination?.name || form.location,
             basePrice: form.basePrice ? Number(form.basePrice) : null,
+            capacity: form.capacity ? Number(form.capacity) : null,
             instantBooking: form.bookingMode === "instant",
             amenities: [],
             tags: [],
             policies: {},
-            metadata: {},
+            metadata: selectedDestination
+              ? {
+                  destinationId: selectedDestination.id,
+                  destinationName: selectedDestination.name,
+                  destinationLocation: selectedDestination.location,
+                  serviceGroup: serviceGroup.id,
+                  serviceSubtype: form.listingType,
+                }
+              : {
+                  serviceGroup: serviceGroup.id,
+                  serviceSubtype: form.listingType,
+                },
             availability: [],
           }),
         }
@@ -218,6 +499,14 @@ export default function ListingManagement() {
       setSaving(false);
     }
   };
+  const selectedServiceGroup = inferServiceGroup({
+    category: form.category,
+    listingType: form.listingType,
+  });
+  const selectedSubtypes = selectedServiceGroup.subtypes;
+  const shouldShowDestinationSelect =
+    serviceGroups.some((group) => group.providerCategory === form.category) ||
+    listingRequiresDestination(form.category);
 
   const toggleVisibility = async (listing: ProviderListingRecord) => {
     try {
@@ -317,20 +606,76 @@ export default function ListingManagement() {
               }
               className="theme-input rounded-2xl px-4 py-3 text-sm"
               placeholder="Location"
-              required
+              required={!listingRequiresDestination(form.category)}
             />
+            {shouldShowDestinationSelect ? (
+              <select
+                value={form.destinationId}
+                onChange={(event) => {
+                  const destination = destinations.find(
+                    (item) => item.id === event.target.value
+                  );
+                  setForm((current) => ({
+                    ...current,
+                    destinationId: event.target.value,
+                    location: destination?.name || current.location,
+                  }));
+                }}
+                className="theme-input rounded-2xl px-4 py-3 text-sm"
+                required={listingRequiresDestination(form.category)}
+              >
+                <option value="">
+                  {listingRequiresDestination(form.category)
+                    ? "Choose destination"
+                    : "Optional destination"}
+                </option>
+                {destinations.map((destination) => (
+                  <option key={destination.id} value={destination.id}>
+                    {destination.name}
+                  </option>
+                ))}
+              </select>
+            ) : null}
             <select
               value={form.category}
               onChange={(event) =>
-                setForm((current) => ({ ...current, category: event.target.value }))
+                setForm((current) => {
+                  const group = serviceGroups.find(
+                    (item) => item.providerCategory === event.target.value
+                  );
+
+                  return {
+                    ...current,
+                    category: event.target.value,
+                    listingType: group?.subtypes[0]?.id || current.listingType,
+                    destinationId: listingRequiresDestination(event.target.value)
+                      ? current.destinationId
+                      : current.destinationId,
+                  };
+                })
               }
               className="theme-input rounded-2xl px-4 py-3 text-sm"
             >
-              <option>Accommodation</option>
-              <option>Experience</option>
+              {serviceGroups.map((group) => (
+                <option key={group.id}>{group.providerCategory}</option>
+              ))}
               <option>Shopping Product</option>
-              <option>Transport</option>
-              <option>Dining</option>
+            </select>
+            <select
+              value={form.listingType}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  listingType: event.target.value,
+                }))
+              }
+              className="theme-input rounded-2xl px-4 py-3 text-sm"
+            >
+              {selectedSubtypes.map((subtype) => (
+                <option key={subtype.id} value={subtype.id}>
+                  {subtype.label}
+                </option>
+              ))}
             </select>
             <select
               value={form.bookingMode}
@@ -353,6 +698,16 @@ export default function ListingManagement() {
               }
               className="theme-input rounded-2xl px-4 py-3 text-sm"
               placeholder="Base price"
+            />
+            <input
+              type="number"
+              min={0}
+              value={form.capacity}
+              onChange={(event) =>
+                setForm((current) => ({ ...current, capacity: event.target.value }))
+              }
+              className="theme-input rounded-2xl px-4 py-3 text-sm"
+              placeholder="Default capacity"
             />
             <select
               value={form.visibility}
@@ -426,6 +781,30 @@ export default function ListingManagement() {
               listing={listing}
               onToggleVisibility={toggleVisibility}
               onToggleStatus={toggleStatus}
+              onSaveAvailability={async (currentListing, availability, capacity) => {
+                const payload = await apiFetch<{ listing: ProviderListingRecord }>(
+                  `/api/provider/listings/${currentListing.id}`,
+                  {
+                    method: "PATCH",
+                    body: JSON.stringify({
+                      availability: availability.map((slot) => ({
+                        startDate: slot.startDate,
+                        endDate: slot.endDate,
+                        unitsAvailable: slot.unitsAvailable ?? null,
+                        status: slot.status,
+                        notes: slot.notes ?? null,
+                      })),
+                      capacity,
+                    }),
+                  }
+                );
+
+                setListings((current) =>
+                  current.map((item) =>
+                    item.id === payload.listing.id ? payload.listing : item
+                  )
+                );
+              }}
               onImagesUpdated={(imgs) =>
                 setListings((prev) =>
                   prev.map((l) => (l.id === listing.id ? { ...l, images: imgs } : l))

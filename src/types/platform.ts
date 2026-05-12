@@ -115,6 +115,11 @@ export interface ProviderListingRecord {
   amenities: string[];
   policies: Record<string, unknown>;
   metadata: Record<string, unknown>;
+  destinationId?: string | null;
+  destinationName?: string | null;
+  destinationLocation?: string | null;
+  requiresDestination: boolean;
+  hasDestinationAssignment: boolean;
   availability: ListingAvailabilityRecord[];
   bookingsCount?: number;
   createdAt: string;
@@ -222,6 +227,23 @@ export interface AdminBookingRecord {
   disputesCount: number;
 }
 
+export interface AdminUserRecord {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  verificationStatus: string;
+  hasVerifiedBadge: boolean;
+  emailVerified?: string | null;
+  phone?: string | null;
+  nationality?: string | null;
+  createdAt: string;
+  updatedAt: string;
+  bookingCount: number;
+  providerCompanyCount: number;
+  disputeCount: number;
+}
+
 export interface AdminListingRecord {
   id: string;
   companyId: string;
@@ -237,6 +259,12 @@ export interface AdminListingRecord {
   bookingMode: string;
   status: ProviderListingStatus;
   visibility: ProviderListingVisibility;
+  capacity?: number | null;
+  destinationId?: string | null;
+  destinationName?: string | null;
+  destinationLocation?: string | null;
+  requiresDestination: boolean;
+  hasDestinationAssignment: boolean;
   availabilityCount: number;
   bookingsCount: number;
   disputesCount: number;
@@ -254,6 +282,10 @@ export interface DisputeRecord {
   id: string;
   bookingId: string;
   bookingConfirmationNumber: string;
+  bookingStatus: string;
+  paymentStatus: string;
+  totalAmount: number;
+  currency: string;
   companyId?: string | null;
   reason: string;
   details?: string | null;

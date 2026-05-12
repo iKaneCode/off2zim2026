@@ -2,16 +2,22 @@
 
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   CalendarDays,
   ChevronDown,
   Compass,
+  LogOut,
   MapPinned,
+  Settings,
   ShoppingBag,
   Store,
+  LayoutDashboard,
   X,
 } from "lucide-react";
 import { getSurfaceHref } from "@/lib/app-surface";
+import { getAccountRoute } from "@/lib/auth-routing";
+import { useAuth } from "@/contexts/AuthContext";
 import SiteLogo from "../layout/SiteLogo";
 
 interface MobileMenuProps {
@@ -25,10 +31,7 @@ const sections = [
     icon: Compass,
     links: [
       { label: "Destinations", href: "/travel-guide" },
-      { label: "Stays", href: "/accommodation" },
-      { label: "Experiences", href: "/activities" },
-      { label: "Restaurants", href: "/restaurants" },
-      { label: "Ask a Local", href: "/community-guides" },
+      { label: "Events", href: "/events" },
     ],
   },
   {
@@ -39,6 +42,7 @@ const sections = [
       { label: "Transport", href: "/transport" },
       { label: "Flights", href: "/transport/flights" },
       { label: "Events", href: "/events" },
+      { label: "Destination services", href: "/travel-guide" },
     ],
   },
   {
@@ -53,7 +57,17 @@ const sections = [
 ];
 
 export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
+  const { user, isLoading, logout } = useAuth();
+  const router = useRouter();
   const [openSection, setOpenSection] = useState("Explore");
+  const accountRoute = getAccountRoute(user);
+
+  const handleLogout = async () => {
+    onClose();
+    await logout();
+    router.push(getSurfaceHref("explorer", "/"));
+    router.refresh();
+  };
 
   useEffect(() => {
     if (!isOpen) return;
@@ -100,14 +114,55 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 pb-6 pt-5">
-          <div className="border-b border-black/10 pb-5 dark:border-white/10">
-            <div className="text-xs uppercase tracking-[0.28em] text-black/45 dark:text-white/42">
-              Explore | Experience | Enjoy
+          {user ? (
+            <div className="border-b border-black/10 pb-5 dark:border-white/10">
+              <div className="text-xs uppercase tracking-[0.28em] text-black/45 dark:text-white/42">
+                Signed in
+              </div>
+              <div className="mt-3 text-2xl font-semibold leading-tight text-slate-950 dark:text-white">
+                {[user.firstName, user.lastName].filter(Boolean).join(" ").trim() || user.email}
+              </div>
+              <div className="mt-2 text-sm text-slate-600 dark:text-white/62">
+                Your trip plans, saved places, and account tools are ready.
+              </div>
+
+              <div className="mt-4 grid gap-3">
+                <Link
+                  href={accountRoute}
+                  onClick={onClose}
+                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[#ff5630] px-4 py-3 text-sm font-semibold text-white"
+                >
+                  <LayoutDashboard className="h-4 w-4" />
+                  Open account
+                </Link>
+                <Link
+                  href={getSurfaceHref("explorer", "/profile")}
+                  onClick={onClose}
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-black/10 px-4 py-3 text-sm font-medium text-slate-900 dark:border-white/10 dark:text-white/90"
+                >
+                  <Settings className="h-4 w-4" />
+                  Profile settings
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-black/10 px-4 py-3 text-sm font-medium text-slate-900 dark:border-white/10 dark:text-white/90"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Sign out
+                </button>
+              </div>
             </div>
-            <div className="mt-3 text-2xl font-semibold leading-tight text-slate-950 dark:text-white">
-              Everything you need for the trip, grouped properly.
+          ) : (
+            <div className="border-b border-black/10 pb-5 dark:border-white/10">
+              <div className="text-xs uppercase tracking-[0.28em] text-black/45 dark:text-white/42">
+                Explore | Experience | Enjoy
+              </div>
+              <div className="mt-3 text-2xl font-semibold leading-tight text-slate-950 dark:text-white">
+                Choose a destination first, then explore the services available there.
+              </div>
             </div>
-          </div>
+          )}
 
           <div className="mt-5 space-y-3">
             {sections.map((section) => {
@@ -163,22 +218,24 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
             })}
           </div>
 
-          <div className="mt-6 grid gap-3">
-            <Link
-              href={getSurfaceHref("explorer", "/login")}
-              onClick={onClose}
-              className="inline-flex items-center justify-center rounded-full border border-black/10 px-4 py-3 text-sm font-medium text-slate-900 dark:border-white/10 dark:text-white/90"
-            >
-              Sign in
-            </Link>
-            <Link
-              href={getSurfaceHref("explorer", "/register")}
-              onClick={onClose}
-              className="inline-flex items-center justify-center rounded-full bg-[#ff5630] px-4 py-3 text-sm font-semibold text-white"
-            >
-              Create account
-            </Link>
-          </div>
+          {!isLoading && !user ? (
+            <div className="mt-6 grid gap-3">
+              <Link
+                href={getSurfaceHref("explorer", "/login")}
+                onClick={onClose}
+                className="inline-flex items-center justify-center rounded-full border border-black/10 px-4 py-3 text-sm font-medium text-slate-900 dark:border-white/10 dark:text-white/90"
+              >
+                Traveler login
+              </Link>
+              <Link
+                href={getSurfaceHref("explorer", "/register")}
+                onClick={onClose}
+                className="inline-flex items-center justify-center rounded-full bg-[#ff5630] px-4 py-3 text-sm font-semibold text-white"
+              >
+                Create account
+              </Link>
+            </div>
+          ) : null}
 
           <div className="mt-6 flex items-center gap-3 border-t border-black/10 pt-5 text-sm text-slate-600 dark:border-white/10 dark:text-white/62">
             <CalendarDays className="h-4 w-4 text-[#ff7352]" />

@@ -1,3 +1,13 @@
+export class ApiError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
 export function getStoredToken() {
   if (typeof window === "undefined") {
     return null;
@@ -28,6 +38,7 @@ export async function apiFetch<T>(
   input: RequestInfo | URL,
   init: RequestInit = {}
 ): Promise<T> {
+  const token = getStoredToken();
   const isFormData =
     typeof FormData !== "undefined" && init.body instanceof FormData;
   const headers = getAuthHeaders(init.headers, !!init.body && !isFormData);
@@ -40,7 +51,23 @@ export async function apiFetch<T>(
   const payload = await response.json().catch(() => ({}));
 
   if (!response.ok) {
-    throw new Error(payload.error || "Request failed");
+    const message = payload.error || "Request failed";
+
+    if (
+      response.status === 401 &&
+      token &&
+      typeof window !== "undefined"
+    ) {
+      window.dispatchEvent(
+        new CustomEvent("off2zim:session-expired", {
+          detail: {
+            path: `${window.location.pathname}${window.location.search}`,
+          },
+        })
+      );
+    }
+
+    throw new ApiError(message, response.status);
   }
 
   return payload as T;

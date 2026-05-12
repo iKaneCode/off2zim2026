@@ -1,17 +1,25 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CheckCircle2, LayoutGrid, PanelRightOpen, Plus } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useTripPlanner } from "@/contexts/TripPlannerContext";
 import { usePayment } from "@/contexts/PaymentContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { getSurfaceHref } from "@/lib/app-surface";
 import {
+  addDays,
   getBudgetBreakdown,
   detectLogisticsGaps,
   getExpandedTripMeta,
   getItemDateLabel,
+  getItemPricingLabel,
   getItemRangeLabel,
+  getItemsInTripWindow,
+  getItemUnitCost,
+  getPricedItemCost,
   itemTouchesDate,
+  itemScalesWithTravelers,
   getPlannerDays,
   getTripTotals,
   PlannerSectionId,
@@ -20,16 +28,31 @@ import PlannerAddDrawer from "./planner/PlannerAddDrawer";
 import PlannerDayBoard from "./planner/PlannerDayBoard";
 import PlannerOverviewSection from "./planner/PlannerOverviewSection";
 import LogisticsWarning from "./LogisticsWarning";
-import { PlannerScheduleDefaults } from "@/types/trip-planner";
+import { PlannerScheduleDefaults, TripPlannerMeta } from "@/types/trip-planner";
 
 interface NoticeState {
   tone: "success" | "error";
   message: string;
 }
 
-export default function TripPlannerBuilder() {
+const PENDING_ITINERARY_BOOKING_KEY = "off2zim_pending_itinerary_booking";
+
+export interface TripPlannerRouteSelections {
+  isShared?: boolean;
+  meta?: Partial<TripPlannerMeta>;
+  totalBudget?: number;
+}
+
+interface TripPlannerBuilderProps {
+  routeSelections?: TripPlannerRouteSelections;
+}
+
+export default function TripPlannerBuilder({
+  routeSelections,
+}: TripPlannerBuilderProps) {
   const router = useRouter();
   const { addToBooking, currentBooking, removeFromBooking } = usePayment();
+  const { user, isLoading: authLoading } = useAuth();
   const {
     items,
     meta,
@@ -45,21 +68,119 @@ export default function TripPlannerBuilder() {
   } = useTripPlanner();
   const [activeSection, setActiveSection] = useState<PlannerSectionId>("overview");
   const [activeDay, setActiveDay] = useState<string | null>(null);
+  const [forcedActiveDay, setForcedActiveDay] = useState<string | null>(null);
+  const [allowEmptyActiveDay, setAllowEmptyActiveDay] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [drawerDefaults, setDrawerDefaults] = useState<PlannerScheduleDefaults>({
-    date: meta.startDate,
+    date: routeSelections?.meta?.startDate || meta.startDate,
   });
   const [notice, setNotice] = useState<NoticeState | null>(null);
+  const [hasAppliedRouteSelections, setHasAppliedRouteSelections] = useState(false);
+  const [hasEditedTripBrief, setHasEditedTripBrief] = useState(false);
+  const [draftMeta, setDraftMeta] = useState<TripPlannerMeta>({
+    ...meta,
+    ...routeSelections?.meta,
+  });
+  const [draftTotalBudget, setDraftTotalBudget] = useState(
+    routeSelections?.totalBudget ?? totalBudget
+  );
   const exportRef = useRef<HTMLDivElement | null>(null);
+  const pendingActiveDayRef = useRef<string | null>(null);
+  const suppressDayClicksUntilRef = useRef(0);
+  const routeSelectionKey = useMemo(
+    () =>
+      JSON.stringify({
+        isShared: Boolean(routeSelections?.isShared),
+        meta: routeSelections?.meta || {},
+        totalBudget: routeSelections?.totalBudget ?? null,
+      }),
+    [routeSelections?.isShared, routeSelections?.meta, routeSelections?.totalBudget]
+  );
+  const previousRouteSelectionKeyRef = useRef(routeSelectionKey);
 
-  const days = useMemo(() => getPlannerDays(items, meta), [items, meta]);
-  const totals = useMemo(() => getTripTotals(items, totalBudget), [items, totalBudget]);
-  const budgetBreakdown = useMemo(() => getBudgetBreakdown(items), [items]);
-  const logisticsGaps = useMemo(() => detectLogisticsGaps(items, meta), [items, meta]);
+  const plannerMeta = draftMeta;
+  const plannerTotalBudget = draftTotalBudget;
+
+  const tripWindowItems = useMemo(
+    () => getItemsInTripWindow(items, plannerMeta),
+    [items, plannerMeta]
+  );
+  const travelerCount = Math.max(plannerMeta.travelers ?? 1, 1);
+  const days = useMemo(
+    () => getPlannerDays(tripWindowItems, plannerMeta),
+    [plannerMeta, tripWindowItems]
+  );
+  const totals = useMemo(
+    () => getTripTotals(tripWindowItems, plannerTotalBudget, travelerCount),
+    [plannerTotalBudget, travelerCount, tripWindowItems]
+  );
+  const budgetBreakdown = useMemo(
+    () => getBudgetBreakdown(tripWindowItems, travelerCount),
+    [travelerCount, tripWindowItems]
+  );
+  const logisticsGaps = useMemo(
+    () => detectLogisticsGaps(tripWindowItems, plannerMeta),
+    [plannerMeta, tripWindowItems]
+  );
+  const activeDayRecord = activeDay
+    ? days.find((day) => day.key === activeDay)
+    : null;
+  const firstPopulatedDay = days.find((day) => day.items.length > 0);
+  const boardActiveDay =
+    forcedActiveDay ||
+    (!allowEmptyActiveDay &&
+    activeDay &&
+    activeDayRecord &&
+    activeDayRecord.items.length === 0 &&
+    firstPopulatedDay
+      ? firstPopulatedDay.key
+      : activeDay);
+  const preferredBoardDay =
+    forcedActiveDay || null;
+
+  const normalizeTripWindow = (
+    current: TripPlannerMeta,
+    updates: Partial<TripPlannerMeta>
+  ): TripPlannerMeta => {
+    const nextMeta = {
+      ...current,
+      ...updates,
+      ...(updates.travelers !== undefined
+        ? { travelers: Math.max(1, updates.travelers) }
+        : {}),
+    };
+
+    if (
+      updates.startDate &&
+      nextMeta.endDate &&
+      updates.startDate > nextMeta.endDate
+    ) {
+      nextMeta.endDate = updates.startDate;
+    }
+
+    if (
+      updates.endDate &&
+      nextMeta.startDate &&
+      updates.endDate < nextMeta.startDate
+    ) {
+      nextMeta.startDate = updates.endDate;
+    }
+
+    return nextMeta;
+  };
 
   useEffect(() => {
     if (!days.length) {
       setActiveDay(null);
+      return;
+    }
+
+    if (
+      pendingActiveDayRef.current &&
+      days.some((day) => day.key === pendingActiveDayRef.current)
+    ) {
+      setActiveDay(pendingActiveDayRef.current);
+      pendingActiveDayRef.current = null;
       return;
     }
 
@@ -75,7 +196,75 @@ export default function TripPlannerBuilder() {
   }, [notice]);
 
   useEffect(() => {
+    if (previousRouteSelectionKeyRef.current === routeSelectionKey) return;
+
+    previousRouteSelectionKeyRef.current = routeSelectionKey;
+    setHasAppliedRouteSelections(false);
+    setHasEditedTripBrief(false);
+    setDraftMeta({
+      ...meta,
+      ...(!routeSelections?.isShared ? routeSelections?.meta : {}),
+    });
+    setDraftTotalBudget(
+      !routeSelections?.isShared && routeSelections?.totalBudget !== undefined
+        ? routeSelections.totalBudget
+        : totalBudget
+    );
+  }, [
+    meta,
+    routeSelectionKey,
+    routeSelections?.isShared,
+    routeSelections?.meta,
+    routeSelections?.totalBudget,
+    totalBudget,
+  ]);
+
+  useEffect(() => {
+    if (!isHydrated || hasEditedTripBrief) return;
+
+    setDraftMeta({
+      ...meta,
+      ...(!routeSelections?.isShared ? routeSelections?.meta : {}),
+    });
+    setDraftTotalBudget(
+      !routeSelections?.isShared && routeSelections?.totalBudget !== undefined
+        ? routeSelections.totalBudget
+        : totalBudget
+    );
+  }, [
+    hasEditedTripBrief,
+    isHydrated,
+    meta,
+    routeSelections?.isShared,
+    routeSelections?.meta,
+    routeSelections?.totalBudget,
+    totalBudget,
+  ]);
+
+  useEffect(() => {
+    if (!isHydrated || hasAppliedRouteSelections) return;
+
+    if (routeSelections?.isShared) {
+      setHasAppliedRouteSelections(true);
+      return;
+    }
+
+    const metaUpdates: Partial<TripPlannerMeta> = routeSelections?.meta || {};
+
+    if (Object.keys(metaUpdates).length > 0) {
+      updateMeta(metaUpdates);
+    }
+
+    if (routeSelections?.totalBudget !== undefined) {
+      setTotalBudget(routeSelections.totalBudget);
+    }
+
+    setHasAppliedRouteSelections(true);
+  }, [hasAppliedRouteSelections, isHydrated, routeSelections, setTotalBudget, updateMeta]);
+
+  useEffect(() => {
     if (!isHydrated) return;
+
     const sharedData = new URLSearchParams(window.location.search).get("shared");
     if (!sharedData) return;
 
@@ -111,7 +300,7 @@ export default function TripPlannerBuilder() {
   ) => {
     setDrawerDefaults({
       ...scheduleDefaults,
-      date: scheduleDefaults?.date || date || activeDay || meta.startDate,
+      date: scheduleDefaults?.date || date || activeDay || plannerMeta.startDate,
     });
     setIsDrawerOpen(true);
   };
@@ -165,9 +354,9 @@ export default function TripPlannerBuilder() {
   const handleShare = async () => {
     const payload = btoa(
       JSON.stringify({
-        items,
-        totalBudget,
-        meta,
+        items: tripWindowItems,
+        totalBudget: plannerTotalBudget,
+        meta: plannerMeta,
       })
     );
     const url = `${window.location.origin}/trip-planner?shared=${payload}`;
@@ -176,7 +365,7 @@ export default function TripPlannerBuilder() {
     try {
       if (canUseNativeShare) {
         await navigator.share({
-          title: meta.title || "Off2Zim itinerary",
+          title: plannerMeta.title || "Off2Zim itinerary",
           text: "Explore my Off2Zim itinerary.",
           url,
         });
@@ -213,17 +402,81 @@ export default function TripPlannerBuilder() {
   const handleDeleteDay = (dayKey: string) => {
     const remainingItems = items.filter((item) => !itemTouchesDate(item, dayKey));
     reorderItems(remainingItems);
-    updateMeta({
-      excludedDates: Array.from(new Set([...(meta.excludedDates || []), dayKey])),
-    });
+    setForcedActiveDay(dayKey);
+    setActiveDay(dayKey);
     setNotice({
       tone: "success",
-      message: "That day was removed from the board.",
+      message: "Planned items were cleared from that day.",
     });
   };
 
-  const handleBookItinerary = () => {
-    if (!items.length) return;
+  const handleReorderTripWindowItems = (nextTripWindowItems: typeof tripWindowItems) => {
+    const visibleIds = new Set(tripWindowItems.map((item) => item.id));
+    const itemsOutsideWindow = items.filter((item) => !visibleIds.has(item.id));
+    reorderItems([...itemsOutsideWindow, ...nextTripWindowItems]);
+  };
+
+  const handleDraftMetaChange = (updates: Partial<TripPlannerMeta>) => {
+    const nextMeta = normalizeTripWindow(draftMeta, updates);
+
+    setHasEditedTripBrief(true);
+    setDraftMeta(nextMeta);
+    updateMeta(nextMeta);
+  };
+
+  const handleDraftBudgetChange = (value: number) => {
+    const nextBudget = Number.isFinite(value) ? Math.max(0, value) : 0;
+    setHasEditedTripBrief(true);
+    setDraftTotalBudget(nextBudget);
+    setTotalBudget(nextBudget);
+  };
+
+  const handleContinueToBoard = () => {
+    const nextMeta = normalizeTripWindow(draftMeta, {});
+    setDraftMeta(nextMeta);
+    updateMeta(nextMeta);
+    setTotalBudget(draftTotalBudget);
+    setHasAppliedRouteSelections(true);
+    setForcedActiveDay(nextMeta.startDate || null);
+    setAllowEmptyActiveDay(true);
+    if (nextMeta.startDate) {
+      setActiveDay(nextMeta.startDate);
+    }
+    setActiveSection("board");
+  };
+
+  const handleAddBoardDay = () => {
+    const currentLastDay = plannerMeta.endDate || days.at(-1)?.key || plannerMeta.startDate;
+    if (!currentLastDay) {
+      setNotice({
+        tone: "error",
+        message: "Choose a start date first, then add more days to the board.",
+      });
+      setActiveSection("overview");
+      return;
+    }
+
+    const nextDay = addDays(currentLastDay, 1);
+    const nextMeta = normalizeTripWindow(plannerMeta, {
+      startDate: plannerMeta.startDate || currentLastDay,
+      endDate: nextDay,
+      excludedDates: (plannerMeta.excludedDates || []).filter((date) => date !== nextDay),
+    });
+
+    setHasEditedTripBrief(true);
+    setDraftMeta(nextMeta);
+    updateMeta(nextMeta);
+    setForcedActiveDay(nextDay);
+    setAllowEmptyActiveDay(true);
+    setActiveDay(nextDay);
+    setNotice({
+      tone: "success",
+      message: "Another day was added to your itinerary window.",
+    });
+  };
+
+  const queueItineraryForCheckout = useCallback(() => {
+    if (!tripWindowItems.length) return false;
 
     // Remove any previously queued planner items to prevent duplicates on
     // repeat clicks (e.g. user goes back from checkout and clicks again).
@@ -231,11 +484,15 @@ export default function TripPlannerBuilder() {
       .filter((b) => b.metadata?.source === "trip-planner")
       .forEach((b) => removeFromBooking(b.id));
 
-    // Guard: travelers must be at least 1 so quantity is never 0.
-    const travelers = Math.max(1, meta.travelers ?? 1);
-
-    items.forEach((item) => {
+    tripWindowItems.forEach((item) => {
       const isAccommodation = item.type === "accommodation";
+      const scalesWithTravelers = itemScalesWithTravelers(item);
+      const unitCost = getItemUnitCost(item);
+      const effectiveCost = getPricedItemCost(item, travelerCount);
+      const bookingQuantity = scalesWithTravelers ? travelerCount : 1;
+      const bookingPrice = isAccommodation
+        ? unitCost
+        : effectiveCost / bookingQuantity;
       // "dining" is a valid PlannerItemType but not a valid BookingItem type —
       // map it to "activity" so the type constraint is satisfied at runtime.
       const bookingType =
@@ -249,11 +506,11 @@ export default function TripPlannerBuilder() {
         type: bookingType,
         name: item.title,
         description: item.location ?? item.category,
-        price: item.cost,
+        price: bookingPrice,
         currency: "USD",
-        quantity: travelers,
-        ...(isAccommodation && item.date && item.endDate
-          ? { checkIn: item.date, checkOut: item.endDate }
+        quantity: bookingQuantity,
+        ...(isAccommodation && item.date
+          ? { checkIn: item.date, checkOut: addDays(item.date, Math.max(item.quantity ?? 1, 1)) }
           : {}),
         // Preserve the original category (e.g. "dining") in the optional
         // category field even though type is mapped to "activity".
@@ -261,17 +518,68 @@ export default function TripPlannerBuilder() {
         metadata: {
           location: item.location,
           source: "trip-planner",
-          planTitle: meta.title || "Off2Zim Itinerary",
+          planTitle: plannerMeta.title || "Off2Zim Itinerary",
           date: item.date,
           startTime: item.startTime,
           endTime: item.endTime,
           image: item.image,
+          pricingModel: scalesWithTravelers ? "per_traveler" : "fixed",
+          pricingLabel: getItemPricingLabel(item, travelerCount),
+          plannerLineTotal: effectiveCost,
+          travelers: travelerCount,
         },
       });
     });
 
+    return true;
+  }, [
+    addToBooking,
+    currentBooking,
+    plannerMeta.title,
+    removeFromBooking,
+    travelerCount,
+    tripWindowItems,
+  ]);
+
+  const handleBookItinerary = () => {
+    if (!tripWindowItems.length) return;
+
+    if (authLoading) {
+      setNotice({
+        tone: "error",
+        message: "Checking your sign-in status. Please try again in a moment.",
+      });
+      return;
+    }
+
+    if (!user) {
+      if (typeof window !== "undefined") {
+        sessionStorage.setItem(PENDING_ITINERARY_BOOKING_KEY, "1");
+      }
+      setNotice({
+        tone: "success",
+        message: "Sign in or create an account to keep this booking in your history.",
+      });
+      router.push(
+        `${getSurfaceHref("explorer", "/login")}?redirect=${encodeURIComponent("/trip-planner")}`
+      );
+      return;
+    }
+
+    queueItineraryForCheckout();
     router.push("/checkout");
   };
+
+  useEffect(() => {
+    if (!isHydrated || authLoading || !user || !tripWindowItems.length) return;
+    if (typeof window === "undefined") return;
+    if (sessionStorage.getItem(PENDING_ITINERARY_BOOKING_KEY) !== "1") return;
+
+    sessionStorage.removeItem(PENDING_ITINERARY_BOOKING_KEY);
+    if (queueItineraryForCheckout()) {
+      router.push("/checkout");
+    }
+  }, [authLoading, isHydrated, queueItineraryForCheckout, router, tripWindowItems.length, user]);
 
   return (
     <section
@@ -347,24 +655,30 @@ export default function TripPlannerBuilder() {
         <div className="space-y-5 md:space-y-6">
           {activeSection === "overview" ? (
             <PlannerOverviewSection
-              items={items}
-              meta={meta}
-              totalBudget={totalBudget}
-              onMetaChange={updateMeta}
-              onBudgetChange={setTotalBudget}
-              onContinueToBoard={() => setActiveSection("board")}
+              meta={plannerMeta}
+              totalBudget={plannerTotalBudget}
+              onMetaChange={handleDraftMetaChange}
+              onBudgetChange={handleDraftBudgetChange}
+              onContinueToBoard={handleContinueToBoard}
               onOpenAddDrawer={openAddDrawer}
             />
           ) : (
             <PlannerDayBoard
-              items={items}
-              meta={meta}
-              totalBudget={totalBudget}
-              activeDay={activeDay}
-              onActiveDayChange={setActiveDay}
+              items={tripWindowItems}
+              meta={plannerMeta}
+              totalBudget={plannerTotalBudget}
+              activeDay={boardActiveDay}
+              preferredDay={preferredBoardDay}
+              onActiveDayChange={(dayKey) => {
+                if (Date.now() < suppressDayClicksUntilRef.current) return;
+                setForcedActiveDay(null);
+                setAllowEmptyActiveDay(true);
+                setActiveDay(dayKey);
+              }}
               onOpenAddDrawer={openAddDrawer}
+              onAddDay={handleAddBoardDay}
               onRemoveItem={removeItem}
-              onReorderItems={reorderItems}
+              onReorderItems={handleReorderTripWindowItems}
               onDeleteDay={handleDeleteDay}
               onShare={handleShare}
               onExport={handleExport}
@@ -377,12 +691,27 @@ export default function TripPlannerBuilder() {
         <PlannerAddDrawer
           isOpen={isDrawerOpen}
           defaults={drawerDefaults}
+          minDate={plannerMeta.startDate}
+          maxDate={plannerMeta.endDate}
           onClose={() => setIsDrawerOpen(false)}
           onAddItem={(item, overrides) => {
             const added = addCatalogItem(item, overrides);
-            updateMeta(getExpandedTripMeta(meta, added));
+            const targetDay = overrides?.date || added.date;
+            if (!plannerMeta.startDate || !plannerMeta.endDate) {
+              updateMeta(getExpandedTripMeta(plannerMeta, added));
+            }
+            pendingActiveDayRef.current = targetDay;
+            suppressDayClicksUntilRef.current = Date.now() + 800;
+            setForcedActiveDay(targetDay);
+            setAllowEmptyActiveDay(false);
             setActiveSection("board");
-            setActiveDay(overrides?.date || added.date);
+            setActiveDay(targetDay);
+            window.setTimeout(() => {
+              pendingActiveDayRef.current = targetDay;
+              setForcedActiveDay(targetDay);
+              setAllowEmptyActiveDay(false);
+              setActiveDay(targetDay);
+            }, 150);
             setNotice({
               tone: "success",
               message: `${added.title} was added to the itinerary.`,
@@ -408,7 +737,7 @@ export default function TripPlannerBuilder() {
                     Explore | Experience | Enjoy
                   </p>
                   <h1 className="mt-3 text-4xl font-semibold leading-tight">
-                    {meta.title || "Off2Zim Itinerary"}
+                    {plannerMeta.title || "Off2Zim Itinerary"}
                   </h1>
                   <p className="mt-3 text-sm leading-6 text-white/72">
                     A branded trip summary with your route, daily plan, and
@@ -422,14 +751,14 @@ export default function TripPlannerBuilder() {
                       Travel window
                     </div>
                     <div className="mt-2 text-lg font-semibold">
-                      {meta.startDate || "TBD"} to {meta.endDate || "TBD"}
+                      {plannerMeta.startDate || "TBD"} to {plannerMeta.endDate || "TBD"}
                     </div>
                   </div>
                   <div className="rounded-[24px] bg-white/10 px-4 py-4">
                     <div className="text-xs uppercase tracking-[0.24em] text-white/55">
                       Travelers
                     </div>
-                    <div className="mt-2 text-lg font-semibold">{meta.travelers}</div>
+                    <div className="mt-2 text-lg font-semibold">{plannerMeta.travelers}</div>
                   </div>
                 </div>
               </div>
@@ -440,7 +769,7 @@ export default function TripPlannerBuilder() {
                 <div className="text-xs uppercase tracking-[0.24em] text-slate-400">
                   Budget
                 </div>
-                <div className="mt-2 text-3xl font-semibold">${totalBudget}</div>
+                <div className="mt-2 text-3xl font-semibold">${plannerTotalBudget}</div>
               </div>
               <div className="rounded-[28px] bg-white px-5 py-5 shadow-sm">
                 <div className="text-xs uppercase tracking-[0.24em] text-slate-400">
@@ -501,7 +830,7 @@ export default function TripPlannerBuilder() {
                                   </div>
                                 </div>
                                 <div className="text-right text-sm font-semibold">
-                                  ${item.cost}
+                                  ${getPricedItemCost(item, travelerCount).toLocaleString()}
                                 </div>
                               </div>
                               <div className="mt-3 grid grid-cols-3 gap-3 text-sm text-slate-600">
@@ -512,6 +841,9 @@ export default function TripPlannerBuilder() {
                                     ? getItemRangeLabel(item, day.key)
                                     : `${item.startTime} - ${item.endTime}`}
                                 </div>
+                              </div>
+                              <div className="mt-2 text-xs font-semibold text-slate-500">
+                                {getItemPricingLabel(item, travelerCount)}
                               </div>
                             </div>
                           ))
@@ -534,19 +866,19 @@ export default function TripPlannerBuilder() {
                   <div className="mt-5 space-y-4">
                     <div className="flex items-center justify-between text-sm">
                       <span>Stays</span>
-                      <span className="font-semibold">${budgetBreakdown.accommodation}</span>
+                      <span className="font-semibold">${budgetBreakdown.accommodation.toLocaleString()}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span>Experiences</span>
-                      <span className="font-semibold">${budgetBreakdown.activity}</span>
+                      <span className="font-semibold">${budgetBreakdown.activity.toLocaleString()}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span>Transport</span>
-                      <span className="font-semibold">${budgetBreakdown.transport}</span>
+                      <span className="font-semibold">${budgetBreakdown.transport.toLocaleString()}</span>
                     </div>
                     <div className="flex items-center justify-between text-sm">
                       <span>Dining</span>
-                      <span className="font-semibold">${budgetBreakdown.dining}</span>
+                      <span className="font-semibold">${budgetBreakdown.dining.toLocaleString()}</span>
                     </div>
                   </div>
 
@@ -566,7 +898,7 @@ export default function TripPlannerBuilder() {
                     Planner notes
                   </div>
                   <div className="mt-3 text-sm leading-7 text-slate-700">
-                    {meta.notes || "No notes added."}
+                    {plannerMeta.notes || "No notes added."}
                   </div>
                 </div>
               </div>

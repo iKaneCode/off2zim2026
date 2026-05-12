@@ -18,6 +18,10 @@ import type {
   AdminListingRecord,
   DisputeRecord,
 } from "@/types/platform";
+import {
+  getListingDestinationMetadata,
+  listingRequiresDestination,
+} from "@/lib/listing-destination-rules";
 
 function safeJsonParse<T>(value: string | null | undefined, fallback: T): T {
   if (!value) {
@@ -145,6 +149,10 @@ export function serializeCompany(
 export function serializeListing(
   listing: ListingWithRelations
 ): ProviderListingRecord {
+  const metadata = safeJsonParse<Record<string, unknown>>(listing.metadata, {});
+  const destination = getListingDestinationMetadata(metadata);
+  const requiresDestination = listingRequiresDestination(listing.category);
+
   return {
     id: listing.id,
     companyId: listing.companyId,
@@ -168,7 +176,12 @@ export function serializeListing(
     tags: safeJsonParse(listing.tags, []),
     amenities: safeJsonParse(listing.amenities, []),
     policies: safeJsonParse(listing.policies, {}),
-    metadata: safeJsonParse(listing.metadata, {}),
+    metadata,
+    destinationId: destination.destinationId ?? null,
+    destinationName: destination.destinationName ?? null,
+    destinationLocation: destination.destinationLocation ?? null,
+    requiresDestination,
+    hasDestinationAssignment: !requiresDestination || !!destination.destinationId,
     availability: listing.availability.map((slot) => ({
       id: slot.id,
       startDate: slot.startDate.toISOString(),
@@ -350,6 +363,10 @@ export function serializeAdminListing(
     bookings: (Booking & { disputes: Dispute[] })[];
   }
 ): AdminListingRecord {
+  const metadata = safeJsonParse<Record<string, unknown>>(listing.metadata, {});
+  const destination = getListingDestinationMetadata(metadata);
+  const requiresDestination = listingRequiresDestination(listing.category);
+
   return {
     id: listing.id,
     companyId: listing.companyId,
@@ -365,6 +382,12 @@ export function serializeAdminListing(
     bookingMode: listing.bookingMode,
     status: listing.status as AdminListingRecord["status"],
     visibility: listing.visibility as AdminListingRecord["visibility"],
+    capacity: listing.capacity,
+    destinationId: destination.destinationId ?? null,
+    destinationName: destination.destinationName ?? null,
+    destinationLocation: destination.destinationLocation ?? null,
+    requiresDestination,
+    hasDestinationAssignment: !requiresDestination || !!destination.destinationId,
     availabilityCount: listing.availability.length,
     bookingsCount: listing.bookings.length,
     disputesCount: listing.bookings.reduce(
@@ -389,6 +412,7 @@ export function serializeDispute(
     booking: Booking & {
       listing: ProviderListing | null;
       provider: ProviderCompany | null;
+      payments?: { status: string; createdAt: Date }[];
     };
     openedBy: User;
     assignedAdmin: User | null;
@@ -398,6 +422,10 @@ export function serializeDispute(
     id: dispute.id,
     bookingId: dispute.bookingId,
     bookingConfirmationNumber: dispute.booking.confirmationNumber,
+    bookingStatus: dispute.booking.status,
+    paymentStatus: dispute.booking.payments?.[0]?.status || "PENDING",
+    totalAmount: dispute.booking.totalAmount,
+    currency: dispute.booking.currency,
     companyId: dispute.companyId,
     reason: dispute.reason,
     details: dispute.details,

@@ -9,7 +9,8 @@ import {
 } from "@/types/trip-planner";
 import { toTripPlannerItem } from "@/lib/trip-planner/catalog";
 
-const STORAGE_KEY = "off2zim_trip_planner_v1";
+export const TRIP_PLANNER_STORAGE_KEY = "off2zim_trip_planner_v2";
+const LEGACY_STORAGE_KEYS = ["off2zim_trip_planner_v1"];
 const DEFAULT_META: TripPlannerMeta = {
   title: "My Zimbabwe Journey",
   travelers: 2,
@@ -51,7 +52,9 @@ export function TripPlannerProvider({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
+      LEGACY_STORAGE_KEYS.forEach((key) => localStorage.removeItem(key));
+
+      const raw = localStorage.getItem(TRIP_PLANNER_STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw) as Partial<TripPlannerState>;
         setState({
@@ -76,7 +79,7 @@ export function TripPlannerProvider({ children }: { children: React.ReactNode })
 
   useEffect(() => {
     if (!isHydrated) return;
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    localStorage.setItem(TRIP_PLANNER_STORAGE_KEY, JSON.stringify(state));
   }, [isHydrated, state]);
 
   const value = useMemo<TripPlannerContextType>(

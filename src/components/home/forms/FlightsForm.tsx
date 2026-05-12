@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useForm } from "react-hook-form";
+import { useRouter } from "next/navigation";
 import { Calendar, Users, Plane } from "lucide-react";
 import DestinationDropdown from "./DestinationDropdown";
 import DatePicker from "./DatePicker";
@@ -20,7 +21,16 @@ interface FlightsFormData {
   tripType: "one-way" | "round-trip" | "multi-city";
 }
 
+function formatDateParam(date: Date | null) {
+  if (!date) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export default function FlightsForm() {
+  const router = useRouter();
   const [tripType, setTripType] = useState<
     "one-way" | "round-trip" | "multi-city"
   >("round-trip");
@@ -49,8 +59,20 @@ export default function FlightsForm() {
   const formData = watch();
 
   const onSubmit = (data: FlightsFormData) => {
-    console.log("Flight search:", data);
-    // Handle flight search
+    const passengers =
+      data.passengers.adults + data.passengers.children + data.passengers.infants;
+    const params = new URLSearchParams();
+    params.set("listingType", "transport");
+    params.set("search", [data.from, data.to].filter(Boolean).join(" "));
+    params.set("passengers", String(passengers));
+    params.set("travelers", String(passengers));
+    params.set("title", [data.from, data.to].filter(Boolean).join(" to ") || "Zimbabwe flight itinerary");
+    params.set("class", data.class);
+    const departDate = formatDateParam(data.departDate);
+    const returnDate = formatDateParam(data.returnDate);
+    if (departDate) params.set("startDate", departDate);
+    if (returnDate && data.tripType === "round-trip") params.set("endDate", returnDate);
+    router.push(`/trip-planner/search?${params.toString()}`);
   };
 
   const airports = [

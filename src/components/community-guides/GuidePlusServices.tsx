@@ -7,18 +7,14 @@ import {
   Clock,
   Users,
   Award,
-  Phone,
   Mail,
   Calendar,
-  ChevronRight,
   Badge,
   Camera,
-  Car,
   Mountain,
   Utensils,
-  ShoppingBag,
   Heart,
-  Filter,
+  type LucideIcon,
 } from "lucide-react";
 
 interface Guide {
@@ -47,7 +43,7 @@ interface Service {
   price: number;
   maxGuests: number;
   category: string;
-  icon: any;
+  icon: LucideIcon;
 }
 
 const mockGuides: Guide[] = [
@@ -150,7 +146,6 @@ const serviceCategories = [
 
 export default function GuidePlusServices() {
   const [selectedCategory, setSelectedCategory] = useState("All Services");
-  const [selectedGuide, setSelectedGuide] = useState<Guide | null>(null);
 
   return (
     <section className="py-16 bg-white">
@@ -160,13 +155,11 @@ export default function GuidePlusServices() {
           <div className="inline-flex items-center space-x-2 mb-4">
             <Award className="w-8 h-8 text-yellow-500" />
             <h2 className="text-3xl font-bold text-gray-900">
-              Guide+ Premium Services
+              Guide+ services
             </h2>
           </div>
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
-            Book personalized experiences with verified local experts. Our
-            Guide+ professionals offer premium services for truly authentic and
-            memorable Zimbabwe adventures.
+            Book personalized services with verified local experts. Guide+ professionals help travelers plan better trips and enjoy more personal experiences in Zimbabwe.
           </p>
         </div>
 

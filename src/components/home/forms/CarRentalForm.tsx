@@ -18,6 +18,14 @@ interface CarRentalFormData {
   sameLocation: boolean;
 }
 
+function formatDateParam(date: Date | null) {
+  if (!date) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export default function CarRentalForm() {
   const router = useRouter();
   const [showPickupDropdown, setShowPickupDropdown] = useState(false);
@@ -51,6 +59,14 @@ export default function CarRentalForm() {
         .join(" ")
     );
     params.set("driverAge", data.driverAge);
+    params.set(
+      "title",
+      `${data.pickupLocation || "Zimbabwe"} car rental itinerary`
+    );
+    const pickupDate = formatDateParam(data.pickupDate);
+    const dropoffDate = formatDateParam(data.dropoffDate);
+    if (pickupDate) params.set("startDate", pickupDate);
+    if (dropoffDate) params.set("endDate", dropoffDate);
     router.push(`/trip-planner/search?${params.toString()}`);
   };
 

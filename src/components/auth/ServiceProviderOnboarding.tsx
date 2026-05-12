@@ -20,7 +20,7 @@ const ServiceProviderOnboarding = ({
   onComplete,
   onSkip,
 }: ServiceProviderOnboardingProps) => {
-  const { user, updateProfile } = useAuth();
+  const { updateProfile } = useAuth();
   const [currentStep, setCurrentStep] = useState(1);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -476,7 +476,7 @@ const ServiceProviderOnboarding = ({
         <h4 className="font-medium text-yellow-900 mb-2">Next Steps</h4>
         <ul className="text-sm text-yellow-700 space-y-1">
           <li>• Your application will be reviewed within 3-5 business days</li>
-          <li>• You'll receive email updates on your review status</li>
+          <li>• You&apos;ll receive email updates on your review status</li>
           <li>• Once approved, you can start listing your services</li>
           <li>• Consider upgrading to Verified Badge for premium benefits</li>
         </ul>

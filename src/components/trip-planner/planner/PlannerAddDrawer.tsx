@@ -25,6 +25,8 @@ import {
 interface PlannerAddDrawerProps {
   isOpen: boolean;
   defaults?: PlannerScheduleDefaults;
+  minDate?: string;
+  maxDate?: string;
   onClose: () => void;
   onAddItem: (
     item: PlannerCatalogItem,
@@ -53,6 +55,19 @@ function getDefaultSchedule(defaults?: PlannerScheduleDefaults) {
   };
 }
 
+function clampDate(value: string, minDate?: string, maxDate?: string) {
+  if (minDate && value < minDate) return minDate;
+  if (maxDate && value > maxDate) return maxDate;
+  return value;
+}
+
+function getInclusiveDateSpan(start: string, end?: string) {
+  if (!end || end < start) return undefined;
+  const startDate = new Date(`${start}T00:00:00`);
+  const endDate = new Date(`${end}T00:00:00`);
+  return Math.max(1, Math.floor((endDate.getTime() - startDate.getTime()) / 86400000) + 1);
+}
+
 function getTypeDefaults(type: PlannerItemType) {
   switch (type) {
     case "accommodation":
@@ -69,6 +84,8 @@ function getTypeDefaults(type: PlannerItemType) {
 export default function PlannerAddDrawer({
   isOpen,
   defaults,
+  minDate,
+  maxDate,
   onClose,
   onAddItem,
 }: PlannerAddDrawerProps) {
@@ -79,8 +96,17 @@ export default function PlannerAddDrawer({
 
   useEffect(() => {
     if (!isOpen) return;
-    setSchedule(getDefaultSchedule(defaults));
-  }, [defaults, isOpen]);
+    const nextSchedule = getDefaultSchedule(defaults);
+    const nextDate = clampDate(nextSchedule.date, minDate, maxDate);
+    const maxQuantity = getInclusiveDateSpan(nextDate, maxDate);
+    setSchedule({
+      ...nextSchedule,
+      date: nextDate,
+      quantity: maxQuantity
+        ? Math.min(nextSchedule.quantity, maxQuantity)
+        : nextSchedule.quantity,
+    });
+  }, [defaults, isOpen, maxDate, minDate]);
 
   const filteredItems = useMemo(() => {
     return tripPlannerCatalog.filter((item) => {
@@ -123,7 +149,7 @@ export default function PlannerAddDrawer({
     selectedItem?.type === "accommodation" ? "Nights" : "Quantity";
   const computedEndDate =
     selectedItem?.type === "accommodation"
-      ? addDays(schedule.date, Math.max(schedule.quantity - 1, 0))
+      ? clampDate(addDays(schedule.date, Math.max(schedule.quantity - 1, 0)), minDate, maxDate)
       : schedule.date;
   const unitCost = selectedItem
     ? Number(selectedItem.price.replace(/[^0-9.]/g, ""))
@@ -317,11 +343,13 @@ export default function PlannerAddDrawer({
                     </span>
                     <input
                       type="date"
+                      min={minDate}
+                      max={maxDate}
                       value={schedule.date}
                       onChange={(event) =>
                         setSchedule((current) => ({
                           ...current,
-                          date: event.target.value,
+                          date: clampDate(event.target.value, minDate, maxDate),
                         }))
                       }
                       className="theme-input h-12 w-full rounded-[18px] px-4"
@@ -337,11 +365,15 @@ export default function PlannerAddDrawer({
                       <input
                         type="number"
                         min={1}
+                        max={getInclusiveDateSpan(schedule.date, maxDate)}
                         value={schedule.quantity}
                         onChange={(event) =>
                           setSchedule((current) => ({
                             ...current,
-                            quantity: Math.max(1, Number(event.target.value) || 1),
+                            quantity: Math.min(
+                              getInclusiveDateSpan(current.date, maxDate) ?? Number.MAX_SAFE_INTEGER,
+                              Math.max(1, Number(event.target.value) || 1)
+                            ),
                           }))
                         }
                         className="theme-input h-12 w-full rounded-[18px] px-4"
@@ -455,13 +487,21 @@ export default function PlannerAddDrawer({
               </div>
               <div className="flex gap-3">
                 <button
-                  onClick={onClose}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onClose();
+                  }}
                   className="theme-button-secondary flex-1 rounded-full px-5 py-3 text-sm font-semibold"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={handleAdd}
+                  onPointerDown={(event) => event.stopPropagation()}
+                  onMouseUp={(event) => event.stopPropagation()}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleAdd();
+                  }}
                   disabled={!selectedItem}
                   className="flex-1 rounded-full bg-[#ff5630] px-5 py-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-40"
                 >

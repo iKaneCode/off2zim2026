@@ -27,8 +27,6 @@ const createProductSchema = z.object({
     .nullable(),
 });
 
-const updateProductSchema = createProductSchema.partial().omit({ listingId: true });
-
 async function findProviderCompany(userId: string) {
   return prisma.providerCompany.findUnique({
     where: { ownerUserId: userId },
@@ -36,7 +34,7 @@ async function findProviderCompany(userId: string) {
   });
 }
 
-export async function GET(request: NextRequest) {
+export async function GET() {
   try {
     const { user } = await requireSessionUser();
     if (user.role !== "provider") return apiError("Providers only.", 403);

@@ -10,7 +10,7 @@ interface RatingSummaryProps {
   totalReviews: number;
   ratingDistribution: { [key: number]: number };
   criteriaRatings?: { [key: string]: number };
-  recentReviews: any[];
+  recentReviews: React.ComponentProps<typeof ReviewCard>["review"][];
   showWriteReview?: boolean;
   onWriteReview?: () => void;
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   DndContext,
   closestCenter,
@@ -20,8 +20,6 @@ import {
   BedDouble,
   CalendarDays,
   CheckCircle2,
-  ChevronLeft,
-  ChevronRight,
   Clock3,
   Copy,
   Download,
@@ -31,19 +29,23 @@ import {
   ShoppingCart,
   Trash2,
   UtensilsCrossed,
+  Users,
   Zap,
 } from "lucide-react";
 import {
   DaySegment,
   getBudgetBreakdown,
   getItemDateLabel,
+  getItemPricingLabel,
   getItemTimeLabel,
+  getPricedItemCost,
   getItemRangeLabel,
   getPlannerDays,
   getSectionCounts,
   getSegmentForTime,
   getStatusTone,
   getTripTotals,
+  itemScalesWithTravelers,
 } from "@/lib/trip-planner/planner";
 import {
   PlannerScheduleDefaults,
@@ -88,10 +90,12 @@ function ItemTypeIcon({ type }: { type: TripPlannerItem["type"] }) {
 function SortableItem({
   item,
   dayKey,
+  travelers,
   onRemove,
 }: {
   item: TripPlannerItem;
   dayKey: string;
+  travelers: number;
   onRemove: (id: string) => void;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -102,6 +106,8 @@ function SortableItem({
     transition,
     opacity: isDragging ? 0.5 : 1,
   };
+  const scalesWithTravelers = itemScalesWithTravelers(item);
+  const pricedCost = getPricedItemCost(item, travelers);
 
   return (
     <article
@@ -137,6 +143,12 @@ function SortableItem({
                 <ItemTypeIcon type={item.type} />
                 {item.category}
               </span>
+              {scalesWithTravelers ? (
+                <span className="ml-1.5 inline-flex items-center gap-1 rounded-full border border-[#ff5630]/30 bg-[#ff5630]/10 px-2 py-0.5 text-xs font-semibold text-[#ff8a78]">
+                  <Users className="h-3 w-3" />
+                  Per traveler
+                </span>
+              ) : null}
               <h5 className="theme-heading mt-1.5 text-sm font-semibold leading-snug">
                 {item.title}
               </h5>
@@ -166,8 +178,12 @@ function SortableItem({
           </div>
 
           <div className="mt-2 flex items-center justify-between">
-            <span className="theme-muted text-xs">{getItemRangeLabel(item, dayKey)}</span>
-            <span className="theme-heading text-sm font-semibold">${item.cost}</span>
+            <span className="theme-muted text-xs">
+              {getItemRangeLabel(item, dayKey)} · {getItemPricingLabel(item, travelers)}
+            </span>
+            <span className="theme-heading text-sm font-semibold">
+              ${pricedCost.toLocaleString()}
+            </span>
           </div>
         </div>
       </div>
@@ -182,8 +198,10 @@ interface PlannerDayBoardProps {
   meta: TripPlannerMeta;
   totalBudget: number;
   activeDay: string | null;
+  preferredDay?: string | null;
   onActiveDayChange: (dayKey: string) => void;
   onOpenAddDrawer: (date?: string, defaults?: PlannerScheduleDefaults) => void;
+  onAddDay: () => void;
   onRemoveItem: (itemId: string) => void;
   onReorderItems: (items: TripPlannerItem[]) => void;
   onDeleteDay: (dayKey: string) => void;
@@ -200,8 +218,10 @@ export default function PlannerDayBoard({
   meta,
   totalBudget,
   activeDay,
+  preferredDay,
   onActiveDayChange,
   onOpenAddDrawer,
+  onAddDay,
   onRemoveItem,
   onReorderItems,
   onDeleteDay,
@@ -211,12 +231,22 @@ export default function PlannerDayBoard({
   onBookItinerary,
 }: PlannerDayBoardProps) {
   const days = getPlannerDays(items, meta);
+  const preferredSafeDay =
+    preferredDay && days.some((d) => d.key === preferredDay) ? preferredDay : null;
   const safeDayKey =
-    activeDay && days.some((d) => d.key === activeDay) ? activeDay : (days[0]?.key ?? null);
+    preferredSafeDay ||
+    (activeDay && days.some((d) => d.key === activeDay) ? activeDay : (days[0]?.key ?? null));
   const selectedDay = days.find((d) => d.key === safeDayKey) ?? null;
-  const totals = useMemo(() => getTripTotals(items, totalBudget), [items, totalBudget]);
+  const travelerCount = Math.max(meta.travelers ?? 1, 1);
+  const totals = useMemo(
+    () => getTripTotals(items, totalBudget, travelerCount),
+    [items, totalBudget, travelerCount]
+  );
   const counts = useMemo(() => getSectionCounts(items), [items]);
-  const budgetBreakdown = useMemo(() => getBudgetBreakdown(items), [items]);
+  const budgetBreakdown = useMemo(
+    () => getBudgetBreakdown(items, travelerCount),
+    [items, travelerCount]
+  );
   const overBudget = totals.remainingBudget < 0;
 
   /* dnd sensors */
@@ -278,11 +308,11 @@ export default function PlannerDayBoard({
               );
             })}
             <button
-              onClick={() => onOpenAddDrawer(safeDayKey ?? undefined)}
+              onClick={onAddDay}
               className="flex shrink-0 flex-col items-center gap-1.5 rounded-[18px] border border-dashed border-white/[0.12] px-4 py-3 text-center min-w-[80px] theme-muted hover:border-[#ff5630] hover:text-[#ff5630] transition"
             >
               <Plus className="h-4 w-4" />
-              <span className="text-xs">Add</span>
+              <span className="text-xs">Add day</span>
             </button>
           </div>
         </div>
@@ -369,6 +399,7 @@ export default function PlannerDayBoard({
                                   key={item.id}
                                   item={item}
                                   dayKey={selectedDay.key}
+                                  travelers={travelerCount}
                                   onRemove={onRemoveItem}
                                 />
                               ))}
@@ -445,7 +476,9 @@ export default function PlannerDayBoard({
                         <span className="h-2 w-2 rounded-full" style={{ backgroundColor: BUDGET_COLORS[cat].hex }} />
                         {BUDGET_COLORS[cat].label}
                       </span>
-                      <span className="theme-heading font-medium">${budgetBreakdown[cat]}</span>
+                      <span className="theme-heading font-medium">
+                        ${budgetBreakdown[cat].toLocaleString()}
+                      </span>
                     </div>
                   ))}
                 </div>

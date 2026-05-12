@@ -2,7 +2,9 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Eye, EyeOff, KeyRound, Mail } from "lucide-react";
+import { type AppSurface, getSurfaceHref } from "@/lib/app-surface";
 import { useAuth } from "@/contexts/AuthContext";
 
 interface LoginFormProps {
@@ -17,6 +19,7 @@ interface LoginFormProps {
   signupLabel?: string;
   showSocialButtons?: boolean;
   compactHeader?: boolean;
+  surface?: AppSurface;
 }
 
 const LoginForm = ({
@@ -24,20 +27,38 @@ const LoginForm = ({
   redirectTo,
   eyebrow = "Sign in",
   title = "Welcome back",
-  body = "Access your planner, bookings, saved places, and account workspace.",
-  helpHref = "/contact",
-  helpLabel = "Need help?",
+  body = "Access your planner, bookings, saved places, and account details.",
+  helpHref = "/auth/forgot-password",
+  helpLabel = "Forgot password?",
   signupHref = "/register",
   signupLabel = "Create account",
   showSocialButtons = true,
   compactHeader = false,
+  surface = "public",
 }: LoginFormProps) => {
   const { login, isLoading, error } = useAuth();
+  const router = useRouter();
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
   const [showPassword, setShowPassword] = useState(false);
+  const baseSignupHref = signupHref.startsWith("/")
+    ? getSurfaceHref(surface, signupHref)
+    : signupHref;
+  const baseHelpHref =
+    helpHref === "/contact" || helpHref.startsWith("mailto:") || !helpHref.startsWith("/")
+      ? helpHref
+      : getSurfaceHref(surface, helpHref);
+  const signupDestination = redirectTo
+    ? `${baseSignupHref}?redirect=${encodeURIComponent(redirectTo)}`
+    : baseSignupHref;
+  const helpDestination =
+    helpHref === "/contact" || helpHref.startsWith("mailto:")
+      ? baseHelpHref
+      : redirectTo
+        ? `${baseHelpHref}?redirect=${encodeURIComponent(redirectTo)}`
+        : baseHelpHref;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -45,7 +66,8 @@ const LoginForm = ({
       await login({ email: formData.email, password: formData.password });
       onClose?.();
       if (redirectTo) {
-        window.location.href = redirectTo;
+        router.push(redirectTo);
+        router.refresh();
       }
     } catch {
       return;
@@ -212,10 +234,10 @@ const LoginForm = ({
             Keep me signed in
           </label>
           <Link
-            href={helpHref}
+            href={helpDestination}
             className="font-medium text-[#ff5630] transition hover:text-[#e44c28]"
           >
-            {helpLabel}
+            {helpLabel || "Need help?"}
           </Link>
         </div>
 
@@ -232,7 +254,7 @@ const LoginForm = ({
         <div className="mt-6 border-t border-black/10 pt-5 text-center text-sm dark:border-white/10">
           <span className="theme-muted">New to Off2Zim?</span>{" "}
           <Link
-            href={signupHref}
+            href={signupDestination}
             className="font-semibold text-[#ff5630] transition hover:text-[#e44c28]"
           >
             {signupLabel}

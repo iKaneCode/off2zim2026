@@ -94,9 +94,18 @@ export const PaymentProvider: React.FC<PaymentProviderProps> = ({
       if (existingIndex !== -1) {
         // Update existing item
         const updated = [...prev];
+        const existing = updated[existingIndex];
+        if (
+          existing.metadata?.source === "trip-planner" &&
+          item.metadata?.source === "trip-planner"
+        ) {
+          updated[existingIndex] = item;
+          return updated;
+        }
+
         updated[existingIndex] = {
-          ...updated[existingIndex],
-          quantity: updated[existingIndex].quantity + item.quantity,
+          ...existing,
+          quantity: existing.quantity + item.quantity,
         };
         return updated;
       }

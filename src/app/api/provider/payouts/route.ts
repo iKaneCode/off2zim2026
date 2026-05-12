@@ -35,17 +35,6 @@ export async function GET() {
       take: 50,
     });
 
-    // Calculate available balance from released commissions net amounts
-    // For now: sum of completed orders net amounts (released commissions)
-    const releasedCommissions = await prisma.platformCommission.aggregate({
-      where: {
-        status: "released",
-        // Filter by transactions belonging to this company
-        // In a full implementation, commissions would be linked to companyId directly
-      },
-      _sum: { netAmount: true },
-    });
-
     const pendingPayoutTotal = await prisma.payout.aggregate({
       where: { companyId: company.id, status: { in: ["pending", "processing"] } },
       _sum: { amount: true },

@@ -5,10 +5,7 @@ import { requireSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { recalculateExplorerScore } from "@/lib/explorer-score";
 import { releaseCommission } from "@/lib/commission";
-import {
-  sendBookingStatusUpdate,
-  sendProviderNewBookingAlert,
-} from "@/lib/platform-email";
+import { sendBookingStatusUpdate } from "@/lib/platform-email";
 
 export const dynamic = "force-dynamic";
 

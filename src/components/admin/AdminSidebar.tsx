@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   ListChecks,
   ShoppingBag,
+  Users,
   Wallet,
 } from "lucide-react";
 import { getSurfaceHref } from "@/lib/app-surface";
@@ -19,6 +20,7 @@ const adminNav = [
   { label: "Bookings", href: "/admin/bookings", icon: ListChecks },
   { label: "Disputes", href: "/admin/disputes", icon: Flag },
   { label: "Revenue", href: "/admin/revenue", icon: Wallet },
+  { label: "Users", href: "/admin/users", icon: Users },
 ];
 
 export default function AdminSidebar({ activePath }: { activePath: string }) {

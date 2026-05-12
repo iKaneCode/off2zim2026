@@ -1,6 +1,11 @@
+"use client";
+
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ArrowRight, Compass, MapPin, MessageCircle } from "lucide-react";
 import { getSurfaceHref } from "@/lib/app-surface";
+import { getAccountRoute } from "@/lib/auth-routing";
+import { useAuth } from "@/contexts/AuthContext";
 
 const footerColumns = [
   {
@@ -8,16 +13,16 @@ const footerColumns = [
     links: [
       { label: "Destinations", href: "/travel-guide" },
       { label: "Trip Planner", href: "/trip-planner" },
-      { label: "Ask a Local", href: "/community-guides" },
+      { label: "Local guidance", href: "/travel-guide" },
       { label: "Events", href: "/events" },
     ],
   },
   {
     title: "Access",
     links: [
-      { label: "Client login", href: getSurfaceHref("explorer", "/login") },
+      { label: "Traveler login", href: getSurfaceHref("explorer", "/login") },
       { label: "Create account", href: getSurfaceHref("explorer", "/register") },
-      { label: "Provider registration", href: getSurfaceHref("provider", "/register") },
+      { label: "Register your business", href: getSurfaceHref("provider", "/register") },
       { label: "Provider sign in", href: getSurfaceHref("provider", "/login") },
     ],
   },
@@ -33,6 +38,25 @@ const footerColumns = [
 ];
 
 export default function Footer() {
+  const { user, isLoading, logout } = useAuth();
+  const router = useRouter();
+  const accountRoute = getAccountRoute(user);
+  const accessLinks =
+    !isLoading && user
+      ? [
+          { label: "Open account", href: accountRoute },
+          { label: "Profile settings", href: getSurfaceHref("explorer", "/profile") },
+          { label: "Register your business", href: getSurfaceHref("provider", "/register") },
+          { label: "Provider sign in", href: getSurfaceHref("provider", "/login") },
+        ]
+      : footerColumns.find((column) => column.title === "Access")?.links || [];
+
+  const handleLogout = async () => {
+    await logout();
+    router.push(getSurfaceHref("explorer", "/"));
+    router.refresh();
+  };
+
   return (
     <footer className="border-t border-white/10 bg-[#070707] text-white">
       <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
@@ -42,45 +66,66 @@ export default function Footer() {
               Off2Zim
             </p>
             <h2 className="mt-3 max-w-xl text-3xl font-semibold text-white">
-              Off2Zim gives travelers a cleaner way to explore Zimbabwe before any booking conversation begins.
+              Off2Zim helps travelers discover Zimbabwe, plan with confidence, and book in one place.
             </h2>
             <p className="mt-4 max-w-2xl text-sm leading-7 text-white/60">
-              Use the public platform to understand destinations, organize ideas, plan routes, ask locals, and send travel enquiries with more confidence.
+              Explore destinations, plan your route, ask locals for advice, and request travel help when you need it.
             </p>
 
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
-              <Link
-                href={getSurfaceHref("explorer", "/login")}
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-[#ff5630] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#ff6f4d]"
-              >
-                Client login
-                <ArrowRight className="h-4 w-4" />
-              </Link>
-              <Link
-                href={getSurfaceHref("provider", "/register")}
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
-              >
-                Service provider registration
-              </Link>
+              {user ? (
+                <>
+                  <Link
+                    href={accountRoute}
+                    className="inline-flex items-center justify-center gap-2 rounded-full bg-[#ff5630] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#ff6f4d]"
+                  >
+                    Open account
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+                  >
+                    Sign out
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    href={getSurfaceHref("explorer", "/login")}
+                    className="inline-flex items-center justify-center gap-2 rounded-full bg-[#ff5630] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#ff6f4d]"
+                  >
+                    Traveler login
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                  <Link
+                    href={getSurfaceHref("provider", "/register")}
+                    className="inline-flex items-center justify-center gap-2 rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/10"
+                  >
+                    Register your business
+                  </Link>
+                </>
+              )}
             </div>
 
             <div className="mt-8 grid gap-3 sm:grid-cols-3">
               <div className="rounded-[24px] bg-white/[0.04] p-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-white">
                   <Compass className="h-4 w-4 text-[#7ddf8c]" />
-                  Destination-first discovery
+                  Destination-based discovery
                 </div>
               </div>
               <div className="rounded-[24px] bg-white/[0.04] p-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-white">
                   <MessageCircle className="h-4 w-4 text-[#5aa7ff]" />
-                  Local guidance and enquiries
+                  Local advice and travel help
                 </div>
               </div>
               <div className="rounded-[24px] bg-white/[0.04] p-4">
                 <div className="flex items-center gap-2 text-sm font-medium text-white">
                   <ArrowRight className="h-4 w-4 text-[#ffc247]" />
-                  Cleaner next-step navigation
+                  Clear next steps
                 </div>
               </div>
             </div>
@@ -118,14 +163,36 @@ export default function Footer() {
                   </h3>
                   <div className="mt-4 space-y-3">
                     {column.links.map((link) => (
-                      <Link
-                        key={link.label}
-                        href={link.href}
-                        className="block text-sm text-white/65 transition hover:text-white"
-                      >
-                        {link.label}
-                      </Link>
+                      column.title === "Access" ? null : (
+                        <Link
+                          key={link.label}
+                          href={link.href}
+                          className="block text-sm text-white/65 transition hover:text-white"
+                        >
+                          {link.label}
+                        </Link>
+                      )
                     ))}
+                    {column.title === "Access"
+                      ? accessLinks.map((link) => (
+                          <Link
+                            key={link.label}
+                            href={link.href}
+                            className="block text-sm text-white/65 transition hover:text-white"
+                          >
+                            {link.label}
+                          </Link>
+                        ))
+                      : null}
+                    {column.title === "Access" && !isLoading && user ? (
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="block text-left text-sm text-white/65 transition hover:text-white"
+                      >
+                        Sign out
+                      </button>
+                    ) : null}
                   </div>
                 </div>
               ))}

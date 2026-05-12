@@ -11,6 +11,7 @@ import {
 export const dynamic = "force-dynamic";
 const bookingRequestSchema = z.object({
   guests: z.coerce.number().int().positive().default(1),
+  availabilityId: z.string().optional().nullable(),
   checkIn: z.string().optional().nullable(),
   checkOut: z.string().optional().nullable(),
   specialRequests: z.string().optional().nullable(),
@@ -32,33 +33,94 @@ export async function POST(
       where: { slug: params.slug },
       include: {
         company: true,
+        availability: true,
       },
     });
 
-    if (!listing || listing.visibility !== "public") {
+    if (
+      !listing ||
+      listing.visibility !== "public" ||
+      !["active", "approved"].includes(listing.status)
+    ) {
       return apiError("Listing not found.", 404);
     }
 
-    const booking = await prisma.booking.create({
-      data: {
-        userId: user.id,
-        providerId: listing.companyId,
-        listingId: listing.id,
-        bookingType: listing.listingType.toUpperCase(),
-        status: listing.instantBooking ? "CONFIRMED" : "REQUESTED",
-        totalAmount: listing.basePrice || 0,
-        currency: listing.currency,
-        confirmationNumber: confirmationNumber(),
-        checkIn: payload.checkIn ? new Date(payload.checkIn) : null,
-        checkOut: payload.checkOut ? new Date(payload.checkOut) : null,
-        guests: payload.guests,
-        specialRequests: payload.specialRequests || null,
-        metadata: JSON.stringify({
-          listingTitle: listing.title,
-          bookingMode: listing.bookingMode,
-          providerCompanyId: listing.companyId,
-        }),
-      },
+    const selectedSlot = payload.availabilityId
+      ? listing.availability.find((slot) => slot.id === payload.availabilityId)
+      : null;
+
+    if (listing.instantBooking && !selectedSlot) {
+      return apiError("Choose an available slot before booking instantly.", 422);
+    }
+
+    if (selectedSlot) {
+      if (selectedSlot.status !== "available") {
+        return apiError("This slot is not available anymore.", 422);
+      }
+
+      if (
+        selectedSlot.unitsAvailable !== null &&
+        selectedSlot.unitsAvailable < payload.guests
+      ) {
+        return apiError("This slot does not have enough remaining capacity.", 422);
+      }
+    }
+
+    const checkIn =
+      selectedSlot?.startDate ?? (payload.checkIn ? new Date(payload.checkIn) : null);
+    const checkOut =
+      selectedSlot?.endDate ?? (payload.checkOut ? new Date(payload.checkOut) : null);
+
+    const booking = await prisma.$transaction(async (tx) => {
+      if (selectedSlot && listing.instantBooking && selectedSlot.unitsAvailable !== null) {
+        const nextUnits = selectedSlot.unitsAvailable - payload.guests;
+        const updatedSlot = await tx.listingAvailability.updateMany({
+          where: {
+            id: selectedSlot.id,
+            listingId: listing.id,
+            status: "available",
+            unitsAvailable: { gte: payload.guests },
+          },
+          data: {
+            unitsAvailable: { decrement: payload.guests },
+          },
+        });
+
+        if (updatedSlot.count === 0) {
+          throw new Error("SLOT_CAPACITY_UNAVAILABLE");
+        }
+
+        if (nextUnits <= 0) {
+          await tx.listingAvailability.update({
+            where: { id: selectedSlot.id },
+            data: { status: "sold_out" },
+          });
+        }
+      }
+
+      return tx.booking.create({
+        data: {
+          userId: user.id,
+          providerId: listing.companyId,
+          listingId: listing.id,
+          bookingType: listing.listingType.toUpperCase(),
+          status: listing.instantBooking ? "CONFIRMED" : "REQUESTED",
+          totalAmount: listing.basePrice || 0,
+          currency: listing.currency,
+          confirmationNumber: confirmationNumber(),
+          checkIn,
+          checkOut,
+          guests: payload.guests,
+          specialRequests: payload.specialRequests || null,
+          metadata: JSON.stringify({
+            listingTitle: listing.title,
+            bookingMode: listing.bookingMode,
+            providerCompanyId: listing.companyId,
+            availabilityId: selectedSlot?.id ?? null,
+            availabilityStatus: selectedSlot?.status ?? null,
+          }),
+        },
+      });
     });
 
     // Fire-and-forget emails
@@ -70,7 +132,7 @@ export async function POST(
       providerName: listing.company.companyName,
       totalAmount: booking.totalAmount,
       currency: booking.currency,
-      checkIn: payload.checkIn ?? null,
+      checkIn: checkIn?.toISOString() ?? null,
     }).catch(() => {});
 
     void (async () => {
@@ -88,7 +150,7 @@ export async function POST(
           guests: payload.guests,
           totalAmount: booking.totalAmount,
           currency: booking.currency,
-          checkIn: payload.checkIn ?? null,
+          checkIn: checkIn?.toISOString() ?? null,
         }).catch(() => {});
       }
     })();
@@ -107,6 +169,10 @@ export async function POST(
 
     if (error instanceof Error && error.message === "Unauthorized") {
       return apiError("Please sign in to place a booking request.", 401);
+    }
+
+    if (error instanceof Error && error.message === "SLOT_CAPACITY_UNAVAILABLE") {
+      return apiError("This slot no longer has enough remaining capacity.", 422);
     }
 
     console.error("Public booking request error:", error);

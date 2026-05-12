@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
@@ -23,7 +23,7 @@ const LISTING_SELECT = {
   },
 } as const;
 
-export async function GET(_request: NextRequest) {
+export async function GET() {
   const now = new Date();
 
   const entries = await prisma.featuredEntry.findMany({

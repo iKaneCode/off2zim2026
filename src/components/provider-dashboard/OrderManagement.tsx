@@ -7,7 +7,6 @@ import {
   User,
   Phone,
   Mail,
-  MapPin,
   DollarSign,
   Users,
   CheckCircle,
@@ -15,7 +14,6 @@ import {
   AlertCircle,
   MessageCircle,
   Download,
-  Filter,
   Search,
   MoreHorizontal,
 } from "lucide-react";
@@ -107,7 +105,6 @@ export default function OrderManagement() {
   const [orders, setOrders] = useState(mockOrders);
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -178,7 +175,7 @@ export default function OrderManagement() {
   const updateOrderStatus = (orderId: string, newStatus: string) => {
     setOrders(
       orders.map((order) =>
-        order.id === orderId ? { ...order, status: newStatus as any } : order
+        order.id === orderId ? { ...order, status: newStatus as Order["status"] } : order
       )
     );
   };

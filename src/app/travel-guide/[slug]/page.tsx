@@ -1,256 +1,481 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
+import AppServiceStrip from "@/components/ui/AppServiceStrip";
+import CompactRailCard from "@/components/ui/CompactRailCard";
+import CompactSectionHeader from "@/components/ui/CompactSectionHeader";
+import HorizontalRail from "@/components/ui/HorizontalRail";
+import { apiFetch } from "@/lib/client-api";
 import {
-  ArrowLeft, ArrowRight, CheckCircle2, Clock3, Globe2,
-  MapPin, SunMedium, Telescope, Camera,
+  type ExplorerDestinationSummary,
+  withDestinationContext,
+} from "@/lib/destination-explorer";
+import type { PublicListingRecord } from "@/types/platform";
+import {
+  ArrowLeft,
+  ArrowRight,
+  BedDouble,
+  Bus,
+  CalendarDays,
+  MessageCircle,
+  MapPin,
+  Sparkles,
+  UtensilsCrossed,
 } from "lucide-react";
 
-const destinations = [
+interface DestinationContextResponse {
+  destination: ExplorerDestinationSummary;
+  scoped: {
+    stays: Array<{
+      id: string;
+      name: string;
+      description?: string | null;
+      image_url?: string | null;
+      rating?: number | null;
+      price?: number | null;
+      location?: string | null;
+      destinations?: { name?: string | null } | null;
+    }>;
+    activities: PublicListingRecord[];
+    transport: PublicListingRecord[];
+    diningListings: PublicListingRecord[];
+    events: PublicListingRecord[];
+    restaurants: Array<{
+      id: string;
+      name: string;
+      description?: string | null;
+      cuisine: string;
+      location: string;
+      priceRange: string;
+      rating?: number | null;
+      images: string[];
+    }>;
+    guides: Array<{
+      id: string;
+      name: string;
+      bio: string;
+      rating: number;
+      reviewCount: number;
+      avatarUrl?: string | null;
+      specialties: string[];
+      languages: string[];
+    }>;
+    forumQuestions: Array<{
+      id: string;
+      title: string;
+      body: string;
+      answerCount: number;
+      isPinned: boolean;
+      author: { name: string; isGuide: boolean };
+    }>;
+  };
+  counts: {
+    stays: number;
+    activities: number;
+    transport: number;
+    diningListings: number;
+    events: number;
+    restaurants: number;
+    guides: number;
+    questions: number;
+  };
+}
+
+const serviceCards = [
   {
-    slug: "victoria-falls",
-    name: "Victoria Falls",
-    meta: "Adventure capital",
-    description: "Victoria Falls is one of the world's most spectacular natural wonders — a curtain of mist and thunder that marks the border between Zimbabwe and Zambia. Known as 'Mosi-oa-Tunya' (The Smoke that Thunders), it draws travelers from across the globe for helicopter flights, white-water rafting, bungee jumping, sunset cruises on the Zambezi, and iconic safari lodges.",
-    bestTime: "May – October",
-    climate: "Subtropical",
-    temperature: "18–28°C",
-    image: "/images/victoria-falls.jpg",
-    gallery: ["/images/victoria-falls.jpg", "/images/old-drift.jpg"],
-    highlights: ["Devil's Pool", "Bridge Bungee Jump", "Helicopter Flights", "Sunset Cruises", "White-water Rafting", "Elephant Sanctuary"],
-    practicalInfo: [
-      { label: "Getting there", value: "Domestic flights from Harare (1hr) or Bulawayo (45min). Road from Bulawayo: 3–4hrs." },
-      { label: "Currency", value: "USD widely accepted. Carry small notes for local purchases." },
-      { label: "Visa", value: "KAZA Uni-Visa available for dual entry Zimbabwe/Zambia." },
-      { label: "Best base", value: "Stay in Victoria Falls town for easy access to all activities." },
-    ],
-    activities: [
-      { name: "Helicopter flight", duration: "15 min", price: "From $165", link: "/activities" },
-      { name: "Sunset river cruise", duration: "3 hrs", price: "From $65", link: "/restaurants" },
-      { name: "White-water rafting", duration: "Full day", price: "From $120", link: "/activities" },
-      { name: "Safari lodge stay", duration: "Per night", price: "From $320", link: "/accommodation" },
-    ],
+    label: "Stays",
+    key: "stays",
+    href: "/accommodation",
+    icon: BedDouble,
+    description: "Browse hotels, lodges, camps, and other stays available in this destination.",
   },
   {
-    slug: "hwange-national-park",
-    name: "Hwange National Park",
-    meta: "Safari classic",
-    description: "Hwange is Zimbabwe's largest national park and one of Africa's premier wildlife destinations. With an estimated 40,000 elephants — among the highest concentration anywhere on the continent — alongside lions, leopards, wild dogs, and over 400 bird species, Hwange delivers a safari experience that competes with the best in the world. The dry season (April–October) is the optimal window for game viewing, when animals congregate around water holes.",
-    bestTime: "April – October",
-    climate: "Semi-arid",
-    temperature: "15–32°C",
-    image: "/images/hwange.jpg",
-    gallery: ["/images/hwange.jpg", "/images/african-bush-camps-somalisa-camp-604482-original.jpg"],
-    highlights: ["40,000 Elephants", "Big Five", "Game Drives", "Bird Watching", "Wild Dog Territory", "Night Safaris"],
-    practicalInfo: [
-      { label: "Getting there", value: "Fly to Hwange Airport or drive from Victoria Falls (2hrs) or Bulawayo (3hrs)." },
-      { label: "Accommodation", value: "Luxury lodges, tented camps, and NP campsites available." },
-      { label: "Best season", value: "Aug–Oct for maximum wildlife concentration at water holes." },
-      { label: "Guides", value: "Professional guides required for walking safaris." },
-    ],
-    activities: [
-      { name: "Game drive safari", duration: "Half day", price: "From $85", link: "/activities" },
-      { name: "Walking safari", duration: "3–4 hrs", price: "From $95", link: "/activities" },
-      { name: "Bush camp stay", duration: "Per night", price: "From $290", link: "/accommodation" },
-      { name: "Night drive", duration: "3 hrs", price: "From $65", link: "/activities" },
-    ],
+    label: "Things To Do",
+    key: "activities",
+    href: "/activities",
+    icon: Sparkles,
+    description: "See activities, tours, and experiences available in this destination.",
   },
   {
-    slug: "great-zimbabwe",
-    name: "Great Zimbabwe",
-    meta: "Culture & history",
-    description: "Great Zimbabwe is the largest ancient stone structure south of the Sahara and the site that gave Zimbabwe its name. Built between the 11th and 15th centuries by the ancestors of the Shona people, this UNESCO World Heritage Site reveals a sophisticated Iron Age civilization that controlled a vast trade network stretching to China and India. The ruins are divided into three sections — the Hill Complex, the Valley Ruins, and the Great Enclosure — each offering a different perspective on this remarkable kingdom.",
-    bestTime: "April – September",
-    climate: "Temperate",
-    temperature: "12–25°C",
-    image: "/images/great-zimbabwe.jpg",
-    gallery: ["/images/great-zimbabwe.jpg"],
-    highlights: ["Stone Ruins", "UNESCO Heritage Site", "National Museum", "Local Craft Markets", "Hill Complex", "Great Enclosure"],
-    practicalInfo: [
-      { label: "Location", value: "30km from Masvingo — easily reached by road from Harare (4hrs) or Bulawayo (3hrs)." },
-      { label: "Entry", value: "National Park fees apply. Guided tours available at the site." },
-      { label: "Combine with", value: "Pair with Lake Mutirikwi for a fuller Masvingo experience." },
-      { label: "Best time", value: "Cooler months (May–Aug) are most comfortable for exploring the ruins." },
-    ],
-    activities: [
-      { name: "Guided ruins tour", duration: "2–3 hrs", price: "From $15", link: "/activities" },
-      { name: "Museum visit", duration: "1–2 hrs", price: "From $8", link: "/activities" },
-      { name: "Cultural experience", duration: "Half day", price: "From $35", link: "/activities" },
-      { name: "Lake Mutirikwi cruise", duration: "2 hrs", price: "From $45", link: "/activities" },
-    ],
+    label: "Transport",
+    key: "transport",
+    href: "/transport",
+    icon: Bus,
+    description: "See taxis, shuttles, game drives, boat cruises, and route support linked to this destination.",
   },
   {
-    slug: "eastern-highlands",
-    name: "Eastern Highlands",
-    meta: "Scenic escape",
-    description: "The Eastern Highlands stretch along Zimbabwe's eastern border with Mozambique — a cool, misty mountain landscape of waterfalls, tea estates, forest trails, and scenic drives that feels entirely different from the rest of the country. Nyanga, Vumba, and Chimanimani each have distinct characters: Nyanga for mountains and trout fishing, Vumba for lush botanical gardens and boutique stays, and Chimanimani for serious hiking and wilderness adventure.",
-    bestTime: "March – November",
-    climate: "Temperate / Highland",
-    temperature: "10–22°C",
-    image: "/images/destinations/eastern-highlands.jpg",
-    gallery: ["/images/destinations/eastern-highlands.jpg"],
-    highlights: ["Mountain Hiking", "Waterfalls", "Tea Estates", "Vumba Gardens", "Trout Fishing", "Cool Weather"],
-    practicalInfo: [
-      { label: "Getting there", value: "Drive from Harare to Nyanga (3hrs) or Mutare (3hrs). Road trips from Bulawayo (5hrs)." },
-      { label: "Best months", value: "March–May and Aug–Nov. Avoid heaviest rains (Dec–Feb)." },
-      { label: "Key stops", value: "Nyanga, Vumba, Chimanimani — each worth a separate night." },
-      { label: "Activities", value: "Hiking, fly-fishing, botanical gardens, waterfall walks, scenic drives." },
-    ],
-    activities: [
-      { name: "Mountain hiking", duration: "Full day", price: "From $35", link: "/activities" },
-      { name: "Tea estate visit", duration: "3 hrs", price: "From $20", link: "/activities" },
-      { name: "Waterfall trek", duration: "Half day", price: "From $25", link: "/activities" },
-      { name: "Boutique lodge stay", duration: "Per night", price: "From $180", link: "/accommodation" },
-    ],
+    label: "Restaurants",
+    key: "restaurants",
+    href: "/restaurants",
+    icon: UtensilsCrossed,
+    description: "Find restaurants and dining options once this destination is on your plan.",
   },
-];
+  {
+    label: "Events",
+    key: "events",
+    href: "/events",
+    icon: CalendarDays,
+    description: "Browse concerts, festivals, Boma nights, and local happenings connected to this destination.",
+  },
+  {
+    label: "Ask a Local",
+    key: "guides",
+    href: "/ask-a-local",
+    icon: MessageCircle,
+    description: "Ask local guides and browse destination-specific questions and answers.",
+  },
+] as const;
 
 export default function DestinationDetailPage() {
   const { slug } = useParams<{ slug: string }>();
-  const dest = destinations.find((d) => d.slug === slug);
+  const [context, setContext] = useState<DestinationContextResponse | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  if (!dest) {
+  useEffect(() => {
+    apiFetch<DestinationContextResponse>(`/api/destinations/${slug}/context`)
+      .then((payload) => {
+        setContext(payload);
+        setError("");
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : "Unable to load destination.");
+      })
+      .finally(() => setLoading(false));
+  }, [slug]);
+
+  if (loading) {
+    return (
+      <div className="theme-page min-h-screen px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-7xl space-y-6">
+          <div className="h-[360px] animate-pulse rounded-[36px] bg-white/[0.06]" />
+          <div className="grid gap-6 lg:grid-cols-[1.05fr_0.95fr]">
+            <div className="h-72 animate-pulse rounded-[28px] bg-white/[0.06]" />
+            <div className="h-72 animate-pulse rounded-[28px] bg-white/[0.06]" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!context || error) {
     return (
       <div className="theme-page min-h-screen flex items-center justify-center px-4">
         <div className="theme-panel rounded-[32px] p-10 text-center max-w-md">
           <h1 className="theme-heading text-2xl font-semibold">Destination not found</h1>
-          <p className="theme-muted mt-2 text-sm">This destination page doesn't exist.</p>
-          <Link href="/travel-guide" className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#ff5630] px-5 py-3 text-sm font-semibold text-white hover:bg-[#ff7352] transition-colors">
-            <ArrowLeft className="h-4 w-4" /> Travel guide
+          <p className="theme-muted mt-2 text-sm">
+            {error || "This destination page doesn't exist yet."}
+          </p>
+          <Link
+            href="/travel-guide"
+            className="mt-5 inline-flex items-center gap-2 rounded-full bg-[#ff5630] px-5 py-3 text-sm font-semibold text-white hover:bg-[#ff7352] transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to destinations
           </Link>
         </div>
       </div>
     );
   }
 
+  const { destination, scoped, counts } = context;
+  const heroImage =
+    destination.image_url || destination.images?.[0] || "/images/victoria-falls.jpg";
+
   return (
     <div className="theme-page min-h-screen pb-20">
-      {/* Hero */}
       <div
-        className="relative h-[420px] sm:h-[520px] bg-cover bg-center"
-        style={{ backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.1), rgba(0,0,0,0.7)), url('${dest.image}')` }}
+        className="relative min-h-[380px] bg-cover bg-center"
+        style={{
+          backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.14), rgba(0,0,0,0.74)), url('${heroImage}')`,
+        }}
       >
-        <div className="absolute top-6 left-6">
-          <Link href="/travel-guide" className="inline-flex items-center gap-2 rounded-full bg-black/40 px-4 py-2 text-sm text-white backdrop-blur hover:bg-black/55 transition-colors">
-            <ArrowLeft className="h-4 w-4" /> Travel guide
-          </Link>
-        </div>
-        <div className="absolute bottom-0 left-0 right-0 p-6 sm:p-10">
-          <div className="mx-auto max-w-7xl">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-[#ff5630]/90 px-3 py-1.5 text-xs font-medium text-white mb-3">
-              <Camera className="h-3.5 w-3.5" /> {dest.meta}
-            </span>
-            <h1 className="text-4xl sm:text-5xl font-bold text-white">{dest.name}</h1>
-            <div className="mt-3 flex flex-wrap items-center gap-4 text-sm text-white/75">
-              <span className="flex items-center gap-1.5"><Clock3 className="h-4 w-4 text-[#4ade80]" />Best: {dest.bestTime}</span>
-              <span className="flex items-center gap-1.5"><SunMedium className="h-4 w-4 text-[#ffc247]" />{dest.climate} · {dest.temperature}</span>
-              <span className="flex items-center gap-1.5"><MapPin className="h-4 w-4 text-[#ff7352]" />Zimbabwe</span>
+        <div className="mx-auto flex min-h-[380px] max-w-7xl flex-col justify-between px-4 py-5 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between gap-3">
+            <Link
+              href="/travel-guide"
+              className="inline-flex items-center gap-2 rounded-full bg-black/40 px-4 py-2 text-sm text-white backdrop-blur hover:bg-black/55 transition-colors"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              All destinations
+            </Link>
+            <div className="rounded-full bg-black/40 px-4 py-2 text-xs uppercase tracking-[0.24em] text-white/75 backdrop-blur">
+              Destination hub
+            </div>
+          </div>
+
+          <div className="max-w-4xl">
+            <div className="inline-flex items-center gap-2 rounded-full bg-[#ff5630]/90 px-4 py-2 text-xs font-semibold uppercase tracking-[0.24em] text-white">
+              <MapPin className="h-3.5 w-3.5" />
+              {destination.location || "Zimbabwe"}
+            </div>
+            <h1 className="mt-3 text-4xl font-bold text-white md:text-5xl">{destination.name}</h1>
+            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/78 md:text-base">
+              {destination.description ||
+                "Choose this destination to see the stays, activities, restaurants, and local insight connected to it."}
+            </p>
+
+            <div className="mt-5 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <StatCard label="Stays" value={counts.stays} />
+              <StatCard label="Things to do" value={counts.activities} />
+              <StatCard label="Transport" value={counts.transport} />
+              <StatCard label="Dining and events" value={counts.restaurants + counts.diningListings + counts.events} />
+              <StatCard label="Local guidance" value={counts.guides + counts.questions} />
             </div>
           </div>
         </div>
       </div>
 
-      <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-        <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
+      <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+        <AppServiceStrip
+          activeLabel="Destinations"
+          destinationId={destination.id}
+          destinationName={destination.name}
+        />
+      </section>
 
-          {/* Left */}
-          <div className="space-y-6">
-            {/* About */}
-            <div className="theme-panel rounded-[28px] p-6">
-              <h2 className="theme-heading text-xl font-semibold mb-3">About {dest.name}</h2>
-              <p className="theme-muted text-sm leading-7">{dest.description}</p>
-            </div>
-
-            {/* Highlights */}
-            <div className="theme-panel rounded-[28px] p-6">
-              <h2 className="theme-heading text-xl font-semibold mb-4">Highlights</h2>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                {dest.highlights.map((h) => (
-                  <div key={h} className="flex items-center gap-2 rounded-[12px] bg-white/[0.04] border border-white/[0.06] px-3 py-2.5">
-                    <Telescope className="h-4 w-4 shrink-0 text-[#ff7352]" />
-                    <span className="theme-muted text-sm">{h}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Practical info */}
-            <div className="theme-panel rounded-[28px] p-6">
-              <h2 className="theme-heading text-xl font-semibold mb-4">Practical information</h2>
-              <div className="space-y-3">
-                {dest.practicalInfo.map(({ label, value }) => (
-                  <div key={label} className="flex gap-3 rounded-[14px] bg-white/[0.03] border border-white/[0.06] px-4 py-3">
-                    <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5 text-[#4ade80]" />
-                    <div>
-                      <p className="theme-heading text-sm font-medium">{label}</p>
-                      <p className="theme-muted text-sm mt-0.5">{value}</p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Activities */}
-            <div className="theme-panel rounded-[28px] p-6">
-              <h2 className="theme-heading text-xl font-semibold mb-4">Things to do</h2>
-              <div className="grid gap-3 sm:grid-cols-2">
-                {dest.activities.map((act) => (
-                  <Link key={act.name} href={act.link}
-                    className="group flex items-center justify-between rounded-[16px] border border-white/[0.07] bg-white/[0.03] px-4 py-3.5 hover:border-[#ff5630]/30 hover:bg-[#ff5630]/[0.05] transition-colors">
-                    <div>
-                      <p className="theme-heading text-sm font-medium">{act.name}</p>
-                      <p className="theme-subtle text-xs mt-0.5">{act.duration} · {act.price}</p>
-                    </div>
-                    <ArrowRight className="h-4 w-4 text-white/20 group-hover:text-[#ff5630] transition-colors" />
-                  </Link>
-                ))}
-              </div>
-            </div>
+      <section className="mx-auto max-w-7xl px-4 py-3 sm:px-6 lg:px-8">
+        <div className="flex flex-col gap-3 rounded-xl border border-black/10 bg-white p-3 dark:border-white/10 dark:bg-white/[0.03] lg:flex-row lg:items-center lg:justify-between">
+          <div className="min-w-0">
+            <p className="theme-label text-[10px] uppercase tracking-[0.22em]">Selected destination</p>
+            <h2 className="theme-heading mt-1 truncate text-base font-semibold">
+              Services are filtered to {destination.name}
+            </h2>
           </div>
-
-          {/* Right */}
-          <div className="space-y-4">
-            <div className="theme-panel rounded-[24px] p-5">
-              <h3 className="theme-heading font-semibold mb-4">Plan your visit</h3>
-              <div className="space-y-3">
-                <Link href="/marketplace" className="flex items-center justify-between rounded-[14px] bg-[#ff5630] px-4 py-3 text-sm font-semibold text-white hover:bg-[#ff7352] transition-colors">
-                  Browse stays near {dest.name.split(" ")[0]}
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-                <Link href="/activities" className="theme-button-secondary flex items-center justify-between rounded-[14px] px-4 py-3 text-sm font-semibold">
-                  Explore activities
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-                <Link href="/trip-planner" className="theme-button-secondary flex items-center justify-between rounded-[14px] px-4 py-3 text-sm font-semibold">
-                  Add to trip planner
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-                <Link href="/community-guides" className="theme-button-secondary flex items-center justify-between rounded-[14px] px-4 py-3 text-sm font-semibold">
-                  <span className="flex items-center gap-2"><Globe2 className="h-4 w-4" />Ask a local guide</span>
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-              </div>
-            </div>
-
-            <div className="theme-panel rounded-[24px] p-5">
-              <h3 className="theme-heading font-semibold mb-3">Quick facts</h3>
-              <div className="space-y-2.5">
-                {[
-                  { label: "Best time", value: dest.bestTime },
-                  { label: "Climate", value: dest.climate },
-                  { label: "Temperature", value: dest.temperature },
-                ].map(({ label, value }) => (
-                  <div key={label} className="flex justify-between text-sm">
-                    <span className="theme-subtle">{label}</span>
-                    <span className="theme-heading font-medium">{value}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
+          <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <Link
+              href="/events"
+              title="Browse events across Zimbabwe"
+              className="theme-button-secondary inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold"
+            >
+              All events
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+            <Link
+              href="/transport"
+              title="Browse transport options across Zimbabwe"
+              className="theme-button-secondary inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold"
+            >
+              Transport
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
+            <Link
+              href="/transport/flights"
+              title="Browse flights separately from destination-specific services"
+              className="theme-button-secondary inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold"
+            >
+              Flights
+              <ArrowRight className="h-3.5 w-3.5" />
+            </Link>
           </div>
         </div>
-      </div>
+      </section>
+
+      <section className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
+        <CompactSectionHeader eyebrow="Destination services" title="Explore this stop" />
+        <HorizontalRail itemClassName="w-[62vw] max-w-[210px] sm:w-[210px]">
+          {serviceCards.map((service) => {
+            const Icon = service.icon;
+            const count =
+              service.key === "restaurants"
+                ? counts.restaurants + counts.diningListings
+                : counts[service.key];
+
+            return (
+              <CompactRailCard
+                key={service.label}
+                href={withDestinationContext(service.href, destination.id)}
+                icon={Icon}
+                meta="Service"
+                badge={count}
+                title={service.label}
+                description={service.description}
+                actionLabel={`Open ${service.label}`}
+              />
+            );
+          })}
+        </HorizontalRail>
+      </section>
+
+      <section className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
+        <div>
+          <CompactSectionHeader
+            title="Featured stays"
+            count={scoped.stays.length}
+            actionHref={withDestinationContext("/accommodation", destination.id)}
+          />
+          {scoped.stays.length > 0 ? (
+            <HorizontalRail>
+              {scoped.stays.slice(0, 3).map((stay) => (
+                <CompactRailCard
+                  key={stay.id}
+                  title={stay.name}
+                  imageUrl={stay.image_url || destination.image_url}
+                  meta="Stay"
+                  detail={stay.location || stay.destinations?.name || destination.name}
+                  badge={stay.rating ? stay.rating.toFixed(1) : null}
+                  description={stay.description}
+                />
+              ))}
+            </HorizontalRail>
+          ) : (
+            <EmptyScopedState label="stays" destinationName={destination.name} />
+          )}
+        </div>
+
+        <div>
+          <CompactSectionHeader
+            title="Transport here"
+            count={scoped.transport.length}
+            actionHref={withDestinationContext("/transport", destination.id)}
+          />
+          {scoped.transport.length > 0 ? (
+            <HorizontalRail>
+              {scoped.transport.slice(0, 3).map((transport) => (
+                <ListingPreview key={transport.id} listing={transport} />
+              ))}
+            </HorizontalRail>
+          ) : (
+            <EmptyScopedState label="transport options" destinationName={destination.name} />
+          )}
+        </div>
+
+        <div>
+          <CompactSectionHeader
+            title="Dining"
+            count={scoped.restaurants.length + scoped.diningListings.length}
+            actionHref={withDestinationContext("/restaurants", destination.id)}
+          />
+          {scoped.restaurants.length > 0 || scoped.diningListings.length > 0 ? (
+            <HorizontalRail>
+              {scoped.restaurants.slice(0, 2).map((restaurant) => (
+                <CompactRailCard
+                  key={restaurant.id}
+                  title={restaurant.name}
+                  imageUrl={restaurant.images[0] || destination.image_url}
+                  meta={restaurant.cuisine}
+                  detail={restaurant.location}
+                  badge={restaurant.rating ? restaurant.rating.toFixed(1) : restaurant.priceRange}
+                  description={restaurant.description}
+                />
+              ))}
+              {scoped.diningListings.slice(0, Math.max(0, 3 - scoped.restaurants.length)).map((dining) => (
+                <ListingPreview key={dining.id} listing={dining} />
+              ))}
+            </HorizontalRail>
+          ) : (
+            <EmptyScopedState label="dining options" destinationName={destination.name} />
+          )}
+        </div>
+
+        <div>
+          <CompactSectionHeader
+            title="Events"
+            count={scoped.events.length}
+            actionHref={withDestinationContext("/events", destination.id)}
+          />
+          {scoped.events.length > 0 ? (
+            <HorizontalRail>
+              {scoped.events.slice(0, 3).map((event) => (
+                <ListingPreview key={event.id} listing={event} />
+              ))}
+            </HorizontalRail>
+          ) : (
+            <EmptyScopedState label="events" destinationName={destination.name} />
+          )}
+        </div>
+
+        <div>
+          <CompactSectionHeader
+            title="Things to do"
+            count={scoped.activities.length}
+            actionHref={withDestinationContext("/activities", destination.id)}
+          />
+          {scoped.activities.length > 0 ? (
+            <HorizontalRail>
+              {scoped.activities.slice(0, 3).map((activity) => (
+                <ListingPreview key={activity.id} listing={activity} />
+              ))}
+            </HorizontalRail>
+          ) : (
+            <EmptyScopedState label="activities" destinationName={destination.name} />
+          )}
+        </div>
+
+        <div>
+          <CompactSectionHeader
+            title="Ask a Local"
+            count={scoped.guides.length + scoped.forumQuestions.length}
+            actionHref={withDestinationContext("/ask-a-local", destination.id)}
+            actionLabel="Open forum"
+          />
+          {scoped.guides.length > 0 || scoped.forumQuestions.length > 0 ? (
+            <HorizontalRail>
+              {scoped.forumQuestions.slice(0, 2).map((question) => (
+                <CompactRailCard
+                  key={question.id}
+                  title={question.title}
+                  icon={MessageCircle}
+                  meta="Question"
+                  badge={`${question.answerCount} answers`}
+                  description={question.body}
+                />
+              ))}
+              {scoped.guides.slice(0, 1).map((guide) => (
+                <CompactRailCard
+                  key={guide.id}
+                  title={guide.name}
+                  icon={MessageCircle}
+                  meta="Guide"
+                  badge={guide.rating.toFixed(1)}
+                  description={guide.bio}
+                />
+              ))}
+            </HorizontalRail>
+          ) : (
+            <EmptyScopedState label="local guidance" destinationName={destination.name} />
+          )}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+function ListingPreview({ listing }: { listing: PublicListingRecord }) {
+  return (
+    <CompactRailCard
+      title={listing.title}
+      href={`/marketplace/${listing.slug}`}
+      imageUrl={listing.images[0]}
+      meta={listing.category}
+      detail={listing.location}
+      badge={listing.basePrice ? `$${listing.basePrice}` : "Quote"}
+      description={listing.shortDescription || listing.description}
+    />
+  );
+}
+
+function StatCard({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="min-w-[136px] rounded-xl border border-white/10 bg-black/32 px-3 py-2.5 text-white backdrop-blur">
+      <div className="text-xl font-semibold">{value}</div>
+      <div className="mt-0.5 truncate text-xs text-white/72">{label}</div>
+    </div>
+  );
+}
+
+function EmptyScopedState({
+  label,
+  destinationName,
+}: {
+  label: string;
+  destinationName: string;
+}) {
+  return (
+    <div className="rounded-xl border border-dashed border-black/15 p-4 text-sm theme-muted dark:border-white/12">
+      No {label} are linked to {destinationName} yet.
     </div>
   );
 }

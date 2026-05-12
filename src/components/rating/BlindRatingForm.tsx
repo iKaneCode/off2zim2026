@@ -152,7 +152,9 @@ export default function BlindRatingForm({
               ))}
             </div>
             {myRating?.note && (
-              <p className="mt-2 text-sm text-white/55 italic">"{myRating.note}"</p>
+              <p className="mt-2 text-sm text-white/55 italic">
+                &quot;{myRating.note}&quot;
+              </p>
             )}
           </div>
 
@@ -174,7 +176,9 @@ export default function BlindRatingForm({
                   ))}
                 </div>
                 {theirRating.note && (
-                  <p className="mt-2 text-sm text-white/55 italic">"{theirRating.note}"</p>
+                  <p className="mt-2 text-sm text-white/55 italic">
+                    &quot;{theirRating.note}&quot;
+                  </p>
                 )}
               </>
             ) : (

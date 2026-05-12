@@ -3,9 +3,10 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import AppServiceStrip from "@/components/ui/AppServiceStrip";
-import { ArrowRight, Compass, Heart, MapPinned, ReceiptText } from "lucide-react";
+import { ArrowRight, Compass, Heart, MapPinned, ReceiptText, ShieldCheck, UserRoundCheck } from "lucide-react";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/contexts/AuthContext";
+import { TRIP_PLANNER_STORAGE_KEY } from "@/contexts/TripPlannerContext";
 import { explorerWorkspaceCards } from "@/lib/surface-config";
 import { apiFetch } from "@/lib/client-api";
 
@@ -22,7 +23,7 @@ function useDashboardStats(): DashboardStats {
     // Read planner item count from localStorage (no API needed)
     let plannerItemCount = 0;
     try {
-      const raw = localStorage.getItem("off2zim_trip_planner_v1");
+      const raw = localStorage.getItem(TRIP_PLANNER_STORAGE_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
         plannerItemCount = Array.isArray(parsed.items) ? parsed.items.length : 0;
@@ -47,6 +48,14 @@ function useDashboardStats(): DashboardStats {
 function ExplorerDashboardShell() {
   const { user } = useAuth();
   const stats = useDashboardStats();
+  const readinessChecks = [
+    { label: "Email verified", done: !!user?.isVerified },
+    { label: "Phone added", done: !!user?.profile?.phone },
+    { label: "Nationality added", done: !!user?.profile?.nationality },
+    { label: "Explorer type set", done: !!user?.explorerType || !!user?.profile?.explorerType },
+  ];
+  const readinessCount = readinessChecks.filter((item) => item.done).length;
+  const readinessPercent = Math.round((readinessCount / readinessChecks.length) * 100);
 
   return (
     <div className="theme-page min-h-screen px-4 py-8 sm:px-6 lg:px-8">
@@ -55,7 +64,7 @@ function ExplorerDashboardShell() {
           <div className="grid lg:grid-cols-[1.05fr_0.95fr]">
             <div className="p-6 md:p-8 lg:p-10">
               <p className="theme-label text-xs uppercase tracking-[0.24em]">
-                Explorer workspace
+                Traveler workspace
               </p>
               <h1 className="theme-heading mt-3 text-4xl font-semibold">
                 {user?.firstName ? `Welcome back, ${user.firstName}` : "Welcome back"}
@@ -78,10 +87,10 @@ function ExplorerDashboardShell() {
                   Explore destinations
                 </Link>
                 <Link
-                  href="/community-guides"
+                  href="/events"
                   className="theme-button-secondary inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold"
                 >
-                  Ask a local
+                  Explore events
                 </Link>
               </div>
             </div>
@@ -118,6 +127,90 @@ function ExplorerDashboardShell() {
           <AppServiceStrip activeLabel="Trip Planner" />
         </section>
 
+        <section className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="theme-panel rounded-[32px] p-6">
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="theme-label text-xs uppercase tracking-[0.24em]">
+                  Account readiness
+                </p>
+                <h2 className="theme-heading mt-3 text-2xl font-semibold">
+                  Keep your travel account ready for your next booking
+                </h2>
+                <p className="theme-muted mt-3 text-sm leading-6">
+                  Verified contact details and a complete profile make booking, support, and account recovery much easier.
+                </p>
+              </div>
+              <div className="theme-card-soft rounded-[24px] px-4 py-3 text-right">
+                <div className="theme-heading text-3xl font-semibold">{readinessPercent}%</div>
+                <div className="theme-subtle mt-1 text-xs">Profile readiness</div>
+              </div>
+            </div>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              {readinessChecks.map((item) => (
+                <div key={item.label} className="theme-card-soft rounded-[22px] px-4 py-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <span className="theme-heading text-sm font-medium">{item.label}</span>
+                    <span
+                      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
+                        item.done
+                          ? "bg-[#0f2a1e] text-[#4ade80]"
+                          : "bg-[#2d1714] text-[#ffb09c]"
+                      }`}
+                    >
+                      {item.done ? "Ready" : "Action needed"}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link
+                href="/profile"
+                className="inline-flex items-center gap-2 rounded-full bg-[#ff5630] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#ff6f4d]"
+              >
+                Complete profile
+                <ArrowRight className="h-4 w-4" />
+              </Link>
+              {!user?.isVerified ? (
+                <Link
+                  href="/auth/verify-email/request"
+                  className="theme-button-secondary inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold"
+                >
+                  Verify email
+                </Link>
+              ) : null}
+            </div>
+          </div>
+
+          <div className="grid gap-4">
+            <WorkspaceTrustCard
+              title="Email status"
+              value={user?.isVerified ? "Verified" : "Pending"}
+              body={
+                user?.isVerified
+                  ? "Your email is confirmed and ready for account recovery."
+                  : "Confirm your email to strengthen recovery and account security."
+              }
+              icon={<ShieldCheck className="h-5 w-5 text-[#5aa7ff]" />}
+            />
+            <WorkspaceTrustCard
+              title="Explorer identity"
+              value={user?.explorerType === "local" ? "Local explorer" : "Visiting explorer"}
+              body="This helps us show the most relevant planning guidance for your trip."
+              icon={<Compass className="h-5 w-5 text-[#ffc247]" />}
+            />
+            <WorkspaceTrustCard
+              title="Profile coverage"
+              value={`${readinessCount}/${readinessChecks.length} complete`}
+              body="A complete profile helps you move through planning and booking with fewer delays."
+              icon={<UserRoundCheck className="h-5 w-5 text-[#8cf0a1]" />}
+            />
+          </div>
+        </section>
+
         <section className="grid gap-5 md:grid-cols-3">
           {explorerWorkspaceCards.map((card) => {
             const Icon = card.icon;
@@ -141,18 +234,41 @@ function ExplorerDashboardShell() {
                 Continue where the trip is moving next
               </h2>
               <p className="theme-muted mt-2 text-sm leading-6">
-                Use the explorer surface for planning, saved places, and confirmed travel activity.
+                Start with a destination, then explore the stays, dining, and local services available there while keeping global tools nearby.
               </p>
             </div>
             <Link
               href="/travel-guide"
               className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-black/[0.04] px-4 py-2 text-sm font-medium theme-muted transition hover:bg-black/[0.07] dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.08]"
             >
-              Open explorer surface
+              Explore destinations
             </Link>
           </div>
         </section>
       </div>
+    </div>
+  );
+}
+
+function WorkspaceTrustCard({
+  title,
+  value,
+  body,
+  icon,
+}: {
+  title: string;
+  value: string;
+  body: string;
+  icon: ReactNode;
+}) {
+  return (
+    <div className="theme-card rounded-[28px] p-5">
+      <div className="flex items-center gap-2">
+        {icon}
+        <span className="theme-subtle text-sm">{title}</span>
+      </div>
+      <div className="theme-heading mt-4 text-2xl font-semibold">{value}</div>
+      <p className="theme-muted mt-2 text-sm leading-6">{body}</p>
     </div>
   );
 }

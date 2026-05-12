@@ -41,6 +41,7 @@ export interface TripPlannerItem {
   unitCost?: number;
   quantity?: number;
   pricingUnit?: string;
+  maxGuests?: number;
   description: string;
   rating: number;
   image: string;

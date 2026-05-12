@@ -10,7 +10,7 @@ export const metadata = {
 
 export default function ProviderDashboardPage() {
   return (
-    <ProtectedRoute requiredRole="provider">
+    <ProtectedRoute requiredRole="provider" surface="provider">
       <ProviderDashboard />
     </ProtectedRoute>
   );

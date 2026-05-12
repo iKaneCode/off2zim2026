@@ -4,6 +4,12 @@ import { apiError } from "@/lib/http";
 import { requireSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { serializeAdminListing } from "@/lib/platform";
+import {
+  buildDestinationMetadata,
+  getListingDestinationMetadata,
+  listingRequiresDestination,
+  resolveListingDestination,
+} from "@/lib/listing-destination-rules";
 
 const updateListingSchema = z.object({
   status: z
@@ -11,6 +17,7 @@ const updateListingSchema = z.object({
     .optional(),
   visibility: z.enum(["private", "public"]).optional(),
   category: z.string().min(1).optional(),
+  metadata: z.record(z.unknown()).optional(),
 });
 
 export async function PATCH(
@@ -27,12 +34,43 @@ export async function PATCH(
 
     const listing = await prisma.providerListing.findUnique({
       where: { id: params.id },
-      select: { id: true, companyId: true, status: true, visibility: true, category: true },
+      select: {
+        id: true,
+        companyId: true,
+        status: true,
+        visibility: true,
+        category: true,
+        location: true,
+        metadata: true,
+      },
     });
 
     if (!listing) {
       return apiError("Listing not found.", 404);
     }
+
+    const existingMetadata = (() => {
+      try {
+        return listing.metadata
+          ? (JSON.parse(listing.metadata) as Record<string, unknown>)
+          : {};
+      } catch {
+        return {};
+      }
+    })();
+    const nextMetadata = { ...existingMetadata, ...(payload.metadata ?? {}) };
+    const submittedDestination = getListingDestinationMetadata(nextMetadata);
+    const destination = resolveListingDestination(submittedDestination.destinationId);
+    const nextCategory = payload.category ?? listing.category;
+
+    if (listingRequiresDestination(nextCategory) && !destination) {
+      return apiError(
+        "Assign a destination before publishing this destination-scoped listing.",
+        422
+      );
+    }
+
+    const destinationMetadata = buildDestinationMetadata(destination);
 
     const updated = await prisma.providerListing.update({
       where: { id: listing.id },
@@ -40,6 +78,14 @@ export async function PATCH(
         status: payload.status,
         visibility: payload.visibility,
         category: payload.category,
+        location: destination?.name ?? undefined,
+        metadata:
+          payload.metadata || destination
+            ? JSON.stringify({
+                ...nextMetadata,
+                ...destinationMetadata,
+              })
+            : undefined,
       },
       include: {
         company: true,
@@ -67,6 +113,12 @@ export async function PATCH(
           nextVisibility: payload.visibility ?? listing.visibility,
           previousCategory: listing.category,
           nextCategory: payload.category ?? listing.category,
+          previousDestinationId:
+            getListingDestinationMetadata(existingMetadata).destinationId ?? null,
+          nextDestinationId:
+            destination?.id ??
+            getListingDestinationMetadata(existingMetadata).destinationId ??
+            null,
         }),
       },
     });

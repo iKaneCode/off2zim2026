@@ -6,7 +6,7 @@ export const Cta27: React.FC = () => {
       <div className="container">
         <div className="text-center text-white">
           <h2 className="text-3xl font-bold mb-4">
-            Ready to Experience Zimbabwe's Flavors?
+            Ready to Experience Zimbabwe&apos;s Flavors?
           </h2>
           <p className="text-xl mb-8 opacity-90">
             Book your table now and embark on a culinary journey

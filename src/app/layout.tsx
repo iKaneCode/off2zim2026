@@ -11,7 +11,7 @@ import { resolveAppSurface } from "@/lib/app-surface";
 export const metadata: Metadata = {
   title: "Off2Zim - Explore | Experience | Enjoy",
   description:
-    "Explore, experience, and enjoy Zimbabwe with Off2Zim. Find trusted stays, experiences, transport, and local guidance in one destination-first platform.",
+    "Explore, experience, and enjoy Zimbabwe with Off2Zim. Find trusted stays, activities, transport, and local travel help in one place.",
   keywords:
     "Zimbabwe, travel, tourism, hotels, activities, dining, events, Victoria Falls, safari, adventure",
   authors: [{ name: "Off2Zim Team" }],
@@ -29,7 +29,7 @@ export const metadata: Metadata = {
   openGraph: {
     title: "Off2Zim - Explore | Experience | Enjoy",
     description:
-      "Explore, experience, and enjoy Zimbabwe with trusted stays, experiences, transport, and local guidance.",
+      "Explore, experience, and enjoy Zimbabwe with trusted stays, activities, transport, and local travel help.",
     url: "https://off2zim.com",
     siteName: "Off2Zim",
     images: [
@@ -47,7 +47,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Off2Zim - Explore | Experience | Enjoy",
     description:
-      "Explore, experience, and enjoy Zimbabwe with trusted stays, experiences, transport, and local guidance.",
+      "Explore, experience, and enjoy Zimbabwe with trusted stays, activities, transport, and local travel help.",
     images: ["/images/og-image.jpg"],
     creator: "@off2zim",
   },

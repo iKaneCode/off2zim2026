@@ -49,10 +49,10 @@ export default function BusTransportPage() {
             <div className="p-6 md:p-8 lg:p-10">
               <div className="theme-chip inline-flex rounded-full px-4 py-2 text-xs uppercase tracking-[0.28em]">Bus transport</div>
               <h1 className="theme-heading mt-4 text-4xl font-semibold md:text-5xl">
-                Intercity movement for practical itinerary building
+                Compare bus routes for affordable travel across Zimbabwe
               </h1>
               <p className="theme-muted mt-4 max-w-2xl text-sm leading-7">
-                Reliable intercity connections across Zimbabwe's major destinations. Choose your route, select seats, and confirm in one step.
+                Browse practical intercity routes, compare operators, and book seats for the next leg of your trip.
               </p>
             </div>
             <div className="min-h-[260px] bg-cover bg-center" style={{ backgroundImage: "linear-gradient(180deg,rgba(0,0,0,0.08),rgba(0,0,0,0.5)),url('/images/slide1.jpg')" }} />
@@ -94,7 +94,7 @@ export default function BusTransportPage() {
 
               <button onClick={() => handleBook(route)}
                 className="mt-4 w-full rounded-full bg-[#ff5630] px-5 py-3 text-sm font-semibold text-white hover:bg-[#ff7352] transition-colors">
-                Book this route
+                  Book bus route
               </button>
             </div>
           ))}

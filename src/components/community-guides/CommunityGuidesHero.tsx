@@ -25,12 +25,10 @@ export default function CommunityGuidesHero() {
               Ask a Local
             </h1>
             <h2 className="text-2xl md:text-3xl text-off2zim-primary mb-6">
-              Connect with Zimbabwe's Community Guides
+              Connect with local guides across Zimbabwe
             </h2>
             <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
-              Get authentic local insights from our verified Community Guides.
-              Free advice in our forum or personalized Guide+ services for your
-              perfect Zimbabwe experience.
+              Get local advice from verified Community Guides. Ask free questions in the forum or book Guide+ services for more personal trip support.
             </p>
 
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -40,7 +38,7 @@ export default function CommunityGuidesHero() {
               </button>
               <button className="btn-secondary">
                 <StarIcon className="w-5 h-5 mr-2" />
-                Browse Guide+ Services
+                Browse Guide+ services
               </button>
             </div>
           </div>
@@ -63,15 +61,15 @@ export default function CommunityGuidesHero() {
               <ul className="text-left space-y-2 text-gray-600">
                 <li className="flex items-center">
                   <HeartIcon className="w-4 h-4 text-green-500 mr-2" />
-                  Community Q&A forum
+                  Free community question and answer forum
                 </li>
                 <li className="flex items-center">
                   <ShieldCheckIcon className="w-4 h-4 text-green-500 mr-2" />
-                  Answers from verified guides highlighted
+                  Verified guide answers highlighted
                 </li>
                 <li className="flex items-center">
                   <StarIcon className="w-4 h-4 text-green-500 mr-2" />
-                  Browse previous questions
+                  Browse previous travel questions
                 </li>
               </ul>
             </div>
@@ -83,7 +81,7 @@ export default function CommunityGuidesHero() {
                   <StarIcon className="w-8 h-8 text-off2zim-primary" />
                 </div>
                 <h3 className="text-xl font-bold text-gray-900">
-                  Guide+ Services
+                  Guide+ services
                 </h3>
                 <span className="bg-off2zim-primary text-white px-3 py-1 rounded-full text-sm font-medium">
                   PREMIUM
@@ -120,7 +118,7 @@ export default function CommunityGuidesHero() {
                   Community-Centric
                 </h4>
                 <p className="text-sm text-gray-600">
-                  Building mutual respect between Explorers and Guides
+                  Building trust between travelers and local guides
                 </p>
               </div>
               <div>
@@ -131,7 +129,7 @@ export default function CommunityGuidesHero() {
                   Authentic Experiences
                 </h4>
                 <p className="text-sm text-gray-600">
-                  Showcasing the real Zimbabwe through local eyes
+                  Showing travelers the real Zimbabwe through local knowledge
                 </p>
               </div>
               <div>

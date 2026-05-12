@@ -11,7 +11,6 @@ import {
   Truck,
   Package,
 } from "lucide-react";
-import StarRating from "@/components/rating/StarRating";
 
 interface CartItem {
   id: string;
@@ -188,11 +187,6 @@ export const ShoppingCart: React.FC<ShoppingCartProps> = ({
                   const ShippingIcon = getShippingIcon(
                     selectedShipping[item.id] || item.shippingType
                   );
-                  const shippingCost = getShippingCost(
-                    item,
-                    selectedShipping[item.id] || item.shippingType
-                  );
-
                   return (
                     <div
                       key={item.id}

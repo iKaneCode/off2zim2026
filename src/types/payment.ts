@@ -1,4 +1,9 @@
 // Payment types for the Off2Zim platform
+export type PaymentMetadata = Record<
+  string,
+  string | number | boolean | string[] | Date | null | undefined
+>;
+
 export interface PaymentMethod {
   id: string;
   type: "card" | "mobile_money" | "bank_transfer";
@@ -34,7 +39,7 @@ export interface BookingItem {
     name: string;
     email: string;
   };
-  metadata?: Record<string, any>;
+  metadata?: PaymentMetadata;
 }
 
 export interface PaymentIntent {
@@ -52,7 +57,7 @@ export interface PaymentIntent {
     | "succeeded";
   items: BookingItem[];
   userId: string;
-  metadata?: Record<string, any>;
+  metadata?: PaymentMetadata;
 }
 
 export interface BookingConfirmation {
@@ -72,7 +77,7 @@ export interface BookingConfirmation {
     phone?: string;
   };
   createdAt: Date;
-  metadata?: Record<string, any>;
+  metadata?: PaymentMetadata;
 }
 
 export interface PaymentError {

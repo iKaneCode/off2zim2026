@@ -22,6 +22,7 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:seed": "npx tsx prisma/seed.ts",
+    "db:seed:taxonomy": "npx tsx prisma/seed-demo-taxonomy.ts",
     "db:seed:admin": "node scripts/seed-admin.js",
     "db:studio": "prisma studio",
     "db:dev:up": "docker compose -f docker-compose.postgres.yml up -d",

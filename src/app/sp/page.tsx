@@ -5,14 +5,14 @@ import { getSurfaceHref } from "@/lib/app-surface";
 export default function ProviderEntryPage() {
   return (
     <SurfaceEntryPage
-      eyebrow="Service provider app"
-      title="The provider app is your business workspace."
-      body="Use this surface to access provider sign in, complete registration, manage listings, handle orders, and move through verification in a dedicated environment."
+      eyebrow="Provider account"
+      title="The provider app is your business dashboard."
+      body="Sign in to manage listings, handle orders, complete verification, and run your Off2Zim business from one place."
       icon={Building2}
       actions={[
         { label: "Provider sign in", href: getSurfaceHref("provider", "/login") },
         {
-          label: "Provider registration",
+          label: "Register your business",
           href: getSurfaceHref("provider", "/register"),
           variant: "secondary",
         },
@@ -25,7 +25,7 @@ export default function ProviderEntryPage() {
       points={[
         "Separate provider access",
         "Listings, orders, and verification",
-        "Shared backend and unified data model",
+        "Connected to the same platform travelers use to discover and book",
       ]}
     />
   );

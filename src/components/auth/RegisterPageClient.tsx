@@ -6,7 +6,7 @@ import { Building2, Sparkles, Users } from "lucide-react";
 import RegisterForm from "@/components/auth/RegisterForm";
 import { useAuth } from "@/contexts/AuthContext";
 import { getPostAuthRoute } from "@/lib/auth-routing";
-import { AppSurface, getDefaultPostAuthRoute } from "@/lib/app-surface";
+import { AppSurface, getDefaultPostAuthRoute, getSurfaceHref } from "@/lib/app-surface";
 import { authSurfaceCopy } from "@/lib/surface-config";
 
 type RegisterPageClientProps = {
@@ -18,7 +18,7 @@ export default function RegisterPageClient({
   surface,
   redirect,
 }: RegisterPageClientProps) {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo =
@@ -28,16 +28,16 @@ export default function RegisterPageClient({
   const panelCopy = authSurfaceCopy[surface].register;
 
   useEffect(() => {
-    if (user) {
+    if (!isLoading && user) {
       router.push(redirectTo);
     }
-  }, [redirectTo, router, user]);
+  }, [redirectTo, isLoading, router, user]);
 
-  if (user) {
+  if (isLoading || user) {
     return (
       <div className="theme-page flex min-h-screen items-center justify-center p-8">
         <div className="theme-panel rounded-[28px] px-8 py-6 text-center">
-          <p className="theme-muted text-sm">Redirecting to your workspace...</p>
+          <p className="theme-muted text-sm">Redirecting to your account...</p>
         </div>
       </div>
     );
@@ -54,7 +54,7 @@ export default function RegisterPageClient({
               </h2>
               <div className="mt-6 flex flex-col gap-3">
                 <a
-                  href="/login"
+                  href={getSurfaceHref("admin", "/login")}
                   className="inline-flex h-12 items-center justify-center rounded-full bg-[#ff5630] px-5 text-sm font-semibold text-white transition hover:bg-[#ff6f4d]"
                 >
                   Go to admin sign in
@@ -63,7 +63,7 @@ export default function RegisterPageClient({
                   href="mailto:info@off2zim.co.zw"
                   className="theme-button-secondary inline-flex h-12 items-center justify-center rounded-full px-5 text-sm font-semibold"
                 >
-                  Contact platform owner
+                  Contact platform support
                 </a>
               </div>
             </div>
@@ -115,7 +115,11 @@ export default function RegisterPageClient({
             </section>
 
             <aside className="flex items-center justify-center px-0 py-2 lg:px-10">
-              <RegisterForm redirectTo={redirectTo} />
+              <RegisterForm
+                surface={surface}
+                redirectTo={redirectTo}
+                showSocialButtons={false}
+              />
             </aside>
           </>
         )}

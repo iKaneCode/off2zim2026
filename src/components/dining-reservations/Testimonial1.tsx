@@ -33,8 +33,8 @@ export const Testimonial1: React.FC = () => {
               </div>
             </div>
             <p className="text-gray-700">
-              "Incredible authentic flavors! The sadza and beef stew reminded me
-              of home. Highly recommend!"
+              &quot;Incredible authentic flavors! The sadza and beef stew reminded me
+              of home. Highly recommend!&quot;
             </p>
           </div>
           <div className="bg-gray-50 p-6 rounded-lg">
@@ -48,8 +48,8 @@ export const Testimonial1: React.FC = () => {
               </div>
             </div>
             <p className="text-gray-700">
-              "Amazing service and atmosphere. The traditional music made the
-              evening perfect."
+              &quot;Amazing service and atmosphere. The traditional music made the
+              evening perfect.&quot;
             </p>
           </div>
           <div className="bg-gray-50 p-6 rounded-lg">
@@ -63,8 +63,8 @@ export const Testimonial1: React.FC = () => {
               </div>
             </div>
             <p className="text-gray-700">
-              "Best dining experience in Zimbabwe! The chef's special was
-              outstanding."
+              &quot;Best dining experience in Zimbabwe! The chef&apos;s special was
+              outstanding.&quot;
             </p>
           </div>
         </div>

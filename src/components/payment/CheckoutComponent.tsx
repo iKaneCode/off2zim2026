@@ -96,6 +96,7 @@ export default function CheckoutComponent({ items: initialItems, onSuccess, onCa
           {items.map((item) => {
             const isAccommodation = item.type === "accommodation";
             const isTripPackage = item.type === "trip_package";
+            const isFixedPlannerItem = item.metadata?.pricingModel === "fixed";
             const nights = isAccommodation ? nightsBetween(item.checkIn, item.checkOut) : 1;
             const lineTotal = item.price * item.quantity * nights;
 
@@ -114,7 +115,7 @@ export default function CheckoutComponent({ items: initialItems, onSuccess, onCa
                       {item.description && (
                         <p className="theme-muted text-xs mt-0.5 line-clamp-2 leading-5">{item.description}</p>
                       )}
-                      {item.metadata?.location && (
+                      {typeof item.metadata?.location === "string" && (
                         <p className="theme-subtle text-xs mt-1">{item.metadata.location}</p>
                       )}
                     </div>
@@ -179,7 +180,13 @@ export default function CheckoutComponent({ items: initialItems, onSuccess, onCa
                   {/* Guests */}
                   <div className={isAccommodation ? "sm:col-span-1" : ""}>
                     <label className="block text-xs theme-subtle mb-1">
-                      {isAccommodation ? "Guests" : item.category === "dining" ? "Party size" : "Travelers"}
+                      {isAccommodation
+                        ? "Rooms"
+                        : isFixedPlannerItem
+                          ? "Quantity"
+                          : item.category === "dining"
+                            ? "Party size"
+                            : "Travelers"}
                     </label>
                     <div className="flex items-center gap-2">
                       <button
@@ -198,7 +205,9 @@ export default function CheckoutComponent({ items: initialItems, onSuccess, onCa
                       </button>
                       <span className="theme-subtle text-xs ml-1 flex items-center gap-1">
                         <Users className="h-3.5 w-3.5" />
-                        {item.quantity === 1 ? "person" : "people"}
+                        {isFixedPlannerItem
+                          ? item.quantity === 1 ? "item" : "items"
+                          : item.quantity === 1 ? "person" : "people"}
                       </span>
                     </div>
                   </div>
@@ -207,9 +216,20 @@ export default function CheckoutComponent({ items: initialItems, onSuccess, onCa
                   <div className="flex items-end">
                     <p className="theme-subtle text-xs">
                       ${item.price.toFixed(2)}{" "}
-                      {isAccommodation ? "/ night" : isTripPackage ? "/ person (package)" : "/ person"}
+                      {isAccommodation
+                        ? "/ night"
+                        : isTripPackage
+                          ? "/ person (package)"
+                          : isFixedPlannerItem
+                            ? "fixed"
+                            : "/ person"}
                       {isAccommodation && nights > 1 ? ` × ${nights} nights` : ""}
-                      {item.quantity > 1 ? ` × ${item.quantity} ${item.quantity === 1 ? "person" : "people"}` : ""}
+                      {item.quantity > 1
+                        ? ` × ${item.quantity} ${isFixedPlannerItem ? "items" : "people"}`
+                        : ""}
+                      {typeof item.metadata?.pricingLabel === "string"
+                        ? ` · ${item.metadata.pricingLabel}`
+                        : ""}
                     </p>
                   </div>
                 </div>
@@ -220,9 +240,13 @@ export default function CheckoutComponent({ items: initialItems, onSuccess, onCa
                     <label className="block text-xs theme-subtle mb-1">Reservation time</label>
                     <div className="flex flex-wrap gap-2">
                       {(Array.isArray(item.metadata.allTimes)
-                        ? item.metadata.allTimes
-                        : [item.metadata.reservationTime]
-                      ).map((t: string, ti: number) => (
+                        ? item.metadata.allTimes.filter(
+                            (time): time is string => typeof time === "string"
+                          )
+                        : [item.metadata.reservationTime].filter(
+                            (time): time is string => typeof time === "string"
+                          )
+                      ).map((t, ti) => (
                         <button
                           key={`${t}-${ti}`}
                           onClick={() => updateItem(item.id, { metadata: { ...item.metadata, reservationTime: t } })}
@@ -245,7 +269,11 @@ export default function CheckoutComponent({ items: initialItems, onSuccess, onCa
                     <label className="block text-xs theme-subtle mb-1">Dietary needs / notes</label>
                     <input
                       type="text"
-                      value={item.metadata?.dietaryNotes ?? ""}
+                      value={
+                        typeof item.metadata?.dietaryNotes === "string"
+                          ? item.metadata.dietaryNotes
+                          : ""
+                      }
                       onChange={(e) => updateItem(item.id, { metadata: { ...item.metadata, dietaryNotes: e.target.value || null } })}
                       placeholder="e.g. vegetarian, nut allergy, high chair…"
                       className="theme-input w-full rounded-[12px] px-3 py-2 text-xs"
@@ -254,10 +282,16 @@ export default function CheckoutComponent({ items: initialItems, onSuccess, onCa
                 )}
 
                 {/* Special notes for Guide+ bookings */}
-                {item.category === "guide-plus" && item.metadata?.guideName && (
+                {item.category === "guide-plus" &&
+                  typeof item.metadata?.guideName === "string" && (
                   <div className="mt-3 rounded-[14px] bg-white/[0.04] border border-white/[0.06] px-3 py-2.5 text-xs theme-muted">
-                    Guide: {item.metadata.guideName} · {item.metadata.service}
-                    {item.metadata.location ? ` · ${item.metadata.location}` : ""}
+                    Guide: {item.metadata.guideName}
+                    {typeof item.metadata.service === "string"
+                      ? ` · ${item.metadata.service}`
+                      : ""}
+                    {typeof item.metadata.location === "string"
+                      ? ` · ${item.metadata.location}`
+                      : ""}
                   </div>
                 )}
               </div>

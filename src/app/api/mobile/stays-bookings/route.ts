@@ -5,6 +5,41 @@ import { apiError } from '@/lib/http';
 import { requireSessionUser } from '@/lib/auth';
 
 export const dynamic = "force-dynamic";
+type JsonMetadata = Record<string, string | number | boolean | null | undefined>;
+type StayBookingRecord = {
+  id: string;
+  userId: string;
+  hotelId: string | null;
+  roomId: string | null;
+  providerId: string | null;
+  confirmationNumber: string;
+  metadata: string | null;
+  checkIn: Date | null;
+  checkOut: Date | null;
+  guests: number | null;
+  totalAmount: number;
+  status: string;
+  createdAt: Date;
+  hotel: {
+    id: string;
+    name: string;
+    city: string;
+    images: string | null;
+  } | null;
+  room: {
+    id: string;
+    name: string;
+    price: number;
+    capacity: number;
+    description: string | null;
+  } | null;
+  user: {
+    name: string | null;
+    email: string;
+    phone: string | null;
+  } | null;
+};
+
 function safeJsonParse<T>(value: string | null | undefined, fallback: T): T {
   if (!value) {
     return fallback;
@@ -17,8 +52,8 @@ function safeJsonParse<T>(value: string | null | undefined, fallback: T): T {
   }
 }
 
-function serializeStayBooking(booking: any) {
-  const metadata = safeJsonParse<Record<string, any>>(booking.metadata, {});
+function serializeStayBooking(booking: StayBookingRecord) {
+  const metadata = safeJsonParse<JsonMetadata>(booking.metadata, {});
   return {
     id: booking.id,
     user_id: booking.userId,
@@ -74,7 +109,7 @@ function serializeStayBooking(booking: any) {
             : [],
           stay_gallery: safeJsonParse<string[]>(booking.hotel.images, []).map(
             (image: string, index: number) => ({
-              id: `${booking.hotel.id}-${index}`,
+              id: `${booking.hotel?.id || "hotel"}-${index}`,
               image_url: image,
               sort_order: index,
             })
@@ -232,7 +267,7 @@ export async function PATCH(request: NextRequest) {
       return apiError('Booking not found.', 404);
     }
 
-    const metadata = safeJsonParse<Record<string, any>>(existing.metadata, {});
+    const metadata = safeJsonParse<JsonMetadata>(existing.metadata, {});
     metadata.marked_as_deleted = payload.markedAsDeleted ?? true;
 
     const booking = await prisma.booking.update({

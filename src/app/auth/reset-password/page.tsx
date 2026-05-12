@@ -1,20 +1,24 @@
 "use client";
 
-import { FormEvent, Suspense, useMemo, useState } from "react";
+import { FormEvent, Suspense, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { KeyRound, CheckCircle2, XCircle } from "lucide-react";
+import { getSurfaceHref, resolveSurfaceFromPath } from "@/lib/app-surface";
 import { apiFetch } from "@/lib/client-api";
 
 type ResetState = "idle" | "submitting" | "success" | "error";
 
 function ResetPasswordForm() {
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const token = searchParams.get("token") || "";
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [state, setState] = useState<ResetState>("idle");
   const [message, setMessage] = useState("");
+  const surface = resolveSurfaceFromPath(pathname);
+  const signInHref = getSurfaceHref(surface, "/login");
 
   const passwordsMatch = password.length > 0 && password === confirmPassword;
 
@@ -61,7 +65,7 @@ function ResetPasswordForm() {
                 <p className="text-sm text-[#4ade80]">{message}</p>
               </div>
               <Link
-                href="/login"
+                href={signInHref}
                 className="mt-5 flex w-full items-center justify-center rounded-full bg-[#ff5630] px-5 py-3 text-sm font-semibold text-white hover:bg-[#ff7352] transition-colors"
               >
                 Go to sign in
@@ -113,7 +117,7 @@ function ResetPasswordForm() {
           )}
 
           <div className="mt-6 text-center text-sm">
-            <Link href="/login" className="text-[#ff7352] hover:underline font-medium">
+            <Link href={signInHref} className="text-[#ff7352] hover:underline font-medium">
               Back to sign in
             </Link>
           </div>

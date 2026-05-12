@@ -1,9 +1,11 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import ExplorerScoreBadge from "@/components/ui/ExplorerScoreBadge";
 import { apiFetch } from "@/lib/client-api";
+import { useAuth } from "@/contexts/AuthContext";
 import {
   AlertCircle,
   Camera,
@@ -192,6 +194,7 @@ function DeleteAccountSection() {
 // ─── Main page ─────────────────────────────────────────────────────────────────
 
 export default function ProfilePage() {
+  const { user } = useAuth();
   const [profile, setProfile] = useState<MobileProfile | null>(null);
   const [explorerScore, setExplorerScore] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -206,6 +209,16 @@ export default function ProfilePage() {
   const [gender, setGender] = useState("");
   const [dob, setDob] = useState("");
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+  const profileChecks = [
+    { label: "Full name", done: !!fullName.trim() },
+    { label: "Phone", done: !!phone.trim() },
+    { label: "Nationality", done: !!nationality.trim() },
+    { label: "Gender", done: !!gender.trim() },
+    { label: "Date of birth", done: !!dob.trim() },
+    { label: "Profile photo", done: !!avatarUrl },
+  ];
+  const completedChecks = profileChecks.filter((item) => item.done).length;
+  const completionPercent = Math.round((completedChecks / profileChecks.length) * 100);
 
   useEffect(() => {
     Promise.all([
@@ -284,6 +297,70 @@ export default function ProfilePage() {
             <p className="theme-muted mt-1 text-sm">
               Manage your personal information and account settings.
             </p>
+          </div>
+
+          <div className="mb-6 rounded-[24px] border border-white/10 bg-[#111111] p-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+              <div>
+                <h2 className="text-xl font-semibold text-white">Account readiness</h2>
+                <p className="mt-2 text-sm leading-6 text-white/45">
+                  Keep your explorer account complete so trip planning, booking follow-up, and account recovery stay smooth.
+                </p>
+              </div>
+              <div className="rounded-[20px] bg-white/[0.04] px-4 py-3 text-left md:text-right">
+                <div className="text-3xl font-semibold text-white">{completionPercent}%</div>
+                <div className="mt-1 text-xs text-white/35">Profile complete</div>
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-3 md:grid-cols-2">
+              <div className="rounded-[20px] border border-white/10 bg-white/[0.03] p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium text-white">Email verification</span>
+                  <span
+                    className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
+                      user?.isVerified ? "bg-[#0f2a1e] text-[#4ade80]" : "bg-[#2d1714] text-[#ffb09c]"
+                    }`}
+                  >
+                    {user?.isVerified ? "Verified" : "Action needed"}
+                  </span>
+                </div>
+                <p className="mt-2 text-sm leading-6 text-white/45">
+                  {user?.isVerified
+                    ? "Your email is confirmed and ready for secure recovery."
+                    : "Verify your email to improve security and make account recovery easier."}
+                </p>
+                {!user?.isVerified ? (
+                  <Link
+                    href="/auth/verify-email/request"
+                    className="mt-4 inline-flex items-center rounded-full border border-[#ff5630]/25 px-4 py-2 text-sm font-medium text-[#ff7352] transition hover:bg-[#ff5630]/10"
+                  >
+                    Send verification email
+                  </Link>
+                ) : null}
+              </div>
+
+              <div className="rounded-[20px] border border-white/10 bg-white/[0.03] p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <span className="text-sm font-medium text-white">Profile details</span>
+                  <span className="inline-flex items-center rounded-full bg-white/8 px-2.5 py-1 text-xs font-medium text-white/70">
+                    {completedChecks}/{profileChecks.length} complete
+                  </span>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {profileChecks.map((item) => (
+                    <span
+                      key={item.label}
+                      className={`rounded-full px-3 py-1 text-xs ${
+                        item.done ? "bg-[#0f2a1e] text-[#4ade80]" : "bg-white/[0.06] text-white/45"
+                      }`}
+                    >
+                      {item.label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
           </div>
 
           {error && (
@@ -366,6 +443,23 @@ export default function ProfilePage() {
                     readOnly
                     className="w-full cursor-not-allowed rounded-xl border border-white/8 bg-white/[0.02] px-4 py-2.5 text-sm text-white/40"
                   />
+                  <div className="mt-2 flex items-center gap-2">
+                    <span
+                      className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
+                        user?.isVerified ? "bg-[#0f2a1e] text-[#4ade80]" : "bg-[#2d1714] text-[#ffb09c]"
+                      }`}
+                    >
+                      {user?.isVerified ? "Email verified" : "Email not verified"}
+                    </span>
+                    {!user?.isVerified ? (
+                      <Link
+                        href="/auth/verify-email/request"
+                        className="text-xs font-medium text-[#ff7352] transition hover:underline"
+                      >
+                        Resend verification
+                      </Link>
+                    ) : null}
+                  </div>
                 </div>
 
                 {/* Phone */}

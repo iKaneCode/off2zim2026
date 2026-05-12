@@ -1,9 +1,11 @@
-import Image from "next/image";
 import Link from "next/link";
 import AppServiceStrip from "@/components/ui/AppServiceStrip";
-import SectionHeader from "@/components/ui/SectionHeader";
+import CompactPageHero from "@/components/ui/CompactPageHero";
+import CompactRailCard from "@/components/ui/CompactRailCard";
+import CompactSectionHeader from "@/components/ui/CompactSectionHeader";
+import HorizontalRail from "@/components/ui/HorizontalRail";
+import { getSubtypesForGroup } from "@/lib/taxonomy";
 import {
-  ArrowRight,
   Bus,
   CarFront,
   Plane,
@@ -50,98 +52,84 @@ const transportTypes = [
     features: ["Airport pickup", "City rides", "Last-mile support"],
   },
 ];
+const transportSubtypes = getSubtypesForGroup("transport");
 
 export default function TransportPage() {
   return (
     <div className="theme-page pb-20">
-      <section className="mx-auto max-w-7xl px-4 pb-6 pt-6 sm:px-6 lg:px-8">
-        <div className="theme-panel-strong overflow-hidden rounded-[34px]">
-          <div className="grid lg:grid-cols-[1.05fr_0.95fr]">
-            <div className="p-6 md:p-8 lg:p-10">
-              <div className="theme-chip inline-flex rounded-full px-4 py-2 text-xs uppercase tracking-[0.28em]">
-                Transport
-              </div>
-              <h1 className="theme-heading mt-4 max-w-3xl text-4xl font-semibold md:text-5xl">
-                Move through Zimbabwe with a route that still feels calm
-              </h1>
-              <p className="theme-muted mt-4 max-w-2xl text-sm leading-7 md:text-base">
-                Compare routes, protect your timing, and keep every leg aligned with your trip.
-              </p>
-
-              <div className="mt-8 grid gap-3 sm:grid-cols-3">
-                <div className="theme-card-soft rounded-[24px] p-4">
-                  <ShieldCheck className="h-6 w-6 text-[#8cf0a1]" />
-                  <div className="theme-heading mt-3 text-base font-semibold">Trusted providers</div>
-                  <div className="theme-muted mt-1 text-sm">Verified operators and route-aware choices.</div>
-                </div>
-                <div className="theme-card-soft rounded-[24px] p-4">
-                  <TimerReset className="h-6 w-6 text-[#5aa7ff]" />
-                  <div className="theme-heading mt-3 text-base font-semibold">Time visibility</div>
-                  <div className="theme-muted mt-1 text-sm">See what saves time and what stretches a day.</div>
-                </div>
-                <div className="theme-card-soft rounded-[24px] p-4">
-                  <Route className="h-6 w-6 text-[#ffca74]" />
-                  <div className="theme-heading mt-3 text-base font-semibold">Trip-linked planning</div>
-                  <div className="theme-muted mt-1 text-sm">Transport that fits the actual itinerary window.</div>
-                </div>
-              </div>
-            </div>
-
-            <div
-              className="min-h-[280px] bg-cover bg-center"
-              style={{
-                backgroundImage:
-                  "linear-gradient(180deg, rgba(0,0,0,0.12), rgba(0,0,0,0.48)), url('/images/destinations/eastern-highlands.jpg')",
-              }}
-            />
-          </div>
+      <CompactPageHero
+        eyebrow="Transport"
+        title="Plan transport across Zimbabwe with clear, practical options"
+        description="Compare routes, save time, and choose the transport that fits your itinerary."
+        imageUrl="/images/destinations/eastern-highlands.jpg"
+      >
+        <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <HeroMiniFact icon={ShieldCheck} title="Trusted providers" detail="Verified operators" />
+          <HeroMiniFact icon={TimerReset} title="Time visibility" detail="Compare travel pace" />
+          <HeroMiniFact icon={Route} title="Trip-linked" detail="Match your itinerary" />
         </div>
-      </section>
+      </CompactPageHero>
 
       <section className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
         <AppServiceStrip activeLabel="Transport" />
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-        <SectionHeader
+        <CompactSectionHeader
           eyebrow="Modes"
-          title="Choose the transport layer that fits the route"
+          title="Choose the transport option that fits your route"
         />
-        <div className="grid gap-5 md:grid-cols-2">
+        <div className="mb-4 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {transportSubtypes.map((subtype) => (
+            <Link
+              key={subtype.id}
+              href={`/marketplace?serviceGroup=transport&subtype=${encodeURIComponent(subtype.id)}`}
+              className="theme-chip shrink-0 rounded-lg px-3 py-2 text-xs font-semibold"
+              title={subtype.travelerHint}
+            >
+              {subtype.label}
+            </Link>
+          ))}
+        </div>
+        <HorizontalRail itemClassName="w-[78vw] max-w-[300px] sm:w-[280px]">
           {transportTypes.map((transport) => {
             const Icon = transport.icon;
             return (
-              <Link key={transport.id} href={transport.href} className="theme-card overflow-hidden transition hover:-translate-y-0.5">
-                <div className="grid md:grid-cols-[0.85fr_1.15fr]">
-                  <div className="relative min-h-[220px]">
-                    <Image src={transport.image} alt={transport.name} fill className="object-cover" />
-                  </div>
-                  <div className="p-6 md:p-7">
-                    <Icon className="h-7 w-7 text-[#ff7352]" />
-                    <h2 className="theme-heading mt-4 text-2xl font-semibold">
-                      {transport.name}
-                    </h2>
-                    <p className="theme-muted mt-3 text-sm leading-6">
-                      {transport.description}
-                    </p>
-                    <div className="mt-5 flex flex-wrap gap-2">
-                      {transport.features.map((feature) => (
-                        <span key={feature} className="theme-chip rounded-full px-3 py-1.5 text-sm">
-                          {feature}
-                        </span>
-                      ))}
-                    </div>
-                    <div className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-[#ff5630]">
-                      Explore this transport mode
-                      <ArrowRight className="h-4 w-4" />
-                    </div>
-                  </div>
-                </div>
-              </Link>
+              <CompactRailCard
+                key={transport.id}
+                href={transport.href}
+                title={transport.name}
+                imageUrl={transport.image}
+                icon={Icon}
+                meta="Transport"
+                detail={transport.features[0]}
+                description={transport.description}
+                actionLabel="View transport options"
+              />
             );
           })}
-        </div>
+        </HorizontalRail>
       </section>
+    </div>
+  );
+}
+
+function HeroMiniFact({
+  icon: Icon,
+  title,
+  detail,
+}: {
+  icon: typeof ShieldCheck;
+  title: string;
+  detail: string;
+}) {
+  return (
+    <div className="flex min-w-[160px] items-center gap-2 rounded-lg border border-white/12 bg-black/35 px-3 py-2 text-white backdrop-blur">
+      <Icon className="h-4 w-4 shrink-0 text-[#ffca74]" />
+      <span className="min-w-0">
+        <span className="block truncate text-sm font-semibold">{title}</span>
+        <span className="block truncate text-xs text-white/62">{detail}</span>
+      </span>
     </div>
   );
 }

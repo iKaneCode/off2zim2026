@@ -1,5 +1,5 @@
 import { prisma } from "@/lib/prisma";
-import { BookingItem, BookingConfirmation } from "@/types/payment";
+import { BookingItem, BookingConfirmation, PaymentMetadata } from "@/types/payment";
 
 export interface CreateBookingRequest {
   userId: string;
@@ -25,7 +25,7 @@ export interface CreatePaymentRequest {
   phoneNumber?: string;
   reference?: string;
   paynowReference?: string; // Added for Paynow
-  metadata?: Record<string, any>;
+  metadata?: PaymentMetadata;
 }
 
 export class BookingService {
@@ -43,7 +43,7 @@ export class BookingService {
         data.items[0]?.metadata?.instantBooking
           ? "CONFIRMED"
           : "PENDING";
-      let relatedIds: {
+      const relatedIds: {
         providerId?: string;
         listingId?: string;
         hotelId?: string;
@@ -56,19 +56,19 @@ export class BookingService {
       // Extract IDs from the first item (assuming single-item bookings for now)
       if (data.items.length > 0) {
         const item = data.items[0];
-        if (item.metadata?.providerId) {
+        if (typeof item.metadata?.providerId === "string") {
           relatedIds.providerId = item.metadata.providerId;
         }
-        if (item.metadata?.listingId) {
+        if (typeof item.metadata?.listingId === "string") {
           relatedIds.listingId = item.metadata.listingId;
         }
         switch (item.type) {
           case "accommodation":
             // For hotel bookings, we might have hotel and room info in metadata
-            if (item.metadata?.hotelId) {
+            if (typeof item.metadata?.hotelId === "string") {
               relatedIds.hotelId = item.metadata.hotelId;
             }
-            if (item.metadata?.roomId) {
+            if (typeof item.metadata?.roomId === "string") {
               relatedIds.roomId = item.metadata.roomId;
             }
             break;
@@ -177,7 +177,7 @@ export class BookingService {
   static async updatePaymentStatus(
     paymentId: string,
     status: "PENDING" | "COMPLETED" | "FAILED" | "CANCELLED",
-    metadata?: Record<string, any>
+    metadata?: PaymentMetadata
   ) {
     try {
       const payment = await prisma.payment.update({
@@ -267,7 +267,7 @@ export class BookingService {
   static async updateBookingStatus(
     bookingId: string,
     status: "PENDING" | "CONFIRMED" | "CANCELLED",
-    metadata?: Record<string, any>
+    metadata?: PaymentMetadata
   ) {
     try {
       const booking = await prisma.booking.update({

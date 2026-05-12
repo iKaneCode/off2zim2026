@@ -237,7 +237,7 @@ const CommunityGuideApplication = ({
         </h2>
         <p className="text-gray-600 mb-6">
           Only verified Local Explorers are eligible to apply for Community
-          Guide status. Please ensure you're registered as a Local Explorer
+          Guide status. Please ensure you&apos;re registered as a Local Explorer
           first.
         </p>
         <button

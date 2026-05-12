@@ -123,6 +123,7 @@ export function plannerCatalogToTripPlannerItem(
     unitCost,
     quantity,
     pricingUnit,
+    maxGuests: overrides.maxGuests ?? item.maxGuests,
     description: overrides.description ?? item.description,
     rating: overrides.rating ?? item.rating,
     image: overrides.image ?? item.image,

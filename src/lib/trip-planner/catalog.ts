@@ -1,6 +1,5 @@
 import {
   PlannerCatalogItem,
-  PlannerItemType,
   TripPlannerItem,
 } from "@/types/trip-planner";
 import { plannerCatalogToTripPlannerItem } from "@/lib/public-listing-adapter";
@@ -155,24 +154,6 @@ export const tripPlannerCatalog: PlannerCatalogItem[] = [
 
 export function getPlannerCatalogItem(id: string) {
   return tripPlannerCatalog.find((item) => item.id === id);
-}
-
-function getDefaultEndTime(startTime: string, type: PlannerItemType) {
-  const [hourString] = startTime.split(":");
-  const hour = Number(hourString);
-  const durationHours =
-    type === "accommodation" ? 18 : type === "transport" ? 2 : 3;
-  const endHour = Math.min(hour + durationHours, 23);
-  return `${String(endHour).padStart(2, "0")}:00`;
-}
-
-function getDefaultQuantity(type: PlannerItemType) {
-  return type === "accommodation" ? 1 : 1;
-}
-
-function getDefaultPricingUnit(item: PlannerCatalogItem) {
-  const unit = item.priceUnit.replace(/^\//, "");
-  return unit || "item";
 }
 
 export function toTripPlannerItem(

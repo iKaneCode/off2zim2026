@@ -9,10 +9,6 @@ import {
   Users,
   ChevronRight,
   Badge,
-  Camera,
-  Mountain,
-  Utensils,
-  Car,
   Heart,
   MessageCircle,
 } from "lucide-react";
@@ -136,13 +132,13 @@ export default function FeaturedGuides() {
           <p className="text-lg text-gray-600 max-w-3xl mx-auto">
             Meet our top-rated local experts who consistently deliver
             exceptional experiences. These featured guides represent the best of
-            Zimbabwe's hospitality and knowledge.
+            Zimbabwe&apos;s hospitality and knowledge.
           </p>
         </div>
 
         {/* Featured Guides */}
         <div className="space-y-12">
-          {featuredGuides.map((guide, index) => (
+          {featuredGuides.map((guide) => (
             <div
               key={guide.id}
               className="bg-white rounded-2xl shadow-xl overflow-hidden"
@@ -334,7 +330,7 @@ export default function FeaturedGuides() {
                         </div>
 
                         <p className="text-gray-700 italic">
-                          "{guide.recentReview.text}"
+                          &quot;{guide.recentReview.text}&quot;
                         </p>
                       </div>
                     </div>

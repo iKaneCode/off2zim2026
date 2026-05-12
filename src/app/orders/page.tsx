@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Package, ShoppingBag, Clock, CheckCircle2, XCircle, Truck, ArrowRight } from "lucide-react";
 import { apiFetch } from "@/lib/client-api";
-import { useAuth } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 
 interface OrderItem {

@@ -243,15 +243,15 @@
   }
 
   .theme-panel {
-    @apply border border-black/10 bg-white/85 text-slate-950 dark:border-white/10 dark:bg-[#111111] dark:text-white;
+    @apply border border-black/10 bg-white/90 text-slate-950 shadow-[0_16px_50px_-38px_rgba(15,23,42,0.22)] dark:border-white/10 dark:bg-[#111111] dark:text-white dark:shadow-[0_18px_55px_-40px_rgba(0,0,0,0.48)];
   }
 
   .theme-panel-strong {
-    @apply border border-black/10 bg-white text-slate-950 dark:border-white/10 dark:bg-[#121212] dark:text-white;
+    @apply border border-black/10 bg-white text-slate-950 shadow-[0_24px_70px_-52px_rgba(15,23,42,0.24)] dark:border-white/10 dark:bg-[#121212] dark:text-white dark:shadow-[0_24px_70px_-52px_rgba(0,0,0,0.55)];
   }
 
   .theme-panel-soft {
-    @apply border border-black/10 bg-black/[0.03] text-slate-800 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/80;
+    @apply border border-black/10 bg-black/[0.03] text-slate-800 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/80;
   }
 
   .theme-heading {
@@ -278,16 +278,36 @@
     @apply border border-black/10 bg-black/[0.04] text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/75;
   }
 
+  .theme-chip-success {
+    @apply bg-[#0f2a1e] text-[#4ade80];
+  }
+
+  .theme-chip-info {
+    @apply bg-[#13283a] text-[#8dc9ff];
+  }
+
+  .theme-chip-warning {
+    @apply bg-[#332913] text-[#ffca74];
+  }
+
+  .theme-chip-danger {
+    @apply bg-[#2d1714] text-[#ffb09c];
+  }
+
+  .theme-button-primary {
+    @apply bg-[#ff5630] text-white hover:bg-[#ff6f4d];
+  }
+
   .theme-button-secondary {
     @apply border border-black/10 bg-black/[0.04] text-slate-800 hover:bg-black/[0.07] dark:border-white/10 dark:bg-white/[0.04] dark:text-white dark:hover:bg-white/[0.08];
   }
 
   .theme-card {
-    @apply rounded-[32px] border border-black/10 bg-white/90 text-slate-950 dark:border-white/10 dark:bg-[#141414] dark:text-white;
+    @apply rounded-[28px] border border-black/10 bg-white/90 text-slate-950 shadow-[0_18px_56px_-42px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-[#141414] dark:text-white dark:shadow-[0_18px_56px_-42px_rgba(0,0,0,0.44)];
   }
 
   .theme-card-soft {
-    @apply rounded-[28px] border border-black/10 bg-black/[0.03] text-slate-800 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/80;
+    @apply rounded-[24px] border border-black/10 bg-black/[0.03] text-slate-800 dark:border-white/10 dark:bg-white/[0.03] dark:text-white/80;
   }
 
   /* Section spacing */

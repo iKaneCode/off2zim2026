@@ -48,6 +48,23 @@ function categoryGradient(category: string) {
   );
 }
 
+function formatSlotRange(startDate: string, endDate: string) {
+  const start = new Date(startDate);
+  const end = new Date(endDate);
+
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return "Invalid slot";
+  }
+
+  return `${start.toLocaleDateString()} ${start.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  })} - ${end.toLocaleDateString()} ${end.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+  })}`;
+}
+
 // ── component ─────────────────────────────────────────────────────────────────
 
 export default function MarketplaceListingDetailPage({
@@ -66,6 +83,7 @@ export default function MarketplaceListingDetailPage({
   const [guests, setGuests] = useState(1);
   const [checkIn, setCheckIn] = useState("");
   const [checkOut, setCheckOut] = useState("");
+  const [selectedAvailabilityId, setSelectedAvailabilityId] = useState("");
   const [specialRequests, setSpecialRequests] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [bookingMessage, setBookingMessage] = useState("");
@@ -76,7 +94,18 @@ export default function MarketplaceListingDetailPage({
 
   useEffect(() => {
     apiFetch<{ listing: PublicListingRecord }>(`/api/listings/${params.slug}`)
-      .then(({ listing: l }) => setListing(l))
+      .then(({ listing: l }) => {
+        setListing(l);
+        const firstAvailableSlot = l.availability.find(
+          (slot) => slot.status === "available"
+        );
+
+        if (l.bookingMode === "instant" && firstAvailableSlot) {
+          setSelectedAvailabilityId(firstAvailableSlot.id);
+          setCheckIn(firstAvailableSlot.startDate.slice(0, 10));
+          setCheckOut(firstAvailableSlot.endDate.slice(0, 10));
+        }
+      })
       .catch((err) =>
         setError(err instanceof Error ? err.message : "Unable to load listing.")
       )
@@ -99,13 +128,14 @@ export default function MarketplaceListingDetailPage({
         method: "POST",
         body: JSON.stringify({
           guests,
+          availabilityId: selectedAvailabilityId || null,
           checkIn: checkIn || null,
           checkOut: checkOut || null,
           specialRequests: specialRequests || null,
         }),
       });
       setBookingMessage(
-        `Booking ${payload.booking.status.toLowerCase()} — confirmation #${payload.booking.confirmationNumber}`
+        `Booking ${payload.booking.status.toLowerCase()} - confirmation #${payload.booking.confirmationNumber}`
       );
     } catch (err) {
       setBookingError(
@@ -149,6 +179,12 @@ export default function MarketplaceListingDetailPage({
 
   const images = getImages(listing);
   const hasImages = images.length > 0;
+  const availableSlots = listing.availability.filter(
+    (slot) => slot.status === "available"
+  );
+  const requiresSlot = listing.bookingMode === "instant";
+  const canSubmitBooking =
+    !requiresSlot || (!!selectedAvailabilityId && availableSlots.length > 0);
 
   return (
     <div className="theme-page min-h-screen pb-20">
@@ -267,7 +303,7 @@ export default function MarketplaceListingDetailPage({
                   )}
                   {listing.bookingMode === "instant"
                     ? "Instant booking"
-                    : "Booking request"}
+                    : "Booking request required"}
                 </span>
                 {listing.capacity ? (
                   <span className="inline-flex items-center gap-1.5 text-white/60">
@@ -417,7 +453,7 @@ export default function MarketplaceListingDetailPage({
                 <div className="mb-4 rounded-[18px] bg-[#0f2a1e] px-4 py-3 text-sm text-[#4ade80]">
                   <div className="flex items-center gap-2 font-medium">
                     <CheckCircle className="h-4 w-4" />
-                    Booking placed!
+                    Booking submitted
                   </div>
                   <p className="mt-1 text-xs opacity-80">{bookingMessage}</p>
                 </div>
@@ -443,6 +479,45 @@ export default function MarketplaceListingDetailPage({
                       </select>
                     </div>
                   </div>
+
+                  {/* Availability slot */}
+                  {availableSlots.length > 0 ? (
+                    <div>
+                      <label className="theme-muted mb-1.5 block text-xs font-medium">
+                        Availability
+                      </label>
+                      <select
+                        value={selectedAvailabilityId}
+                        onChange={(e) => {
+                          const slot = availableSlots.find(
+                            (item) => item.id === e.target.value
+                          );
+                          setSelectedAvailabilityId(e.target.value);
+                          if (slot) {
+                            setCheckIn(slot.startDate.slice(0, 10));
+                            setCheckOut(slot.endDate.slice(0, 10));
+                          }
+                        }}
+                        className="theme-input h-12 w-full rounded-2xl px-4 text-sm"
+                      >
+                        <option value="">
+                          {requiresSlot ? "Choose an available slot" : "No specific slot"}
+                        </option>
+                        {availableSlots.map((slot) => (
+                          <option key={slot.id} value={slot.id}>
+                            {formatSlotRange(slot.startDate, slot.endDate)}
+                            {slot.unitsAvailable
+                              ? ` · ${slot.unitsAvailable} left`
+                              : ""}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  ) : requiresSlot ? (
+                    <div className="rounded-[18px] bg-[#2d1714] px-4 py-3 text-sm text-[#ffb09c]">
+                      This instant-book listing does not have available slots yet.
+                    </div>
+                  ) : null}
 
                   {/* Dates */}
                   <div className="grid grid-cols-2 gap-3">
@@ -494,14 +569,14 @@ export default function MarketplaceListingDetailPage({
                   {/* CTA */}
                   <button
                     onClick={requestBooking}
-                    disabled={submitting}
+                    disabled={submitting || !canSubmitBooking}
                     className="w-full rounded-full bg-[#ff5630] px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-[#ff6f4d] disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {submitting
                       ? "Submitting…"
                       : listing.bookingMode === "instant"
-                        ? "Book instantly"
-                        : "Send booking request"}
+                        ? "Book now"
+                        : "Request booking"}
                   </button>
                 </div>
               )}
@@ -512,11 +587,11 @@ export default function MarketplaceListingDetailPage({
               <div className="space-y-3 text-xs text-white/55">
                 <div className="flex items-center gap-2">
                   <ShieldCheck className="h-4 w-4 text-[#8dc9ff] shrink-0" />
-                  Verified provider — bookings are protected by Off2Zim
+                  Verified provider with booking support through Off2Zim
                 </div>
                 <div className="flex items-center gap-2">
                   <Star className="h-4 w-4 text-[#fbbf24] shrink-0" />
-                  Ratings revealed after service completion
+                  Ratings are shown after completed bookings
                 </div>
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-white/35 shrink-0" />

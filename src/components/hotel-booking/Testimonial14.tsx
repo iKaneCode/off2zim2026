@@ -24,21 +24,21 @@ export const Testimonial14: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <div className="bg-gray-50 p-6 rounded-lg">
             <p className="text-gray-700 mb-4">
-              "Amazing service and beautiful location. Highly recommended!"
+              &quot;Amazing service and beautiful location. Highly recommended!&quot;
             </p>
             <div className="font-semibold text-gray-900">Sarah Johnson</div>
             <RatingRow />
           </div>
           <div className="bg-gray-50 p-6 rounded-lg">
             <p className="text-gray-700 mb-4">
-              "Perfect for our Zimbabwe safari trip. Great hospitality."
+              &quot;Perfect for our Zimbabwe safari trip. Great hospitality.&quot;
             </p>
             <div className="font-semibold text-gray-900">Michael Chen</div>
             <RatingRow />
           </div>
           <div className="bg-gray-50 p-6 rounded-lg">
             <p className="text-gray-700 mb-4">
-              "Excellent facilities and friendly staff. Will visit again!"
+              &quot;Excellent facilities and friendly staff. Will visit again!&quot;
             </p>
             <div className="font-semibold text-gray-900">Emma Wilson</div>
             <RatingRow />

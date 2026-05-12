@@ -76,8 +76,8 @@ export class EmailService {
     const template: EmailTemplate = {
       to: customerEmail,
       subject: `🇿🇼 ${providerName} Payment Confirmed - Off2Zim`,
-      text: `Dear ${customerName}, your ${providerName} payment for booking ${booking.confirmationNumber} has been confirmed!`,
-      html: `<h1>Payment Confirmed!</h1><p>Dear ${customerName}, your ${providerName} payment for booking ${booking.confirmationNumber} has been confirmed!</p>`,
+      text: `Dear ${customerName}, your ${providerName} payment for booking ${booking.confirmationNumber} has been confirmed. Reference: ${transactionId}. Phone: ${phoneNumber}.`,
+      html: `<h1>Payment Confirmed!</h1><p>Dear ${customerName}, your ${providerName} payment for booking ${booking.confirmationNumber} has been confirmed.</p><p>Reference: ${transactionId}</p><p>Phone: ${phoneNumber}</p>`,
     };
 
     return await this.sendEmail(template);

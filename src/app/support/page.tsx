@@ -113,7 +113,7 @@ export default function SupportPage() {
           </div>
           <h1 className="theme-heading mt-4 text-4xl font-semibold">How can we help?</h1>
           <p className="theme-muted mt-2 text-sm leading-6 max-w-xl">
-            Browse common questions or reach out directly — our team is here to make your Off2Zim experience smooth.
+            Browse common questions or contact us directly. We are here to help with bookings, provider support, and trip planning.
           </p>
         </div>
 
@@ -163,7 +163,7 @@ export default function SupportPage() {
 
           {/* Contact form */}
           <div>
-            <h2 className="theme-heading text-xl font-semibold mb-4">Send a Message</h2>
+            <h2 className="theme-heading text-xl font-semibold mb-4">Send a message</h2>
             {submitted ? (
               <div className="theme-panel rounded-[24px] p-8 text-center">
                 <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#0f2a1e]">
@@ -171,7 +171,7 @@ export default function SupportPage() {
                 </div>
                 <h3 className="theme-heading font-semibold">Message received</h3>
                 <p className="theme-muted mt-2 text-sm leading-6">
-                  We'll get back to you within 24 hours. Check your inbox for a confirmation.
+                  We will get back to you within 24 hours. Check your inbox for a confirmation.
                 </p>
                 <button
                   onClick={() => { setSubmitted(false); setFormData({ name: "", email: "", subject: "", message: "" }); }}
@@ -230,7 +230,7 @@ export default function SupportPage() {
                   type="submit"
                   className="w-full rounded-full bg-[#ff5630] px-6 py-3 text-sm font-semibold text-white hover:bg-[#ff7352] transition-colors"
                 >
-                  Send Message
+                  Send message
                 </button>
               </form>
             )}

@@ -1,242 +1,232 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import AppServiceStrip from "@/components/ui/AppServiceStrip";
-import SectionHeader from "@/components/ui/SectionHeader";
-import { Clock3, MapPin, Minus, Plus, Star, Users, UtensilsCrossed } from "lucide-react";
-import { usePayment } from "@/contexts/PaymentContext";
-import { BookingItem } from "@/types/payment";
+import CompactPageHero from "@/components/ui/CompactPageHero";
+import CompactRailCard from "@/components/ui/CompactRailCard";
+import CompactSectionHeader from "@/components/ui/CompactSectionHeader";
+import HorizontalRail from "@/components/ui/HorizontalRail";
+import ServiceSubtypeChips from "@/components/ui/ServiceSubtypeChips";
+import { apiFetch } from "@/lib/client-api";
+import {
+  getDestinationById,
+  type ExplorerDestinationSummary,
+} from "@/lib/destination-explorer";
+import { getSubtypesForGroup, normalizeTaxonomyValue } from "@/lib/taxonomy";
+import { Search, UtensilsCrossed } from "lucide-react";
 
-const sampleRestaurants = [
-  {
-    id: "rest-001",
-    name: "Victoria Falls Safari Lodge Restaurant",
-    description: "Elevated dining with open views across the bushveld — best suited for a long, unhurried evening during your Victoria Falls stay.",
-    price: 75,
-    currency: "USD",
-    category: "dining",
-    location: "Victoria Falls",
-    cuisine: "International & local",
-    rating: 4.8,
-    image: "/images/victoria-falls.jpg",
-    reservationTimes: ["18:00", "19:00", "20:00"],
-  },
-  {
-    id: "rest-002",
-    name: "The Boma",
-    description: "Traditional drums, communal seating, and a parade of Zimbabwean dishes — as much of an experience as it is a meal.",
-    price: 55,
-    currency: "USD",
-    category: "dining",
-    location: "Victoria Falls",
-    cuisine: "Traditional Zimbabwean",
-    rating: 4.6,
-    image: "/images/jacaranda.JPG",
-    reservationTimes: ["18:30", "19:30"],
-  },
-  {
-    id: "rest-003",
-    name: "Mukwa Lodge Restaurant",
-    description: "Intimate farm-to-table dining in a quieter lodge setting — ideal for evenings away from the main tourist circuit.",
-    price: 65,
-    currency: "USD",
-    category: "dining",
-    location: "Hwange",
-    cuisine: "Farm-to-table",
-    rating: 4.7,
-    image: "/images/hwange-bush-camp-548548-original.jpg",
-    reservationTimes: ["19:00", "20:00"],
-  },
-];
-
-type Restaurant = typeof sampleRestaurants[0];
-
-function RestaurantCard({ restaurant, onBook }: { restaurant: Restaurant; onBook: (r: Restaurant, time: string, guests: number, dietary: string) => void }) {
-  const [selectedTime, setSelectedTime] = useState(restaurant.reservationTimes[0]);
-  const [guests, setGuests] = useState(2);
-  const [dietary, setDietary] = useState("");
-
-  return (
-    <article className="theme-card overflow-hidden">
-      <div
-        className="min-h-[220px] bg-cover bg-center"
-        style={{
-          backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.48)), url('${restaurant.image}')`,
-        }}
-      />
-      <div className="p-5">
-        <div className="theme-label text-xs uppercase tracking-[0.24em]">{restaurant.cuisine}</div>
-        <h2 className="theme-heading mt-2 text-xl font-semibold">{restaurant.name}</h2>
-        <p className="theme-muted mt-3 text-sm leading-6">{restaurant.description}</p>
-
-        <div className="theme-muted mt-4 space-y-2 text-sm">
-          <div className="flex items-center gap-2">
-            <MapPin className="h-4 w-4 text-[#ff7352]" />
-            {restaurant.location}
-          </div>
-          <div className="flex items-center gap-2">
-            <UtensilsCrossed className="h-4 w-4 text-[#5aa7ff]" />
-            {restaurant.cuisine}
-          </div>
-        </div>
-
-        {/* Time selector */}
-        <div className="mt-5">
-          <p className="theme-subtle text-xs mb-2 flex items-center gap-1.5">
-            <Clock3 className="h-3.5 w-3.5" /> Select a time
-          </p>
-          <div className="flex flex-wrap gap-2">
-            {restaurant.reservationTimes.map((t) => (
-              <button
-                key={t}
-                onClick={() => setSelectedTime(t)}
-                className={`rounded-full px-3 py-1.5 text-xs font-medium transition-colors ${
-                  selectedTime === t
-                    ? "bg-[#ff5630] text-white"
-                    : "theme-chip hover:bg-white/[0.1]"
-                }`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Guests selector */}
-        <div className="mt-4 flex items-center gap-3">
-          <Users className="h-4 w-4 text-white/40" />
-          <span className="theme-subtle text-sm">Guests</span>
-          <div className="flex items-center gap-2 ml-auto">
-            <button
-              onClick={() => setGuests((g) => Math.max(1, g - 1))}
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 text-white/60 hover:bg-white/[0.07] transition-colors"
-            >
-              <Minus className="h-3 w-3" />
-            </button>
-            <span className="theme-heading w-6 text-center text-sm font-semibold">{guests}</span>
-            <button
-              onClick={() => setGuests((g) => g + 1)}
-              className="flex h-8 w-8 items-center justify-center rounded-full border border-white/10 text-white/60 hover:bg-white/[0.07] transition-colors"
-            >
-              <Plus className="h-3 w-3" />
-            </button>
-          </div>
-        </div>
-
-        <div className="mt-4 flex items-center justify-between gap-3">
-          <div className="inline-flex items-center gap-2">
-            <Star className="h-5 w-5 fill-[#ffca74] text-[#ffca74]" />
-            <span className="theme-heading text-lg font-semibold">{restaurant.rating}</span>
-          </div>
-          <div className="theme-heading text-lg font-semibold">
-            ${restaurant.price}
-            <span className="theme-muted ml-1 text-sm">pp</span>
-          </div>
-        </div>
-
-        <div className="mt-2 text-right theme-subtle text-xs">
-          Total: ${(restaurant.price * guests).toFixed(2)} · {guests} guest{guests !== 1 ? "s" : ""} · {selectedTime}
-        </div>
-
-        {/* Dietary / special requests */}
-        <div className="mt-4">
-          <label className="block text-xs theme-subtle mb-1.5">Dietary needs / notes (optional)</label>
-          <input
-            type="text"
-            value={dietary}
-            onChange={(e) => setDietary(e.target.value)}
-            placeholder="e.g. vegetarian, nut allergy, high chair needed…"
-            className="theme-input w-full rounded-[12px] px-3 py-2 text-xs"
-          />
-        </div>
-
-        <button
-          onClick={() => onBook(restaurant, selectedTime, guests, dietary)}
-          className="mt-4 w-full rounded-full bg-[#ff5630] px-6 py-3 text-sm font-semibold text-white hover:bg-[#ff7352] transition-colors"
-        >
-          Reserve dining
-        </button>
-      </div>
-    </article>
-  );
+interface DestinationContextResponse {
+  destination: ExplorerDestinationSummary;
+  scoped: {
+    restaurants: Array<{
+      id: string;
+      name: string;
+      description?: string | null;
+      cuisine: string;
+      location: string;
+      priceRange: string;
+      rating?: number | null;
+      images: string[];
+    }>;
+  };
 }
 
 export default function RestaurantsPage() {
-  const router = useRouter();
-  const { addToBooking } = usePayment();
+  const searchParams = useSearchParams();
+  const destinationId = searchParams?.get("destination");
+  const [destinations, setDestinations] = useState<ExplorerDestinationSummary[]>([]);
+  const [selectedDestination, setSelectedDestination] = useState<ExplorerDestinationSummary | null>(null);
+  const [restaurants, setRestaurants] = useState<DestinationContextResponse["scoped"]["restaurants"]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeSubtype, setActiveSubtype] = useState(searchParams?.get("subtype") || "all");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const handleBookRestaurant = (restaurant: Restaurant, selectedTime: string, guests: number, dietary: string) => {
-    const bookingItem: BookingItem = {
-      id: `${restaurant.id}-${Date.now()}`,
-      type: "activity",
-      name: restaurant.name,
-      description: restaurant.description,
-      price: restaurant.price,
-      currency: restaurant.currency,
-      category: restaurant.category,
-      quantity: guests,
-      metadata: {
-        location: restaurant.location,
-        cuisine: restaurant.cuisine,
-        rating: restaurant.rating,
-        image: restaurant.image,
-        reservationTime: selectedTime,
-        allTimes: restaurant.reservationTimes,
-        dietaryNotes: dietary || null,
-      },
-    };
-    addToBooking(bookingItem);
-    router.push("/checkout");
-  };
+  useEffect(() => {
+    apiFetch<{ destinations: ExplorerDestinationSummary[] }>("/api/destinations")
+      .then((payload) => {
+        setDestinations(payload.destinations);
+        setSelectedDestination(getDestinationById(payload.destinations, destinationId));
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : "Unable to load destinations."));
+  }, [destinationId]);
+
+  useEffect(() => {
+    if (!destinationId) {
+      setLoading(false);
+      setRestaurants([]);
+      return;
+    }
+
+    setLoading(true);
+    apiFetch<DestinationContextResponse>(`/api/destinations/${destinationId}/context`)
+      .then((payload) => {
+        setSelectedDestination(payload.destination);
+        setRestaurants(payload.scoped.restaurants);
+        setError("");
+      })
+      .catch((err) => setError(err instanceof Error ? err.message : "Unable to load restaurants."))
+      .finally(() => setLoading(false));
+  }, [destinationId]);
+
+  const filteredRestaurants = useMemo(() => {
+    const query = searchTerm.trim().toLowerCase();
+
+    return restaurants.filter((restaurant) =>
+      (activeSubtype === "all" ||
+        [restaurant.name, restaurant.description, restaurant.cuisine, restaurant.location, restaurant.priceRange]
+          .map((value) => normalizeTaxonomyValue(value))
+          .some((value) => value.includes(activeSubtype))) &&
+      (!query ||
+        [restaurant.name, restaurant.description, restaurant.cuisine, restaurant.location, restaurant.priceRange]
+          .join(" ")
+          .toLowerCase()
+          .includes(query))
+    );
+  }, [activeSubtype, restaurants, searchTerm]);
 
   return (
     <div className="theme-page pb-20">
-      <section className="mx-auto max-w-7xl px-4 pb-6 pt-6 sm:px-6 lg:px-8">
-        <div className="theme-panel-strong overflow-hidden rounded-[34px]">
-          <div className="grid lg:grid-cols-[1.05fr_0.95fr]">
-            <div className="p-6 md:p-8 lg:p-10">
-              <div className="theme-chip inline-flex rounded-full px-4 py-2 text-xs uppercase tracking-[0.28em]">
-                Dining
-              </div>
-              <h1 className="theme-heading mt-4 max-w-3xl text-4xl font-semibold md:text-5xl">
-                Add the evening moments that make the route memorable
-              </h1>
-              <p className="theme-muted mt-4 max-w-2xl text-sm leading-7 md:text-base">
-                Reserve a table at the places worth the stop — from cultural dinner
-                experiences in Victoria Falls to lodge dining deep in the bush.
-                Each restaurant is bookable and ready to sit inside your itinerary.
-              </p>
-            </div>
-            <div
-              className="min-h-[260px] bg-cover bg-center"
-              style={{
-                backgroundImage: "linear-gradient(180deg, rgba(0,0,0,0.1), rgba(0,0,0,0.5)), url('/images/victoria-falls.jpg')",
-              }}
-            />
-          </div>
-        </div>
-      </section>
+      <CompactPageHero
+        eyebrow="Dining"
+        title="Find restaurants inside the destination you chose"
+        description="Choose your destination first, then browse the restaurants and dining options that fit that stop on your trip."
+        imageUrl="/images/victoria-falls.jpg"
+      />
 
       <section className="mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
-        <AppServiceStrip activeLabel="Restaurants" />
+        <AppServiceStrip
+          activeLabel="Restaurants"
+          destinationId={selectedDestination?.id ?? destinationId}
+          destinationName={selectedDestination?.name}
+        />
       </section>
 
-      <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-        <SectionHeader
-          eyebrow="Curated dining"
-          title="Reserve meals worth the stop"
-        />
-        <div className="grid gap-5 lg:grid-cols-3">
-          {sampleRestaurants.map((restaurant) => (
-            <RestaurantCard
-              key={restaurant.id}
-              restaurant={restaurant}
-              onBook={handleBookRestaurant}
+      {!destinationId ? (
+        <DestinationChooser destinations={destinations} />
+      ) : (
+        <>
+          <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+            <div className="theme-panel rounded-[32px] p-4 md:p-5">
+              <div className="grid gap-3 lg:grid-cols-[1.2fr_auto]">
+                <div className="relative">
+                  <Search className="theme-subtle absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={searchTerm}
+                    onChange={(event) => setSearchTerm(event.target.value)}
+                    placeholder={`Search dining in ${selectedDestination?.name || "this destination"}`}
+                    className="theme-input w-full rounded-2xl py-3 pl-11 pr-4 text-sm"
+                  />
+                </div>
+                <Link
+                  href={`/travel-guide/${selectedDestination?.id || destinationId}`}
+                  className="theme-button-secondary inline-flex items-center justify-center rounded-2xl px-5 py-3 text-sm"
+                >
+                  Back to destination hub
+                </Link>
+              </div>
+              <ServiceSubtypeChips
+                subtypes={getSubtypesForGroup("dining")}
+                activeSubtype={activeSubtype}
+                onSelect={setActiveSubtype}
+                allLabel="All dining"
+                className="mt-4"
+              />
+            </div>
+          </section>
+
+          <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+            {error ? (
+              <PanelState title="Could not load restaurants" body={error} />
+            ) : loading ? (
+              <LoadingGrid />
+            ) : filteredRestaurants.length === 0 ? (
+              <PanelState
+                title={`No restaurants linked to ${selectedDestination?.name || "this destination"} yet`}
+                body="Destination-linked dining will appear here as new restaurants are added."
+              />
+            ) : (
+              <>
+                <CompactSectionHeader
+                  eyebrow={selectedDestination?.name || "Destination-selected"}
+                  title={`Dining in ${selectedDestination?.name || "this destination"}`}
+                  count={filteredRestaurants.length}
+                />
+                <HorizontalRail itemClassName="w-[76vw] max-w-[280px] sm:w-[260px]">
+                  {filteredRestaurants.map((restaurant) => (
+                    <CompactRailCard
+                      key={restaurant.id}
+                      title={restaurant.name}
+                      imageUrl={restaurant.images[0] || "/images/background.png"}
+                      meta={restaurant.cuisine}
+                      detail={restaurant.location}
+                      badge={restaurant.rating || restaurant.priceRange}
+                      description={restaurant.description}
+                    />
+                  ))}
+                </HorizontalRail>
+              </>
+            )}
+          </section>
+        </>
+      )}
+    </div>
+  );
+}
+
+function DestinationChooser({ destinations }: { destinations: ExplorerDestinationSummary[] }) {
+  return (
+    <section className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+      <div className="theme-panel rounded-2xl p-4 md:p-5">
+        <div className="inline-flex h-10 w-10 items-center justify-center rounded-xl bg-black/[0.05] dark:bg-white/[0.08]">
+          <UtensilsCrossed className="h-5 w-5 text-[#ff5630]" />
+        </div>
+        <h2 className="theme-heading mt-3 text-xl font-semibold">Choose a destination to view its restaurants</h2>
+        <p className="theme-muted mt-2 max-w-2xl text-sm leading-6">
+          Dining is organized by destination so you can see the restaurants that match the place you plan to visit.
+        </p>
+        <HorizontalRail className="mt-4" itemClassName="w-[72vw] max-w-[240px] sm:w-[220px]">
+          {destinations.map((destination) => (
+            <CompactRailCard
+              key={destination.id}
+              href={`/restaurants?destination=${encodeURIComponent(destination.id)}`}
+              title={destination.name}
+              imageUrl={destination.image_url}
+              meta="Dining"
+              badge={destination.dining_count || 0}
+              description={destination.description}
             />
           ))}
+        </HorizontalRail>
+      </div>
+    </section>
+  );
+}
+
+function LoadingGrid() {
+  return (
+    <div className="grid gap-5 lg:grid-cols-3">
+      {Array.from({ length: 3 }).map((_, i) => (
+        <div key={i} className="theme-panel rounded-[28px] overflow-hidden animate-pulse">
+          <div className="h-56 bg-white/[0.06]" />
+          <div className="p-6 space-y-3">
+            <div className="h-4 w-1/2 rounded-full bg-white/[0.08]" />
+            <div className="h-5 w-3/4 rounded-full bg-white/[0.08]" />
+          </div>
         </div>
-      </section>
+      ))}
+    </div>
+  );
+}
+
+function PanelState({ title, body }: { title: string; body: string }) {
+  return (
+    <div className="theme-panel rounded-[36px] p-12 text-center space-y-4">
+      <p className="theme-heading text-lg font-semibold">{title}</p>
+      <p className="theme-muted text-sm max-w-sm mx-auto">{body}</p>
     </div>
   );
 }

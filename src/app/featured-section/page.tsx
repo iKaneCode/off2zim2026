@@ -7,11 +7,14 @@ import {
   Clock3,
   HeartHandshake,
   LucideIcon,
-  MapPin,
   ShieldCheck,
   Sparkles,
   TrendingUp,
 } from "lucide-react";
+import CompactPageHero from "@/components/ui/CompactPageHero";
+import CompactRailCard from "@/components/ui/CompactRailCard";
+import CompactSectionHeader from "@/components/ui/CompactSectionHeader";
+import HorizontalRail from "@/components/ui/HorizontalRail";
 
 const featuredItems = [
   {
@@ -92,33 +95,15 @@ export default function FeaturedSectionPage() {
 
   return (
     <div className="theme-page pb-20">
-      <section className="mx-auto max-w-7xl px-4 pb-6 pt-6 sm:px-6 lg:px-8">
-        <div className="theme-panel-strong overflow-hidden rounded-[34px]">
-          <div className="grid lg:grid-cols-[1.04fr_0.96fr]">
-            <div className="p-6 md:p-8 lg:p-10">
-              <div className="theme-chip inline-flex rounded-full px-4 py-2 text-xs uppercase tracking-[0.28em]">
-                Featured framework
-              </div>
-              <h1 className="theme-heading mt-4 max-w-3xl text-4xl font-semibold md:text-5xl">
-                A clearer way to feature standout businesses and experiences across Zimbabwe
-              </h1>
-              <p className="theme-muted mt-4 max-w-2xl text-sm leading-7 md:text-base">
-                Featured visibility is based on trust, quality, and fair rotation.
-              </p>
-            </div>
-            <div
-              className="min-h-[260px] bg-cover bg-center"
-              style={{
-                backgroundImage:
-                  "linear-gradient(180deg, rgba(0,0,0,0.1), rgba(0,0,0,0.52)), url('/images/destinations/eastern-highlands.jpg')",
-              }}
-            />
-          </div>
-        </div>
-      </section>
+      <CompactPageHero
+        eyebrow="Featured framework"
+        title="A clearer way to feature standout businesses and experiences across Zimbabwe"
+        description="Featured visibility is based on trust, quality, and fair rotation."
+        imageUrl="/images/destinations/eastern-highlands.jpg"
+      />
 
       <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-        <div className="flex gap-2 overflow-x-auto pb-2">
+        <div className="flex gap-2 overflow-x-auto pb-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {featuredTabs.map(({ key, label, icon: Icon }) => {
             return (
               <button
@@ -140,50 +125,39 @@ export default function FeaturedSectionPage() {
 
       <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
         {activeTab === "current" ? (
-          <div className="grid gap-5 lg:grid-cols-3">
+          <>
+          <CompactSectionHeader title="Current featured set" count={featuredItems.length} />
+          <HorizontalRail itemClassName="w-[82vw] max-w-[320px] sm:w-[300px]">
             {featuredItems.map((item) => (
-              <article key={item.id} className="theme-card overflow-hidden">
-                <div
-                  className="min-h-[220px] bg-cover bg-center"
-                  style={{
-                    backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.5)), url('${item.image}')`,
-                  }}
-                >
-                  <div className="p-4">
-                    <div className="inline-flex items-center gap-2 rounded-full bg-[#ff5630] px-3 py-1 text-sm font-semibold text-white">
-                      <Award className="h-4 w-4" />
-                      Featured
-                    </div>
-                  </div>
+              <CompactRailCard
+                key={item.id}
+                title={item.name}
+                imageUrl={item.image}
+                meta={item.type}
+                detail={item.location}
+                badge={`${item.featuredScore}/100`}
+                description={item.description}
+              >
+                <div className="flex items-center gap-2 text-[10px] text-white/82">
+                  <span className="inline-flex items-center gap-1 rounded-full bg-black/35 px-2 py-1">
+                    <Award className="h-3 w-3 text-[#ffca74]" />
+                    Featured
+                  </span>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-black/35 px-2 py-1">
+                    <Sparkles className="h-3 w-3 text-[#ffca74]" />
+                    {item.rating} ({item.reviewCount})
+                  </span>
                 </div>
-                <div className="p-5">
-                  <div className="theme-label text-xs uppercase tracking-[0.24em]">{item.type}</div>
-                  <h2 className="theme-heading mt-2 text-xl font-semibold">{item.name}</h2>
-                  <p className="theme-muted mt-3 text-sm leading-6">{item.description}</p>
-                  <div className="theme-muted mt-4 flex flex-wrap gap-4 text-sm">
-                    <span className="inline-flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-[#ff7352]" />
-                      {item.location}
-                    </span>
-                    <span className="inline-flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-[#ffca74]" />
-                      {item.rating} ({item.reviewCount})
-                    </span>
-                  </div>
-                  <div className="mt-5 flex items-center justify-between">
-                    <span className="theme-muted text-sm">Featured score</span>
-                    <span className="theme-heading text-lg font-semibold">{item.featuredScore}/100</span>
-                  </div>
-                </div>
-              </article>
+              </CompactRailCard>
             ))}
-          </div>
+          </HorizontalRail>
+          </>
         ) : activeTab === "algorithm" ? (
-          <div className="theme-panel rounded-[30px] p-6 md:p-8">
-            <h2 className="theme-heading text-2xl font-semibold">How selection works</h2>
-            <div className="mt-5 grid gap-4 md:grid-cols-2">
+          <div className="theme-panel rounded-2xl p-4 md:p-5">
+            <h2 className="theme-heading text-xl font-semibold">How selection works</h2>
+            <div className="mt-4 grid gap-3 md:grid-cols-2">
               {fairnessPrinciples.map(({ title, text }) => (
-                <div key={title} className="theme-card-soft rounded-[24px] p-4">
+                <div key={title} className="theme-card-soft rounded-xl p-3">
                   <div className="theme-heading text-base font-semibold">{title}</div>
                   <div className="theme-muted mt-2 text-sm leading-6">{text}</div>
                 </div>
@@ -191,13 +165,13 @@ export default function FeaturedSectionPage() {
             </div>
           </div>
         ) : (
-          <div className="grid gap-5 md:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-3">
             {platformMetrics.map(({ label, value, icon: Icon }) => {
               return (
-                <div key={label} className="theme-card rounded-[30px] p-6">
+                <div key={label} className="theme-card rounded-xl p-4">
                   <Icon className="h-6 w-6 text-[#ff7352]" />
-                  <div className="theme-muted mt-4 text-sm">{label}</div>
-                  <div className="theme-heading mt-2 text-3xl font-semibold">{value}</div>
+                  <div className="theme-muted mt-3 text-sm">{label}</div>
+                  <div className="theme-heading mt-1 text-2xl font-semibold">{value}</div>
                 </div>
               );
             })}

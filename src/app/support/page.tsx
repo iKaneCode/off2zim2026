@@ -104,28 +104,28 @@ export default function SupportPage() {
 
   return (
     <div className="theme-page min-h-screen">
-      <div className="mx-auto max-w-5xl px-4 py-12 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-5xl px-4 py-5 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-10">
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#8dc9ff]/25 bg-[#13283a] px-4 py-2 text-sm font-medium text-[#8dc9ff]">
+        <div className="mb-5 rounded-2xl border border-black/10 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/[0.04] sm:p-5">
+          <div className="inline-flex items-center gap-2 rounded-lg border border-[#8dc9ff]/25 bg-[#13283a] px-3 py-1.5 text-xs font-medium text-[#8dc9ff]">
             <MessageCircle className="h-4 w-4" />
             Help &amp; Support
           </div>
-          <h1 className="theme-heading mt-4 text-4xl font-semibold">How can we help?</h1>
+          <h1 className="theme-heading mt-3 text-3xl font-semibold">How can we help?</h1>
           <p className="theme-muted mt-2 text-sm leading-6 max-w-xl">
             Browse common questions or contact us directly. We are here to help with bookings, provider support, and trip planning.
           </p>
         </div>
 
         {/* Contact channels */}
-        <div className="grid gap-4 md:grid-cols-3 mb-10">
+        <div className="mb-6 flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
           {CONTACT_CHANNELS.map((ch) => {
             const Icon = ch.icon;
             return (
               <a
                 key={ch.label}
                 href={ch.href}
-                className="theme-panel group rounded-[24px] p-5 transition hover:shadow-lg"
+                className="theme-panel group min-w-[240px] rounded-xl p-4 transition hover:shadow-lg"
               >
                 <div className={`mb-3 inline-flex h-10 w-10 items-center justify-center rounded-full ${ch.bg}`}>
                   <Icon className={`h-5 w-5 ${ch.accent}`} />
@@ -141,7 +141,7 @@ export default function SupportPage() {
           })}
         </div>
 
-        <div className="grid gap-8 lg:grid-cols-[1fr_1.1fr]">
+        <div className="grid gap-5 lg:grid-cols-[1fr_1.1fr]">
           {/* FAQ */}
           <div>
             <h2 className="theme-heading text-xl font-semibold mb-4">Frequently Asked Questions</h2>

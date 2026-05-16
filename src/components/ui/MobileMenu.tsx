@@ -40,7 +40,6 @@ const sections = [
     links: [
       { label: "Trip Planner", href: "/trip-planner" },
       { label: "Transport", href: "/transport" },
-      { label: "Flights", href: "/transport/flights" },
       { label: "Events", href: "/events" },
       { label: "Destination services", href: "/travel-guide" },
     ],

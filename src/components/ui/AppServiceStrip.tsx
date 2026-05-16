@@ -6,7 +6,6 @@ import {
   CalendarDays,
   Compass,
   MessageCircle,
-  Plane,
   Ticket,
   BedDouble,
   Sparkles,
@@ -20,7 +19,6 @@ import {
 
 const iconMap = {
   Destinations: Compass,
-  Flights: Plane,
   Events: Ticket,
   Transport: Bus,
   "Trip Planner": CalendarDays,

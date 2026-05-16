@@ -112,8 +112,8 @@ export default function ProductDetailPage() {
   if (loading) {
     return (
       <div className="theme-page min-h-screen">
-        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
-          <div className="grid gap-10 lg:grid-cols-2">
+        <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 lg:px-8">
+          <div className="grid gap-5 lg:grid-cols-2">
             <div className="animate-pulse space-y-4">
               <div className="aspect-square rounded-[28px] bg-white/5" />
             </div>
@@ -157,20 +157,20 @@ export default function ProductDetailPage() {
 
   return (
     <div className="theme-page min-h-screen">
-      <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 lg:px-8">
         {/* Back */}
         <Link
           href="/shop"
-          className="mb-8 inline-flex items-center gap-2 text-sm text-white/50 transition hover:text-white/80"
+          className="mb-4 inline-flex items-center gap-2 text-sm text-white/50 transition hover:text-white/80"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to shop
         </Link>
 
-        <div className="grid gap-10 lg:grid-cols-2">
+        <div className="grid gap-5 lg:grid-cols-2">
           {/* Image gallery */}
           <div className="space-y-3">
-            <div className="aspect-square overflow-hidden rounded-[28px] bg-white/5">
+            <div className="aspect-square overflow-hidden rounded-2xl bg-white/5">
               {product.images[selectedImage] ? (
                 <img
                   src={product.images[selectedImage]}

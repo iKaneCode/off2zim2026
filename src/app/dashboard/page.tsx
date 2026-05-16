@@ -3,6 +3,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import AppServiceStrip from "@/components/ui/AppServiceStrip";
+import CompactSectionHeader from "@/components/ui/CompactSectionHeader";
+import HorizontalRail from "@/components/ui/HorizontalRail";
 import { ArrowRight, Compass, Heart, MapPinned, ReceiptText, ShieldCheck, UserRoundCheck } from "lucide-react";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/contexts/AuthContext";
@@ -58,43 +60,43 @@ function ExplorerDashboardShell() {
   const readinessPercent = Math.round((readinessCount / readinessChecks.length) * 100);
 
   return (
-    <div className="theme-page min-h-screen px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-6xl space-y-6">
-        <section className="theme-panel-strong overflow-hidden rounded-[34px]">
+    <div className="theme-page min-h-screen px-4 py-5 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl space-y-5">
+        <section className="theme-panel-strong overflow-hidden rounded-2xl">
           <div className="grid lg:grid-cols-[1.05fr_0.95fr]">
-            <div className="p-6 md:p-8 lg:p-10">
+            <div className="p-4 md:p-5">
               <p className="theme-label text-xs uppercase tracking-[0.24em]">
                 Traveler workspace
               </p>
-              <h1 className="theme-heading mt-3 text-4xl font-semibold">
+              <h1 className="theme-heading mt-3 text-3xl font-semibold">
                 {user?.firstName ? `Welcome back, ${user.firstName}` : "Welcome back"}
               </h1>
-              <p className="theme-muted mt-4 max-w-2xl text-sm leading-7">
+              <p className="theme-muted mt-2 max-w-2xl text-sm leading-6">
                 Trips, bookings, saved places, and planning tools stay connected here.
               </p>
-              <div className="mt-6 flex flex-wrap gap-3">
+              <div className="mt-4 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <Link
                   href="/trip-planner"
-                  className="inline-flex items-center gap-2 rounded-full bg-[#ff5630] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#ff6f4d]"
+                  className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-[#ff5630] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#ff6f4d]"
                 >
                   Open planner
                   <ArrowRight className="h-4 w-4" />
                 </Link>
                 <Link
                   href="/travel-guide"
-                  className="theme-button-secondary inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold"
+                  className="theme-button-secondary inline-flex shrink-0 items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold"
                 >
                   Explore destinations
                 </Link>
                 <Link
                   href="/events"
-                  className="theme-button-secondary inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold"
+                  className="theme-button-secondary inline-flex shrink-0 items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold"
                 >
                   Explore events
                 </Link>
               </div>
             </div>
-            <div className="grid gap-3 bg-black/[0.03] p-6 dark:bg-white/[0.02] md:grid-cols-2 md:p-8">
+            <div className="grid gap-2 bg-black/[0.03] p-4 dark:bg-white/[0.02] md:grid-cols-2">
               <WorkspaceStat
                 label="Saved places"
                 value={stats.savedCount > 0 ? String(stats.savedCount) : "—"}
@@ -127,29 +129,29 @@ function ExplorerDashboardShell() {
           <AppServiceStrip activeLabel="Trip Planner" />
         </section>
 
-        <section className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
-          <div className="theme-panel rounded-[32px] p-6">
+        <section className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
+          <div className="theme-panel rounded-2xl p-4">
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="theme-label text-xs uppercase tracking-[0.24em]">
                   Account readiness
                 </p>
-                <h2 className="theme-heading mt-3 text-2xl font-semibold">
+                <h2 className="theme-heading mt-2 text-xl font-semibold">
                   Keep your travel account ready for your next booking
                 </h2>
                 <p className="theme-muted mt-3 text-sm leading-6">
                   Verified contact details and a complete profile make booking, support, and account recovery much easier.
                 </p>
               </div>
-              <div className="theme-card-soft rounded-[24px] px-4 py-3 text-right">
-                <div className="theme-heading text-3xl font-semibold">{readinessPercent}%</div>
+              <div className="theme-card-soft rounded-xl px-3 py-2 text-right">
+                <div className="theme-heading text-2xl font-semibold">{readinessPercent}%</div>
                 <div className="theme-subtle mt-1 text-xs">Profile readiness</div>
               </div>
             </div>
 
-            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+            <div className="mt-4 grid gap-2 sm:grid-cols-2">
               {readinessChecks.map((item) => (
-                <div key={item.label} className="theme-card-soft rounded-[22px] px-4 py-4">
+                <div key={item.label} className="theme-card-soft rounded-xl px-3 py-3">
                   <div className="flex items-center justify-between gap-3">
                     <span className="theme-heading text-sm font-medium">{item.label}</span>
                     <span
@@ -166,10 +168,10 @@ function ExplorerDashboardShell() {
               ))}
             </div>
 
-            <div className="mt-6 flex flex-wrap gap-3">
+            <div className="mt-4 flex flex-wrap gap-2">
               <Link
                 href="/profile"
-                className="inline-flex items-center gap-2 rounded-full bg-[#ff5630] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#ff6f4d]"
+                className="inline-flex items-center gap-2 rounded-lg bg-[#ff5630] px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-[#ff6f4d]"
               >
                 Complete profile
                 <ArrowRight className="h-4 w-4" />
@@ -177,7 +179,7 @@ function ExplorerDashboardShell() {
               {!user?.isVerified ? (
                 <Link
                   href="/auth/verify-email/request"
-                  className="theme-button-secondary inline-flex items-center gap-2 rounded-full px-5 py-3 text-sm font-semibold"
+                  className="theme-button-secondary inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-semibold"
                 >
                   Verify email
                 </Link>
@@ -211,7 +213,9 @@ function ExplorerDashboardShell() {
           </div>
         </section>
 
-        <section className="grid gap-5 md:grid-cols-3">
+        <section>
+          <CompactSectionHeader eyebrow="Workspace tools" title="Continue your trip tasks" />
+          <HorizontalRail itemClassName="w-[76vw] max-w-[280px] sm:w-[260px]">
           {explorerWorkspaceCards.map((card) => {
             const Icon = card.icon;
             return (
@@ -225,12 +229,13 @@ function ExplorerDashboardShell() {
               />
             );
           })}
+          </HorizontalRail>
         </section>
 
-        <section className="theme-panel rounded-[32px] p-6">
+        <section className="theme-panel rounded-2xl p-4">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div>
-              <h2 className="theme-heading text-2xl font-semibold">
+              <h2 className="theme-heading text-xl font-semibold">
                 Continue where the trip is moving next
               </h2>
               <p className="theme-muted mt-2 text-sm leading-6">
@@ -239,7 +244,7 @@ function ExplorerDashboardShell() {
             </div>
             <Link
               href="/travel-guide"
-              className="inline-flex items-center gap-2 rounded-full border border-black/10 bg-black/[0.04] px-4 py-2 text-sm font-medium theme-muted transition hover:bg-black/[0.07] dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.08]"
+              className="inline-flex items-center gap-2 rounded-lg border border-black/10 bg-black/[0.04] px-4 py-2 text-sm font-medium theme-muted transition hover:bg-black/[0.07] dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.08]"
             >
               Explore destinations
             </Link>
@@ -262,12 +267,12 @@ function WorkspaceTrustCard({
   icon: ReactNode;
 }) {
   return (
-    <div className="theme-card rounded-[28px] p-5">
+    <div className="theme-card rounded-xl p-4">
       <div className="flex items-center gap-2">
         {icon}
         <span className="theme-subtle text-sm">{title}</span>
       </div>
-      <div className="theme-heading mt-4 text-2xl font-semibold">{value}</div>
+      <div className="theme-heading mt-3 text-xl font-semibold">{value}</div>
       <p className="theme-muted mt-2 text-sm leading-6">{body}</p>
     </div>
   );
@@ -285,12 +290,12 @@ function WorkspaceStat({
   icon: ReactNode;
 }) {
   return (
-    <div className="theme-card-soft rounded-[26px] p-4">
+    <div className="theme-card-soft rounded-xl p-3">
       <div className="theme-subtle flex items-center gap-2 text-sm">
         {icon}
         {label}
       </div>
-      <div className="theme-heading mt-3 text-3xl font-semibold">{value}</div>
+      <div className="theme-heading mt-2 text-2xl font-semibold">{value}</div>
       <div className="theme-subtle mt-1 text-xs">{meta}</div>
     </div>
   );
@@ -310,13 +315,13 @@ function DashboardCard({
   icon: ReactNode;
 }) {
   return (
-    <div className="theme-card rounded-[30px] p-6">
+    <div className="theme-card h-full rounded-xl p-4">
       {icon}
-      <h2 className="theme-heading mt-4 text-2xl font-semibold">{title}</h2>
-      <p className="theme-muted mt-3 text-sm leading-6">{body}</p>
+      <h2 className="theme-heading mt-3 text-xl font-semibold">{title}</h2>
+      <p className="theme-muted mt-2 text-sm leading-6">{body}</p>
       <Link
         href={href}
-        className="mt-6 inline-flex rounded-full border border-black/10 bg-black/[0.04] px-4 py-2 text-sm theme-muted transition hover:bg-black/[0.07] dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.08]"
+        className="mt-4 inline-flex rounded-lg border border-black/10 bg-black/[0.04] px-3 py-2 text-sm theme-muted transition hover:bg-black/[0.07] dark:border-white/10 dark:bg-white/[0.04] dark:hover:bg-white/[0.08]"
       >
         {label}
       </Link>

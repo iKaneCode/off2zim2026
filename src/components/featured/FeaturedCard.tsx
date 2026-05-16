@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { BadgeCheck, Star, Award, Sparkles } from "lucide-react";
+import HorizontalRail from "@/components/ui/HorizontalRail";
 
 export type FeaturedPathway = "sponsored" | "top_rated" | "editors_choice";
 
@@ -82,10 +83,10 @@ export function FeaturedCard({ entry }: { entry: FeaturedEntryData }) {
   return (
     <Link
       href={`/listings/${listing.slug}`}
-      className="group block rounded-[24px] border border-white/10 bg-[#111111] overflow-hidden transition hover:border-white/20 hover:shadow-lg hover:shadow-black/30"
+      className="group block overflow-hidden rounded-xl border border-white/10 bg-[#111111] transition hover:border-white/20 hover:shadow-lg hover:shadow-black/30"
     >
       {/* Image */}
-      <div className="relative aspect-[4/3] w-full overflow-hidden bg-white/[0.04]">
+      <div className="relative h-32 w-full overflow-hidden bg-white/[0.04]">
         {imageUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -151,7 +152,7 @@ export function FeaturedSection({
   const { label, icon: Icon } = PATHWAY_CONFIG[pathway];
 
   return (
-    <section className="space-y-4">
+    <section className="space-y-3">
       <div className="flex items-center gap-2">
         <Icon className="h-5 w-5 text-white/50" />
         <h2 className="text-lg font-semibold text-white">{label}</h2>
@@ -159,11 +160,11 @@ export function FeaturedSection({
           {entries.length}
         </span>
       </div>
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <HorizontalRail itemClassName="w-[76vw] max-w-[280px] sm:w-[260px]">
         {entries.map((entry) => (
           <FeaturedCard key={entry.id} entry={entry} />
         ))}
-      </div>
+      </HorizontalRail>
     </section>
   );
 }

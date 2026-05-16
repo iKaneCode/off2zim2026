@@ -261,14 +261,6 @@ export default function DestinationDetailPage() {
               Transport
               <ArrowRight className="h-3.5 w-3.5" />
             </Link>
-            <Link
-              href="/transport/flights"
-              title="Browse flights separately from destination-specific services"
-              className="theme-button-secondary inline-flex shrink-0 items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold"
-            >
-              Flights
-              <ArrowRight className="h-3.5 w-3.5" />
-            </Link>
           </div>
         </div>
       </section>

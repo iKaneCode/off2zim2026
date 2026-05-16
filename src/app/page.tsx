@@ -7,7 +7,6 @@ import {
   CalendarDays,
   Compass,
   MessageCircle,
-  Plane,
   ShieldCheck,
   Ticket,
   UtensilsCrossed,
@@ -58,7 +57,6 @@ const serviceAtlas = [
   { label: "Transport", detail: "Flights, transfers, buses, and movement planning.", icon: Bus },
   { label: "Events", detail: "Tickets, festivals, and moments worth building around.", icon: Ticket },
   { label: "Destination services", detail: "Stays, dining, and local guidance unlock once a place is selected.", icon: UtensilsCrossed },
-  { label: "Flights", detail: "Air travel options for tighter timelines and longer journeys.", icon: Plane },
   { label: "Trip planner", detail: "Keep the route moving while destinations and global transport stay connected.", icon: CalendarDays },
 ];
 
@@ -89,7 +87,7 @@ const trustPoints = [
 const quickRoutes = [
   { label: "Destinations", href: "/travel-guide" },
   { label: "Trip Planner", href: "/trip-planner" },
-  { label: "Flights", href: "/transport/flights" },
+  { label: "Transport", href: "/transport" },
   { label: "Events", href: "/events" },
   { label: "Travel help", href: "/contact" },
 ];

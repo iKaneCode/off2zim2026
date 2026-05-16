@@ -8,6 +8,7 @@ import {
   type FeaturedEntryData,
   type FeaturedPathway,
 } from "@/components/featured/FeaturedCard";
+import CompactSectionHeader from "@/components/ui/CompactSectionHeader";
 
 interface FeaturedResponse {
   featured: Record<FeaturedPathway, FeaturedEntryData[]>;
@@ -36,18 +37,13 @@ export default function FeaturedPage() {
 
   return (
     <div className="theme-page">
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-10">
-          <div className="mb-3 flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-[#fbbf24]" />
-            <span className="theme-label text-xs uppercase tracking-[0.24em]">
-              Editorially curated
-            </span>
-          </div>
-          <h1 className="theme-heading text-3xl font-bold sm:text-4xl">
-            Featured across Zimbabwe
-          </h1>
+        <div className="mb-5 rounded-2xl border border-black/10 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/[0.04] sm:p-5">
+          <CompactSectionHeader
+            eyebrow="Editorially curated"
+            title="Featured across Zimbabwe"
+          />
           <p className="theme-muted mt-2 max-w-xl text-sm leading-6">
             Editors picks, top-rated providers, and standout experiences from across Zimbabwe, refreshed every week.
           </p>
@@ -77,7 +73,7 @@ export default function FeaturedPage() {
             ))}
           </div>
         ) : !hasContent ? (
-          <div className="rounded-[28px] border border-white/10 bg-[#111111] p-16 text-center space-y-4">
+          <div className="rounded-xl border border-white/10 bg-[#111111] p-8 text-center space-y-4">
             <Sparkles className="mx-auto h-10 w-10 text-white/15" />
             <p className="font-semibold text-white/50">No featured listings yet</p>
             <p className="text-sm text-white/30 max-w-xs mx-auto">
@@ -91,7 +87,7 @@ export default function FeaturedPage() {
             </a>
           </div>
         ) : (
-          <div className="space-y-14">
+          <div className="space-y-8">
             {/* Editor's Choice first — most editorial weight */}
             <FeaturedSection
               pathway="editors_choice"

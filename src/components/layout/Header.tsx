@@ -57,12 +57,7 @@ const navGroups: NavGroup[] = [
       {
         label: "Transport",
         href: "/transport",
-        description: "Cars, buses, taxis, and route planning.",
-      },
-      {
-        label: "Flights",
-        href: "/transport/flights",
-        description: "Compare air travel options for local and international trips.",
+        description: "Flights, cars, buses, taxis, and route planning.",
       },
       {
         label: "Events",

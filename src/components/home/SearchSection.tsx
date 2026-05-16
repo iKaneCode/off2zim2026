@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import SearchTab from "./SearchTab";
 import StaysForm from "./forms/StaysForm";
 import BusForm from "./forms/BusForm";
-import FlightsForm from "./forms/FlightsForm";
 import CarRentalForm from "./forms/CarRentalForm";
 import HouseboatForm from "./forms/HouseboatForm";
 import ThingsToDoForm from "./forms/ThingsToDoForm";
@@ -12,7 +11,6 @@ import ThingsToDoForm from "./forms/ThingsToDoForm";
 export type SearchTabType =
   | "stays"
   | "bus"
-  | "flights"
   | "cars"
   | "cruises"
   | "things-to-do";
@@ -20,7 +18,6 @@ export type SearchTabType =
 const tabs = [
   { id: "stays" as const, label: "Stays" },
   { id: "bus" as const, label: "Bus" },
-  { id: "flights" as const, label: "Flights" },
   { id: "cars" as const, label: "Car Rental" },
   { id: "cruises" as const, label: "Houseboat" },
   { id: "things-to-do" as const, label: "Things to Do" },
@@ -46,8 +43,6 @@ export default function SearchSection() {
         return <StaysForm />;
       case "bus":
         return <BusForm />;
-      case "flights":
-        return <FlightsForm />;
       case "cars":
         return <CarRentalForm />;
       case "cruises":

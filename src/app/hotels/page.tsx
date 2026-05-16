@@ -2,9 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ArrowLeft, MapPin, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowLeft, ShieldCheck, Sparkles } from "lucide-react";
 import { apiFetch } from "@/lib/client-api";
 import type { PublicListingRecord } from "@/types/platform";
+import CompactPageHero from "@/components/ui/CompactPageHero";
+import CompactRailCard from "@/components/ui/CompactRailCard";
+import CompactSectionHeader from "@/components/ui/CompactSectionHeader";
+import HorizontalRail from "@/components/ui/HorizontalRail";
 
 export default function HotelsPage() {
   const [listings, setListings] = useState<PublicListingRecord[]>([]);
@@ -39,30 +43,13 @@ export default function HotelsPage() {
           Back to accommodation
         </Link>
 
-        <div className="theme-panel-strong mt-5 overflow-hidden rounded-[34px]">
-          <div className="grid lg:grid-cols-[1.05fr_0.95fr]">
-            <div className="p-6 md:p-8 lg:p-10">
-              <div className="theme-chip inline-flex rounded-full px-4 py-2 text-xs uppercase tracking-[0.28em]">
-                Hotels
-              </div>
-              <h1 className="theme-heading mt-4 max-w-3xl text-4xl font-semibold md:text-5xl">
-                Stays that give the route a reliable base
-              </h1>
-              <p className="theme-muted mt-4 max-w-2xl text-sm leading-7 md:text-base">
-                This route keeps hotel discovery in the same Off2Zim language as the
-                planner and marketplace, so travelers can compare trusted options and
-                move into booking or planning without a visual reset.
-              </p>
-            </div>
-            <div
-              className="min-h-[260px] bg-cover bg-center"
-              style={{
-                backgroundImage:
-                  "linear-gradient(180deg, rgba(0,0,0,0.1), rgba(0,0,0,0.5)), url('/images/palm-river-hotel-604329-original.jpg')",
-              }}
-            />
-          </div>
-        </div>
+        <CompactPageHero
+          eyebrow="Hotels"
+          title="Stays that give the route a reliable base"
+          description="Compare trusted accommodation options and move into booking or planning without a visual reset."
+          imageUrl="/images/palm-river-hotel-604329-original.jpg"
+          className="mt-4 px-0 pb-0 pt-0"
+        />
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
@@ -77,44 +64,37 @@ export default function HotelsPage() {
             <p className="theme-muted text-sm">No hotel listings are published yet.</p>
           </div>
         ) : (
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+          <>
+            <CompactSectionHeader title="Available hotel stays" count={listings.length} />
+            <HorizontalRail itemClassName="w-[78vw] max-w-[300px] sm:w-[280px]">
             {listings.map((listing) => (
-              <Link key={listing.id} href={`/marketplace/${listing.slug}`} className="theme-card overflow-hidden">
-                <div
-                  className="min-h-[220px] bg-cover bg-center"
-                  style={{
-                    backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.42)), url('${listing.images[0] || "/images/palm-river-hotel-604329-original.jpg"}')`,
-                  }}
-                />
-                <div className="p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <div className="theme-label text-xs uppercase tracking-[0.24em]">
-                        {listing.category}
-                      </div>
-                      <h2 className="theme-heading mt-2 text-xl font-semibold">{listing.title}</h2>
-                    </div>
-                    {listing.provider.hasVerifiedBadge ? (
-                      <ShieldCheck className="h-5 w-5 shrink-0 text-[#8cf0a1]" />
-                    ) : null}
-                  </div>
-                  <p className="theme-muted mt-3 text-sm leading-6">
-                    {listing.shortDescription || listing.description}
-                  </p>
-                  <div className="theme-muted mt-4 flex flex-wrap gap-4 text-sm">
-                    <span className="inline-flex items-center gap-2">
-                      <MapPin className="h-4 w-4 text-[#ff7352]" />
-                      {listing.location}
+              <CompactRailCard
+                key={listing.id}
+                href={`/marketplace/${listing.slug}`}
+                title={listing.title}
+                imageUrl={listing.images[0] || "/images/palm-river-hotel-604329-original.jpg"}
+                meta={listing.category}
+                detail={listing.location}
+                badge={listing.basePrice ? `$${listing.basePrice}` : "Quote"}
+                description={listing.shortDescription || listing.description}
+                actionLabel="View hotel"
+              >
+                <div className="flex items-center gap-2 text-[10px] text-white/80">
+                  {listing.provider.hasVerifiedBadge ? (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-black/35 px-2 py-1">
+                      <ShieldCheck className="h-3 w-3 text-[#8cf0a1]" />
+                      Verified
                     </span>
-                    <span className="inline-flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-[#ffca74]" />
-                      {listing.basePrice ? `$${listing.basePrice}` : "Quote"}
-                    </span>
+                  ) : null}
+                  <span className="inline-flex items-center gap-1 rounded-full bg-black/35 px-2 py-1">
+                    <Sparkles className="h-3 w-3 text-[#ffca74]" />
+                    Stay
+                  </span>
                   </div>
-                </div>
-              </Link>
+              </CompactRailCard>
             ))}
-          </div>
+            </HorizontalRail>
+          </>
         )}
       </section>
     </div>

@@ -150,7 +150,7 @@ export default function MarketplaceListingDetailPage({
   if (loading) {
     return (
       <div className="theme-page min-h-screen">
-        <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
+        <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 lg:px-8">
           <div className="mb-8 h-5 w-32 animate-pulse rounded-full bg-white/8" />
           <SkeletonDetail />
         </div>
@@ -188,24 +188,24 @@ export default function MarketplaceListingDetailPage({
 
   return (
     <div className="theme-page min-h-screen pb-20">
-      <div className="mx-auto max-w-6xl px-4 py-10 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-6xl px-4 py-5 sm:px-6 lg:px-8">
 
         {/* Back nav */}
         <Link
           href="/marketplace"
-          className="theme-muted mb-8 inline-flex items-center gap-2 text-sm transition hover:text-current"
+          className="theme-muted mb-4 inline-flex items-center gap-2 text-sm transition hover:text-current"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to marketplace
         </Link>
 
-        <div className="grid gap-8 lg:grid-cols-[1.15fr_0.85fr]">
+        <div className="grid gap-5 lg:grid-cols-[1.15fr_0.85fr]">
 
           {/* ── Left column ─────────────────────────────────────────────── */}
           <div className="space-y-5">
 
             {/* Hero image / gallery */}
-            <div className="relative overflow-hidden rounded-[32px]">
+            <div className="relative overflow-hidden rounded-2xl">
               {hasImages ? (
                 <>
                   <img
@@ -280,7 +280,7 @@ export default function MarketplaceListingDetailPage({
             </div>
 
             {/* Core details panel */}
-            <div className="theme-panel rounded-[32px] p-6">
+            <div className="theme-panel rounded-2xl p-4 md:p-5">
               {/* Type label + title */}
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-[#ff5630]">
                 {listing.listingType.replace(/_/g, " ")}
@@ -417,7 +417,7 @@ export default function MarketplaceListingDetailPage({
 
           {/* ── Right column — booking sidebar ───────────────────────── */}
           <div id="booking" className="lg:sticky lg:top-8 h-fit space-y-4">
-            <div className="theme-panel rounded-[32px] p-6">
+            <div className="theme-panel rounded-2xl p-4 md:p-5">
               {/* Price */}
               <div className="mb-5">
                 <p className="text-xs font-medium uppercase tracking-[0.2em] text-white/40">

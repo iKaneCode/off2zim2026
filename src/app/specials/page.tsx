@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { CalendarDays, MapPin, Minus, Plus, Tag, X } from "lucide-react";
 import { usePayment } from "@/contexts/PaymentContext";
 import { BookingItem } from "@/types/payment";
+import CompactPageHero from "@/components/ui/CompactPageHero";
+import CompactSectionHeader from "@/components/ui/CompactSectionHeader";
+import HorizontalRail from "@/components/ui/HorizontalRail";
 
 interface Special {
   id: number;
@@ -241,39 +244,20 @@ export default function SpecialsPage() {
         />
       )}
 
-      <section className="mx-auto max-w-7xl px-4 pb-6 pt-6 sm:px-6 lg:px-8">
-        <div className="theme-panel-strong overflow-hidden rounded-[34px]">
-          <div className="grid lg:grid-cols-[1.04fr_0.96fr]">
-            <div className="p-6 md:p-8 lg:p-10">
-              <div className="theme-chip inline-flex rounded-full px-4 py-2 text-xs uppercase tracking-[0.28em]">
-                Specials
-              </div>
-              <h1 className="theme-heading mt-4 max-w-3xl text-4xl font-semibold md:text-5xl">
-                More of Zimbabwe, at a better price
-              </h1>
-              <p className="theme-muted mt-4 max-w-2xl text-sm leading-7 md:text-base">
-                Each special bundles accommodation, guided experiences, and key
-                activities into one price — so you spend less time planning and
-                more time in the destination.
-              </p>
-            </div>
-            <div
-              className="min-h-[260px] bg-cover bg-center"
-              style={{
-                backgroundImage:
-                  "linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.5)), url('/images/victoria-falls.jpg')",
-              }}
-            />
-          </div>
-        </div>
-      </section>
+      <CompactPageHero
+        eyebrow="Specials"
+        title="More of Zimbabwe, at a better price"
+        description="Each special bundles accommodation, guided experiences, and key activities into one price so you spend less time planning and more time in the destination."
+        imageUrl="/images/victoria-falls.jpg"
+      />
 
       <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-        <div className="grid gap-5 lg:grid-cols-3">
+        <CompactSectionHeader title="Current specials" count={specials.length} />
+        <HorizontalRail itemClassName="w-[84vw] max-w-[340px] sm:w-[320px]">
           {specials.map((special) => (
-            <article key={special.id} className="theme-card overflow-hidden flex flex-col">
+            <article key={special.id} className="theme-card flex h-[420px] flex-col overflow-hidden rounded-xl">
               <div
-                className="min-h-[220px] bg-cover bg-center"
+                className="min-h-[132px] bg-cover bg-center"
                 style={{
                   backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.08), rgba(0,0,0,0.48)), url('${special.image}')`,
                 }}
@@ -285,9 +269,9 @@ export default function SpecialsPage() {
                 </div>
               </div>
 
-              <div className="flex flex-1 flex-col p-5">
+              <div className="flex flex-1 flex-col p-4">
                 <h2 className="theme-heading text-xl font-semibold">{special.title}</h2>
-                <p className="theme-muted mt-3 flex-1 text-sm leading-6">{special.description}</p>
+                <p className="theme-muted mt-2 flex-1 text-sm leading-6">{special.description}</p>
 
                 <div className="theme-muted mt-4 flex flex-wrap gap-4 text-sm">
                   <span className="inline-flex items-center gap-2">
@@ -300,15 +284,15 @@ export default function SpecialsPage() {
                   </span>
                 </div>
 
-                <div className="mt-4 flex flex-wrap gap-2">
+                <div className="mt-3 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {special.features.map((feature) => (
-                    <span key={feature} className="theme-chip rounded-full px-3 py-1.5 text-sm">
+                    <span key={feature} className="theme-chip shrink-0 rounded-lg px-2.5 py-1.5 text-xs">
                       {feature}
                     </span>
                   ))}
                 </div>
 
-                <div className="mt-5 flex items-center justify-between gap-3">
+                <div className="mt-4 flex items-center justify-between gap-3">
                   <div>
                     <div className="theme-muted text-sm line-through">
                       ${special.originalPrice.toLocaleString()}
@@ -323,13 +307,13 @@ export default function SpecialsPage() {
                     className="inline-flex items-center gap-2 rounded-full bg-[#ff5630] px-5 py-2.5 text-sm font-semibold text-white hover:bg-[#ff7352] transition-colors"
                   >
                     <Tag className="h-4 w-4" />
-                    Book special
+                    Book
                   </button>
                 </div>
               </div>
             </article>
           ))}
-        </div>
+        </HorizontalRail>
       </section>
     </div>
   );

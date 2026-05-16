@@ -108,17 +108,17 @@ export default function GuidePlusDetailPage() {
 
   return (
     <div className="theme-page min-h-screen">
-      <div className="mx-auto max-w-4xl px-4 py-12 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-4xl px-4 py-5 sm:px-6 lg:px-8">
         <button
           onClick={() => router.back()}
-          className="theme-muted mb-8 flex items-center gap-2 text-sm hover:text-current"
+          className="theme-muted mb-4 flex items-center gap-2 text-sm hover:text-current"
         >
           <ArrowLeft className="h-4 w-4" />
           Back to guides
         </button>
 
         {booked ? (
-          <div className="theme-panel rounded-[32px] p-8 text-center">
+          <div className="theme-panel rounded-2xl p-6 text-center">
             <Calendar className="mx-auto h-12 w-12 text-[#4ade80]" />
             <h2 className="theme-heading mt-5 text-2xl font-semibold">Booking confirmed</h2>
             <p className="theme-muted mt-3 text-sm">
@@ -127,10 +127,10 @@ export default function GuidePlusDetailPage() {
           </div>
         ) : null}
 
-        <div className="grid gap-8 lg:grid-cols-[1fr_320px]">
+        <div className="grid gap-5 lg:grid-cols-[1fr_320px]">
           {/* Left — guide details */}
-          <div className="space-y-6">
-            <div className="theme-panel rounded-[32px] p-6">
+          <div className="space-y-4">
+            <div className="theme-panel rounded-2xl p-4 md:p-5">
               <div className="flex items-start gap-5">
                 <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full bg-[#ff5630]/15 text-2xl font-semibold text-[#ff5630]">
                   {guide.avatarUrl ? (
@@ -158,9 +158,9 @@ export default function GuidePlusDetailPage() {
                 </div>
               </div>
 
-              <p className="theme-muted mt-5 text-sm leading-7">{guide.bio}</p>
+              <p className="theme-muted mt-4 text-sm leading-6">{guide.bio}</p>
 
-              <div className="mt-5 grid gap-4 sm:grid-cols-3">
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">
                 {guide.specialties.length > 0 ? (
                   <div>
                     <div className="text-xs uppercase tracking-widest text-white/35 mb-2">Specialties</div>
@@ -210,7 +210,7 @@ export default function GuidePlusDetailPage() {
                   return (
                     <div
                       key={service.id}
-                      className="theme-panel rounded-[24px] p-5"
+                      className="theme-panel rounded-xl p-4"
                     >
                       <div className="flex items-start justify-between gap-4">
                         <div className="flex items-start gap-3">

@@ -6,6 +6,9 @@ import { useRouter } from "next/navigation";
 import { ArrowLeft, CarFront, MapPin, Minus, Plus, ShieldCheck, TimerReset, Users } from "lucide-react";
 import { usePayment } from "@/contexts/PaymentContext";
 import { BookingItem } from "@/types/payment";
+import CompactPageHero from "@/components/ui/CompactPageHero";
+import CompactSectionHeader from "@/components/ui/CompactSectionHeader";
+import HorizontalRail from "@/components/ui/HorizontalRail";
 
 const carTypes = [
   { id: "economy", name: "Economy cars",     description: "Fuel-efficient and budget-friendly",          pricePerDay: 25,  category: "Economy" },
@@ -52,45 +55,36 @@ export default function CarRentalPage() {
           <ArrowLeft className="h-4 w-4" /> Transport
         </Link>
 
-        <div className="theme-panel-strong overflow-hidden rounded-[34px]">
-          <div className="grid lg:grid-cols-[1.04fr_0.96fr]">
-            <div className="p-6 md:p-8 lg:p-10">
-              <div className="theme-chip inline-flex rounded-full px-4 py-2 text-xs uppercase tracking-[0.28em]">Car rental</div>
-              <h1 className="theme-heading mt-4 text-4xl font-semibold md:text-5xl">
-                Rent a car for more flexibility across your trip
-              </h1>
-              <p className="theme-muted mt-4 max-w-2xl text-sm leading-7 md:text-base">
-                Car rental works well for multi-stop trips, scenic routes, and travelers who want to move at their own pace.
-              </p>
-            </div>
-            <div
-              className="min-h-[260px] bg-cover bg-center"
-              style={{ backgroundImage: "linear-gradient(180deg,rgba(0,0,0,0.08),rgba(0,0,0,0.5)),url('/images/destinations/eastern-highlands.jpg')" }}
-            />
-          </div>
-        </div>
+        <CompactPageHero
+          eyebrow="Car rental"
+          title="Rent a car for more flexibility across your trip"
+          description="Car rental works well for multi-stop trips, scenic routes, and travelers who want to move at their own pace."
+          imageUrl="/images/destinations/eastern-highlands.jpg"
+          className="px-0 pb-0 pt-0"
+        />
       </section>
 
       <section className="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
-        <div className="grid gap-5 md:grid-cols-3">
+        <CompactSectionHeader eyebrow="Rental types" title="Choose a car type" />
+        <HorizontalRail itemClassName="w-[82vw] max-w-[320px] sm:w-[300px]">
           {carTypes.map((car) => {
             const { days, passengers } = get(car.id);
             return (
-              <div key={car.id} className="theme-card rounded-[28px] p-6">
+              <div key={car.id} className="theme-card rounded-xl p-4">
                 <div className="flex items-start justify-between gap-3">
                   <CarFront className="h-6 w-6 text-[#ff7352] shrink-0 mt-0.5" />
                   <span className="theme-chip rounded-full px-3 py-1 text-xs">${car.pricePerDay}/day</span>
                 </div>
-                <h2 className="theme-heading mt-4 text-2xl font-semibold">{car.name}</h2>
-                <p className="theme-muted mt-3 text-sm leading-6">{car.description}</p>
-                <div className="theme-muted mt-4 space-y-2 text-sm">
+                <h2 className="theme-heading mt-3 text-xl font-semibold">{car.name}</h2>
+                <p className="theme-muted mt-2 text-sm leading-6">{car.description}</p>
+                <div className="theme-muted mt-3 space-y-2 text-sm">
                   <div className="flex items-center gap-2"><ShieldCheck className="h-4 w-4 text-[#8cf0a1]" />Insurance options available</div>
                   <div className="flex items-center gap-2"><TimerReset className="h-4 w-4 text-[#5aa7ff]" />Flexible pickup and return</div>
                   <div className="flex items-center gap-2"><MapPin className="h-4 w-4 text-[#ffca74]" />{car.category}</div>
                 </div>
 
                 {/* Days selector */}
-                <div className="mt-5 flex items-center gap-3">
+                <div className="mt-4 flex items-center gap-3">
                   <TimerReset className="h-4 w-4 text-white/40" />
                   <span className="theme-subtle text-sm">Days</span>
                   <div className="flex items-center gap-2 ml-auto">
@@ -137,14 +131,14 @@ export default function CarRentalPage() {
 
                 <button
                   onClick={() => handleBook(car)}
-                  className="mt-4 w-full rounded-full bg-[#ff5630] px-5 py-3 text-sm font-semibold text-white hover:bg-[#ff7352] transition-colors"
+                  className="mt-4 w-full rounded-lg bg-[#ff5630] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#ff7352] transition-colors"
                 >
                   Book rental car
                 </button>
               </div>
             );
           })}
-        </div>
+        </HorizontalRail>
       </section>
     </div>
   );

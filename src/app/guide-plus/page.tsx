@@ -5,6 +5,8 @@ import Link from "next/link";
 import { MapPin, Star, Clock } from "lucide-react";
 import { apiFetch } from "@/lib/client-api";
 import VerifiedBadge from "@/components/ui/VerifiedBadge";
+import CompactSectionHeader from "@/components/ui/CompactSectionHeader";
+import HorizontalRail from "@/components/ui/HorizontalRail";
 
 interface GuideService {
   id: string;
@@ -47,19 +49,19 @@ export default function GuidePlusPage() {
 
   return (
     <div className="theme-page min-h-screen">
-      <div className="mx-auto max-w-7xl px-4 py-12 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-10 max-w-2xl">
-          <div className="inline-flex items-center gap-2 rounded-full border border-[#ff5630]/25 bg-[#ff5630]/8 px-4 py-2 text-sm font-medium text-[#ff5630]">
+        <div className="mb-5 rounded-2xl border border-black/10 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/[0.04] sm:p-5">
+          <div className="inline-flex items-center gap-2 rounded-lg border border-[#ff5630]/25 bg-[#ff5630]/8 px-3 py-1.5 text-xs font-medium text-[#ff5630]">
             Guide+
           </div>
-          <h1 className="theme-heading mt-4 text-4xl font-semibold">Book a local guide</h1>
-          <p className="theme-muted mt-4 text-sm leading-7">
+          <h1 className="theme-heading mt-3 text-3xl font-semibold">Book a local guide</h1>
+          <p className="theme-muted mt-2 max-w-2xl text-sm leading-6">
             Connect with vetted Community Guides in Zimbabwe for trip planning, video consultations, and in-person tours.
           </p>
           <Link
             href="/community-guides/apply"
-            className="mt-5 inline-flex h-10 items-center rounded-full border border-black/12 bg-black/[0.04] px-5 text-sm font-medium text-black/70 transition hover:bg-black/[0.08] dark:border-white/10 dark:bg-white/[0.05] dark:text-white/70 dark:hover:bg-white/[0.09]"
+            className="mt-4 inline-flex h-10 items-center rounded-lg border border-black/12 bg-black/[0.04] px-4 text-sm font-medium text-black/70 transition hover:bg-black/[0.08] dark:border-white/10 dark:bg-white/[0.05] dark:text-white/70 dark:hover:bg-white/[0.09]"
           >
             Become a guide
           </Link>
@@ -72,9 +74,9 @@ export default function GuidePlusPage() {
         ) : null}
 
         {loading ? (
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
             {[1, 2, 3].map((i) => (
-              <div key={i} className="theme-panel rounded-[28px] p-6 animate-pulse">
+              <div key={i} className="theme-panel rounded-xl p-4 animate-pulse">
                 <div className="h-10 w-10 rounded-full bg-white/10" />
                 <div className="mt-4 h-4 w-32 rounded bg-white/10" />
                 <div className="mt-2 h-3 w-full rounded bg-white/10" />
@@ -82,16 +84,18 @@ export default function GuidePlusPage() {
             ))}
           </div>
         ) : guides.length === 0 ? (
-          <div className="theme-panel rounded-[28px] p-8 text-center">
+          <div className="theme-panel rounded-xl p-6 text-center">
             <p className="theme-muted text-sm">No guides are available right now. Check back soon.</p>
           </div>
         ) : (
-          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+          <>
+          <CompactSectionHeader title="Available local guides" count={guides.length} />
+          <HorizontalRail itemClassName="w-[82vw] max-w-[320px] sm:w-[300px]">
             {guides.map((guide) => (
               <Link
                 key={guide.id}
                 href={`/guide-plus/${guide.id}`}
-                className="theme-panel group rounded-[28px] p-6 transition hover:shadow-lg"
+                className="theme-panel group flex h-[360px] flex-col rounded-xl p-4 transition hover:shadow-lg"
               >
                 <div className="flex items-start gap-4">
                   <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-[#ff5630]/15 text-lg font-semibold text-[#ff5630]">
@@ -120,7 +124,7 @@ export default function GuidePlusPage() {
                   </div>
                 </div>
 
-                <p className="theme-muted mt-4 text-sm leading-6 line-clamp-3">{guide.bio}</p>
+                <p className="theme-muted mt-3 text-sm leading-6 line-clamp-3">{guide.bio}</p>
 
                 {guide.destinations.length > 0 ? (
                   <div className="mt-4 flex flex-wrap gap-1.5">
@@ -135,7 +139,7 @@ export default function GuidePlusPage() {
                 ) : null}
 
                 {guide.services.length > 0 ? (
-                  <div className="mt-4 space-y-2 border-t border-white/8 pt-4">
+                  <div className="mt-auto space-y-2 border-t border-white/8 pt-3">
                     {guide.services.slice(0, 2).map((service) => (
                       <div key={service.id} className="flex items-center justify-between text-sm">
                       <div className="flex items-center gap-2 text-white/70">
@@ -156,7 +160,8 @@ export default function GuidePlusPage() {
                 ) : null}
               </Link>
             ))}
-          </div>
+          </HorizontalRail>
+          </>
         )}
       </div>
     </div>

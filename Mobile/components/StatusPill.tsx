@@ -4,7 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import type { ComponentProps } from 'react';
 
 import { ThemedText } from './ThemedText';
-import { Fonts } from '@/constants/Fonts';
+import { Fonts, responsiveFontSize, responsiveLineHeight, responsiveSize } from '@/constants/Fonts';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
 const DEFAULT_ICON: ComponentProps<typeof Ionicons>['name'] = 'time';
@@ -29,7 +29,7 @@ export function StatusPill({
   iconColor,
   lightTextColor,
   darkTextColor,
-  iconSize = 12,
+  iconSize = 11,
   style,
 }: StatusPillProps) {
   const colorScheme = useColorScheme();
@@ -63,7 +63,7 @@ const styles = StyleSheet.create({
   container: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
+    paddingHorizontal: responsiveSize(10, 8, 12),
     paddingVertical: 6,
     borderRadius: 999,
     alignSelf: 'flex-start',
@@ -79,11 +79,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 1.5,
-    elevation: 1,
+    elevation: 0,
   },
   text: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: responsiveFontSize(13),
+    lineHeight: responsiveLineHeight(13),
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
     flexShrink: 1,

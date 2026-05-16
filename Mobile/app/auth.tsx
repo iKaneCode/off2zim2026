@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
   Animated,
   KeyboardAvoidingView,
   Linking,
@@ -21,14 +20,15 @@ import { Asset } from 'expo-asset';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
 
-import { Logo, WallpaperPattern } from '@/components';
+import { Logo } from '@/components';
 import { ThemedText } from '@/components/ThemedText';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { Colors } from '@/constants/Colors';
 import { cardSurfaceBaseStyle, getCardSurfaceColors } from '@/constants/CardStyles';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useAppAlert } from '@/context/AppAlertContext';
 import { countries } from '@/countries-fixed';
 import { getMobilePostAuthRoute, getMobileVariantConfig } from '@/config/appVariant';
 
@@ -169,6 +169,7 @@ export default function AuthScreen() {
   const isDark = colorScheme === 'dark';
   const headerHeight = useHeaderHeight();
   const { loading, user, signIn, signUp, signOut, setGuestMode, resetPassword } = useAuth();
+  const { showAlert } = useAppAlert();
   const variantConfig = getMobileVariantConfig();
 
   const [mode, setMode] = useState<AuthMode>('sign-in');
@@ -596,10 +597,11 @@ export default function AuthScreen() {
         );
 
         if (verificationUrl) {
-          Alert.alert(
-            'Account ready',
-            'Your account has been created. Email delivery is not configured yet, so open the verification link now to verify your email address.',
-            [
+          showAlert({
+            title: 'Account ready',
+            message:
+              'Your account has been created. Email delivery is not configured yet, so open the verification link now to verify your email address.',
+            buttons: [
               {
                 text: 'Open Verification Link',
                 onPress: async () => {
@@ -618,18 +620,18 @@ export default function AuthScreen() {
                 text: 'Continue',
                 onPress: () => router.replace(postAuthRoute),
               },
-            ]
-          );
+            ],
+          });
           return;
         }
 
-        Alert.alert(
-          'Account ready',
-          verificationSent
+        showAlert({
+          title: 'Account ready',
+          message: verificationSent
             ? 'Your account has been created and a verification email has been sent. Please check your inbox.'
             : 'Your account has been created and you are now signed in.',
-          [{ text: 'Continue', onPress: () => router.replace(postAuthRoute) }]
-        );
+          buttons: [{ text: 'Continue', onPress: () => router.replace(postAuthRoute) }],
+        });
         return;
       }
     } catch (error: any) {
@@ -687,7 +689,6 @@ export default function AuthScreen() {
   if (user) {
     return (
       <View style={[styles.signedInRoot, { backgroundColor: palette.appBackground }]}>
-        <WallpaperPattern offsetTop={0} />
         <View style={[styles.signedInCard, { backgroundColor: cardSurface }]}>
           <Logo size="large" />
           <Text style={[styles.signedInTitle, { color: palette.text }]}>
@@ -709,8 +710,6 @@ export default function AuthScreen() {
 
   return (
     <View style={[styles.root, { backgroundColor: palette.appBackground }]}>
-      <WallpaperPattern offsetTop={0} />
-
       {/* CustomNotification removed; alerts now use RN Alert */}
 
       <KeyboardAvoidingView
@@ -917,10 +916,11 @@ export default function AuthScreen() {
                         onPress={async () => {
                           const resetEmail = email.trim().toLowerCase();
                           if (!resetEmail) {
-                            Alert.alert(
-                              'Email required',
-                              'Enter your email address first, then tap Forgot Password again.'
-                            );
+                            showAlert({
+                              title: 'Email required',
+                              message: 'Enter your email address first, then tap Forgot Password again.',
+                              buttons: [{ text: 'OK' }],
+                            });
                             return;
                           }
 
@@ -931,10 +931,11 @@ export default function AuthScreen() {
                             }
 
                             if (data?.resetUrl) {
-                              Alert.alert(
-                                'Reset ready',
-                                'Email delivery is not configured yet, so open the reset link now to choose a new password.',
-                                [
+                              showAlert({
+                                title: 'Reset ready',
+                                message:
+                                  'Email delivery is not configured yet, so open the reset link now to choose a new password.',
+                                buttons: [
                                   {
                                     text: 'Open Reset Link',
                                     onPress: async () => {
@@ -950,20 +951,22 @@ export default function AuthScreen() {
                                     },
                                   },
                                   { text: 'OK', style: 'cancel' },
-                                ]
-                              );
+                                ],
+                              });
                               return;
                             }
 
-                            Alert.alert(
-                              'Password reset sent',
-                              'Check your email for a password reset link.'
-                            );
+                            showAlert({
+                              title: 'Password reset sent',
+                              message: 'Check your email for a password reset link.',
+                              buttons: [{ text: 'OK' }],
+                            });
                           } catch (error: any) {
-                            Alert.alert(
-                              'Reset failed',
-                              error?.message ?? 'Unable to start password reset right now.'
-                            );
+                            showAlert({
+                              title: 'Reset failed',
+                              message: error?.message ?? 'Unable to start password reset right now.',
+                              buttons: [{ text: 'OK' }],
+                            });
                           }
                         }}
                       >
@@ -1965,7 +1968,7 @@ export default function AuthScreen() {
                           }
                           style={{
                             flex: 1,
-                            fontSize: 16,
+                            fontSize: responsiveFontSize(16),
                             fontFamily: Fonts.regular,
                             color: isDark ? '#FFFFFF' : '#1C1C1E',
                             padding: 0,
@@ -2023,7 +2026,7 @@ export default function AuthScreen() {
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                                 <ThemedText
                                   style={{
-                                    fontSize: 28,
+                                    fontSize: responsiveFontSize(28),
                                     lineHeight: 34,
                                     includeFontPadding: false,
                                   }}
@@ -2102,7 +2105,7 @@ export default function AuthScreen() {
                                 >
                                   <ThemedText
                                     style={{
-                                      fontSize: 28,
+                                      fontSize: responsiveFontSize(28),
                                       lineHeight: 34,
                                       includeFontPadding: false,
                                     }}
@@ -2765,12 +2768,12 @@ const styles = StyleSheet.create({
   },
   authIntroTitle: {
     fontFamily: Fonts.bold,
-    fontSize: 28,
+    fontSize: responsiveFontSize(28),
     lineHeight: 32,
   },
   authIntroSubtitle: {
     fontFamily: Fonts.regular,
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     lineHeight: 22,
   },
   formSurface: {
@@ -2784,12 +2787,12 @@ const styles = StyleSheet.create({
   },
   verificationTitle: {
     fontFamily: Fonts.bold,
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     letterSpacing: 0.4,
   },
   verificationDescription: {
     fontFamily: Fonts.medium,
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     lineHeight: 22,
   },
   verificationCodeWrapper: {
@@ -2800,25 +2803,25 @@ const styles = StyleSheet.create({
   },
   verificationCodeInput: {
     fontFamily: Fonts.bold,
-    fontSize: 26,
+    fontSize: responsiveFontSize(26),
     letterSpacing: 12,
     textAlign: 'center',
   },
   verificationError: {
     fontFamily: Fonts.medium,
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
   },
   verificationFooter: {
     gap: 12,
   },
   verificationResend: {
     fontFamily: Fonts.bold,
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     textAlign: 'center',
   },
   verificationChangeEmail: {
     fontFamily: Fonts.medium,
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     textAlign: 'center',
   },
   modeSwitch: {
@@ -2837,7 +2840,7 @@ const styles = StyleSheet.create({
   },
   modeButtonText: {
     fontFamily: Fonts.medium,
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     letterSpacing: 0.3,
   },
   modeButtonTextActive: {
@@ -2848,7 +2851,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.2,
     shadowRadius: 12,
-    elevation: 4,
+    elevation: 0,
   },
   userTypeSwitch: {
     flexDirection: 'row',
@@ -2868,11 +2871,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.18,
     shadowRadius: 10,
-    elevation: 3,
+    elevation: 0,
   },
   userTypeButtonText: {
     fontFamily: Fonts.medium,
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     letterSpacing: 0.2,
   },
   userTypeButtonTextActive: {
@@ -2890,11 +2893,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.17,
     shadowRadius: 18,
-    elevation: 6,
+    elevation: 0,
   },
   signInButtonText: {
     fontFamily: Fonts.bold,
-    fontSize: 17,
+    fontSize: responsiveFontSize(17),
     letterSpacing: 0.3,
   },
   primaryButton: {
@@ -2906,11 +2909,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.17,
     shadowRadius: 18,
-    elevation: 6,
+    elevation: 0,
   },
   primaryButtonText: {
     fontFamily: Fonts.bold,
-    fontSize: 17,
+    fontSize: responsiveFontSize(17),
     letterSpacing: 0.4,
     color: '#ffffff',
   },
@@ -2928,7 +2931,7 @@ const styles = StyleSheet.create({
   },
   socialDividerText: {
     fontFamily: Fonts.medium,
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     textTransform: 'uppercase',
     letterSpacing: 1,
   },
@@ -2956,7 +2959,7 @@ const styles = StyleSheet.create({
   },
   socialButtonText: {
     fontFamily: Fonts.medium,
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     textAlign: 'center',
     lineHeight: 18,
   },
@@ -2965,7 +2968,7 @@ const styles = StyleSheet.create({
   },
   signInForgotPassword: {
     textAlign: 'right',
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontFamily: Fonts.medium,
     marginTop: -8,
   },
@@ -2978,7 +2981,7 @@ const styles = StyleSheet.create({
   },
   guestPrimaryButtonText: {
     fontFamily: Fonts.bold,
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
   },
   switchAuthRow: {
     flexDirection: 'row',
@@ -2988,16 +2991,16 @@ const styles = StyleSheet.create({
   },
   switchAuthLabel: {
     fontFamily: Fonts.medium,
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
   },
   switchAuthButton: {
     fontFamily: Fonts.bold,
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
   },
   footer: {
     textAlign: 'center',
     marginTop: 32,
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontFamily: Fonts.medium,
     color: 'rgba(255,255,255,0.6)',
   },
@@ -3011,7 +3014,7 @@ const styles = StyleSheet.create({
   textInput: {
     flex: 1,
     fontFamily: Fonts.regular,
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     paddingVertical: 14,
     paddingHorizontal: 4,
   },
@@ -3021,10 +3024,10 @@ const styles = StyleSheet.create({
   },
   inputLabel: {
     fontFamily: Fonts.medium,
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
   },
   inputRequired: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     fontFamily: Fonts.bold,
     color: '#FF3B30',
   },
@@ -3042,7 +3045,7 @@ const styles = StyleSheet.create({
   },
   authPickerValue: {
     fontFamily: Fonts.regular,
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
   },
   authPickerValueRow: {
     flexDirection: 'row',
@@ -3051,7 +3054,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   authPickerFlag: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
   },
   fullScreenBackdrop: {
     flex: 1,
@@ -3081,7 +3084,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 0,
     gap: 12,
     width: '100%',
     maxWidth: 400,
@@ -3094,7 +3097,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   guestDropdownTitle: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontFamily: Fonts.bold,
   },
   guestDropdownCloseButton: {},
@@ -3109,7 +3112,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
-    elevation: 5,
+    elevation: 0,
   },
   guestSection: {
     marginBottom: 20,
@@ -3124,7 +3127,7 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   guestSubLabel: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '600',
   },
   calendarModalContainer: {
@@ -3145,7 +3148,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 0,
     gap: 12,
     width: '100%',
     maxWidth: 400,
@@ -3158,7 +3161,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   calendarModalTitle: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontFamily: Fonts.bold,
   },
   calendarModalCloseButton: {},
@@ -3183,7 +3186,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   monthTitle: {
-    fontSize: 22,
+    fontSize: responsiveFontSize(22),
     fontWeight: '600',
   },
   weekDaysHeader: {
@@ -3198,7 +3201,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   weekDayText: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     fontWeight: '600',
     opacity: 0.5,
     textTransform: 'uppercase',
@@ -3237,12 +3240,12 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   calendarDayText: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontWeight: '400',
   },
   calendarDayTextSelected: {
     fontWeight: '600',
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     color: '#FFFFFF',
   },
   signedInRoot: {
@@ -3263,14 +3266,14 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 14 },
     shadowOpacity: 0.18,
     shadowRadius: 28,
-    elevation: 10,
+    elevation: 0,
   },
   signedInTitle: {
     fontFamily: Fonts.bold,
-    fontSize: 22,
+    fontSize: responsiveFontSize(22),
   },
   signedInSubtitle: {
     fontFamily: Fonts.medium,
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
   },
 });

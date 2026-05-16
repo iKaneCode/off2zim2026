@@ -1,4 +1,5 @@
-import React from 'react';
+﻿import React from 'react';
+import { responsiveFontSize } from '@/constants/Fonts';
 import { View, Text, StyleSheet } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -25,12 +26,12 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   title: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     fontWeight: 'bold',
     marginBottom: 12,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     textAlign: 'center',
   },
 });

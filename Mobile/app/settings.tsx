@@ -1,4 +1,5 @@
-import React, { useCallback, useMemo, useState } from 'react';
+﻿import React, { useCallback, useMemo, useState } from 'react';
+import { responsiveFontSize } from '@/constants/Fonts';
 import { View, StyleSheet, ScrollView, Pressable, Switch } from 'react-native';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -177,7 +178,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   pageTitle: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     textAlign: 'left',
   },
   content: { flex: 1 },

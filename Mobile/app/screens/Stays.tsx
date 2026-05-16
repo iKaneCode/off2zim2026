@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+﻿import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { responsiveFontSize } from '@/constants/Fonts';
 import {
   View,
   StyleSheet,
@@ -328,7 +329,7 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   emptyStateText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     marginTop: 16,
     textAlign: 'center',
     opacity: 0.7,

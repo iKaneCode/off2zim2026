@@ -14,8 +14,10 @@ import { faHeart as regularHeart } from '@fortawesome/free-regular-svg-icons';
 
 import { ThemedText } from './ThemedText';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, responsiveLineHeight, responsiveSize, Fonts } from '@/constants/Fonts';
 import { StatusPill, type StatusPillProps } from './StatusPill';
+
+const AVATAR_SIZE = responsiveSize(96, 86, 108);
 
 export interface ProviderHeroCardProps {
   title: string;
@@ -91,6 +93,8 @@ function ProviderHeroCardComponent({
   const messageBackground = isDark ? 'rgba(0,122,255,0.15)' : 'rgba(0,122,255,0.1)';
 
   const initial = (avatarInitial ?? title.charAt(0) ?? '').toUpperCase();
+  const fallbackLogoUrl = `https://api.dicebear.com/8.x/shapes/png?seed=${encodeURIComponent(title)}&size=128&backgroundColor=FF4757`;
+  const effectiveLogoUrl = logoUrl || fallbackLogoUrl;
   const ratingDisplay =
     rating === undefined
       ? ''
@@ -98,9 +102,7 @@ function ProviderHeroCardComponent({
         ? (Math.round(rating * 10) / 10).toString()
         : rating;
   const hasTopActions = Boolean(onFavoritePress || onSharePress);
-  const hasMetaRow = Boolean(onDirectionsPress || rating !== undefined);
-  const resolvedRatingAlign = ratingAlign ?? (onDirectionsPress ? 'right' : 'left');
-  const hasFooter = Boolean(onCallPress || onMessagePress);
+  const hasFooter = Boolean(onCallPress || onMessagePress || onDirectionsPress);
 
   return (
     <View
@@ -114,141 +116,98 @@ function ProviderHeroCardComponent({
         style,
       ]}
     >
-      {hasTopActions ? (
-        <View style={styles.actionBar}>
-          <View style={styles.actionCluster}>
-            {onFavoritePress ? (
-              <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: controlBackground }]}
-                onPress={onFavoritePress}
-                activeOpacity={0.85}
-              >
-                <FontAwesomeIcon
-                  icon={isFavorited ? solidHeart : regularHeart}
-                  size={18}
-                  color="#FF4757"
-                />
-              </TouchableOpacity>
-            ) : null}
+      <View style={styles.headerRow}>
+        <View style={styles.headerLeft}>
+          {hasTopActions ? (
+            <View style={styles.actionCluster}>
+              {onFavoritePress ? (
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: controlBackground }]}
+                  onPress={onFavoritePress}
+                  activeOpacity={0.85}
+                >
+                  <FontAwesomeIcon
+                    icon={isFavorited ? solidHeart : regularHeart}
+                    size={18}
+                    color="#FF4757"
+                  />
+                </TouchableOpacity>
+              ) : null}
 
-            {onSharePress ? (
-              <TouchableOpacity
-                style={[styles.actionButton, { backgroundColor: controlBackground }]}
-                onPress={onSharePress}
-                activeOpacity={0.85}
-              >
-                <FontAwesomeIcon icon={faShareFromSquare} size={18} color="#FF4757" />
-              </TouchableOpacity>
-            ) : null}
-          </View>
+              {onSharePress ? (
+                <TouchableOpacity
+                  style={[styles.actionButton, { backgroundColor: controlBackground }]}
+                  onPress={onSharePress}
+                  activeOpacity={0.85}
+                >
+                  <FontAwesomeIcon icon={faShareFromSquare} size={18} color="#FF4757" />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          ) : null}
         </View>
-      ) : null}
 
-      <View style={styles.identityRow}>
         <View
           style={[
             styles.profileCircle,
             {
-              backgroundColor: logoUrl
-                ? 'transparent'
-                : isDark
-                  ? 'rgba(255, 71, 87, 0.18)'
-                  : 'rgba(255, 71, 87, 0.08)',
-              borderColor: logoUrl ? 'transparent' : '#FF4757',
-              borderWidth: logoUrl ? 0 : 2,
+              backgroundColor: cardBackground,
+              borderColor: cardBackground,
+              borderWidth: 3,
             },
           ]}
         >
-          {logoUrl ? (
-            <Image source={{ uri: logoUrl }} style={styles.logoImage} resizeMode="contain" />
-          ) : (
-            <ThemedText style={styles.profileInitial}>{initial}</ThemedText>
-          )}
+          <Image source={{ uri: effectiveLogoUrl }} style={styles.logoImage} resizeMode="contain" />
         </View>
 
-        <View style={styles.identityText}>
-          <ThemedText
-            style={[styles.titleText, { color: textColor }]}
-            numberOfLines={2}
-            adjustsFontSizeToFit
-            minimumFontScale={0.82}
-          >
-            {title}
-          </ThemedText>
-
-          {location || statusPillProps ? (
-            <View style={styles.locationStatusRow}>
-              {location ? (
-                <View style={[styles.locationPill, { backgroundColor: subtleBackground }]}>
-                  <View style={[styles.iconBubble, { backgroundColor: accentSurface }]}>
-                    <Ionicons name={locationIconName} size={12} color={locationIconColor} />
-                  </View>
-                  <ThemedText style={[styles.locationText, { color: textColor }]} numberOfLines={1}>
-                    {location}
-                  </ThemedText>
-                </View>
-              ) : (
-                <View />
-              )}
-
-              {statusPillProps
-                ? (() => {
-                    const { style: statusStyle, ...restStatusProps } = statusPillProps;
-                    return (
-                      <StatusPill {...restStatusProps} style={[styles.statusInline, statusStyle]} />
-                    );
-                  })()
-                : null}
-            </View>
-          ) : null}
-        </View>
-      </View>
-
-      {hasMetaRow ? (
-        <View style={styles.metaRow}>
-          {onDirectionsPress ? (
-            <TouchableOpacity
-              style={[styles.directionsPill, { backgroundColor: directionsBackground }]}
-              onPress={onDirectionsPress}
-              activeOpacity={0.85}
-            >
-              <View style={[styles.iconBubble, { backgroundColor: accentSurface }]}>
-                <Ionicons name="navigate" size={12} color="#0A84FF" />
-              </View>
-              <ThemedText
-                style={[styles.directionsText, { color: isDark ? '#FFFFFF' : '#0A84FF' }]}
-                numberOfLines={1}
-              >
-                {directionsLabel}
-              </ThemedText>
-            </TouchableOpacity>
-          ) : null}
-
+        <View style={styles.headerRight}>
           {rating !== undefined ? (
-            <View
-              style={[
-                styles.ratingPill,
-                {
-                  backgroundColor: subtleBackground,
-                  marginLeft: resolvedRatingAlign === 'right' ? 'auto' : 0,
-                },
-              ]}
-            >
+            <View style={[styles.ratingPill, { backgroundColor: subtleBackground }]}>
               <View style={[styles.iconBubble, { backgroundColor: accentSurface }]}>
                 <Ionicons name={ratingIconName} size={12} color={ratingIconColor} />
               </View>
               <ThemedText style={[styles.ratingText, { color: textColor }]}>
                 {ratingDisplay}
               </ThemedText>
-              {reviewsText ? (
-                <ThemedText style={[styles.reviewsText, { color: textColor }]}>
-                  {reviewsText}
-                </ThemedText>
-              ) : null}
             </View>
           ) : null}
         </View>
-      ) : null}
+      </View>
+
+      <View style={styles.identitySection}>
+        <ThemedText
+          style={[styles.titleText, { color: textColor }]}
+          numberOfLines={2}
+          adjustsFontSizeToFit
+          minimumFontScale={0.82}
+        >
+          {title}
+        </ThemedText>
+
+        {location || statusPillProps ? (
+          <View style={styles.locationStatusRow}>
+            {location ? (
+              <View style={[styles.locationPill, { backgroundColor: subtleBackground }]}>
+                <View style={[styles.footerIconBubble, { backgroundColor: accentSurface }]}>
+                  <Ionicons name={locationIconName} size={10} color={locationIconColor} />
+                </View>
+                <ThemedText style={[styles.locationText, { color: textColor }]} numberOfLines={1}>
+                  {location}
+                </ThemedText>
+              </View>
+            ) : null}
+
+            {statusPillProps
+              ? (() => {
+                  const { style: statusStyle, ...restStatusProps } = statusPillProps;
+                  return (
+                    <StatusPill {...restStatusProps} style={[styles.statusInline, statusStyle]} />
+                  );
+                })()
+              : null}
+          </View>
+        ) : null}
+      </View>
 
       {hasFooter ? (
         <View style={styles.footer}>
@@ -262,7 +221,7 @@ function ProviderHeroCardComponent({
               disabled={callDisabled}
               activeOpacity={0.85}
             >
-              <View style={[styles.iconBubble, { backgroundColor: accentSurface }]}>
+              <View style={[styles.footerIconBubble, { backgroundColor: accentSurface }]}>
                 <Ionicons name={callIconName} size={12} color={callIconColor} />
               </View>
               <ThemedText style={[styles.contactText, { color: textColor }]}>
@@ -270,6 +229,26 @@ function ProviderHeroCardComponent({
               </ThemedText>
             </TouchableOpacity>
           ) : null}
+
+          <TouchableOpacity
+            style={[
+              styles.contactPill,
+              { backgroundColor: directionsBackground, opacity: onDirectionsPress ? 1 : 0.4 },
+            ]}
+            onPress={onDirectionsPress}
+            disabled={!onDirectionsPress}
+            activeOpacity={0.85}
+          >
+            <View style={[styles.footerIconBubble, { backgroundColor: accentSurface }]}>
+              <Ionicons name="navigate" size={12} color="#0A84FF" />
+            </View>
+            <ThemedText
+              style={[styles.directionsText, { color: isDark ? '#FFFFFF' : '#0A84FF' }]}
+              numberOfLines={1}
+            >
+              {directionsLabel}
+            </ThemedText>
+          </TouchableOpacity>
 
           {onMessagePress ? (
             <TouchableOpacity
@@ -281,7 +260,7 @@ function ProviderHeroCardComponent({
               disabled={messageDisabled}
               activeOpacity={0.85}
             >
-              <View style={[styles.iconBubble, { backgroundColor: accentSurface }]}>
+              <View style={[styles.footerIconBubble, { backgroundColor: accentSurface }]}>
                 <Ionicons name={messageIconName} size={12} color={messageIconColor} />
               </View>
               <ThemedText style={[styles.contactText, { color: textColor }]}>
@@ -299,47 +278,60 @@ export const ProviderHeroCard = memo(ProviderHeroCardComponent);
 
 const styles = StyleSheet.create({
   card: {
-    borderRadius: 28,
+    borderRadius: 32,
     borderWidth: 1,
     paddingHorizontal: 24,
-    paddingVertical: 26,
-    gap: 18,
+    paddingTop: 0,
+    paddingBottom: 16,
+    gap: 14,
+    overflow: 'visible',
     shadowOffset: { width: 0, height: 16 },
     shadowOpacity: 0.16,
     shadowRadius: 26,
-    elevation: 10,
+    elevation: 0,
   },
-  actionBar: {
+  headerRow: {
     flexDirection: 'row',
+    alignItems: 'flex-end',
+    marginTop: -(AVATAR_SIZE / 2),
+    marginHorizontal: -24,
+  },
+  headerLeft: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    paddingLeft: 16,
+    paddingTop: 36,
+  },
+  headerRight: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'flex-start',
     justifyContent: 'flex-end',
-    alignItems: 'center',
+    paddingRight: 16,
+    paddingTop: 36,
   },
   actionCluster: {
     flexDirection: 'row',
     gap: 10,
   },
   actionButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  identityRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 18,
   },
   profileCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
+    overflow: 'hidden',
   },
   profileInitial: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(38),
     fontFamily: Fonts.bold,
     color: '#FFFFFF',
     letterSpacing: 0.4,
@@ -347,28 +339,29 @@ const styles = StyleSheet.create({
   logoImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 26,
+    borderRadius: AVATAR_SIZE / 2,
   },
-  identityText: {
-    flex: 1,
+  identitySection: {
+    alignItems: 'center',
     gap: 8,
   },
   titleText: {
-    fontSize: 22,
-    lineHeight: 28,
+    fontSize: responsiveFontSize(22),
+    lineHeight: responsiveLineHeight(22),
     fontFamily: Fonts.bold,
+    textAlign: 'center',
   },
   locationPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: responsiveSize(10, 8, 12),
+    paddingVertical: responsiveSize(5, 4, 7),
     borderRadius: 999,
-    alignSelf: 'flex-start',
+    alignSelf: 'center',
     maxWidth: '100%',
   },
   locationText: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(13),
     fontFamily: Fonts.bold,
     flexShrink: 1,
     letterSpacing: 0.2,
@@ -384,71 +377,61 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
-    elevation: 2,
+    elevation: 0,
+  },
+  footerIconBubble: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 4,
+    elevation: 0,
   },
   locationStatusRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
     gap: 12,
-  },
-  metaRow: {
-    flexDirection: 'row',
     flexWrap: 'wrap',
-    alignItems: 'center',
-    gap: 12,
-  },
-  directionsPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
   },
   directionsText: {
-    fontSize: 15,
-    lineHeight: 20,
+    fontSize: responsiveFontSize(14),
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
   },
   ratingPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: responsiveSize(10, 8, 12),
+    paddingVertical: responsiveSize(6, 5, 8),
     borderRadius: 999,
-    minWidth: 140,
   },
   ratingText: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     lineHeight: 20,
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
   },
-  reviewsText: {
-    fontSize: 14,
-    opacity: 0.7,
-    marginLeft: 4,
-  },
   statusInline: {
-    marginLeft: 'auto',
     alignSelf: 'center',
   },
   footer: {
     flexDirection: 'row',
-    gap: 12,
+    gap: responsiveSize(12, 10, 16),
+    marginHorizontal: -10,
   },
   contactPill: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    paddingHorizontal: responsiveSize(12, 10, 14),
+    paddingVertical: responsiveSize(7, 5, 9),
     borderRadius: 999,
     flex: 1,
   },
   contactText: {
-    fontSize: 15,
-    lineHeight: 20,
+    fontSize: responsiveFontSize(14),
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
   },

@@ -1,12 +1,26 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet, Platform } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Platform, Dimensions } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { Logo } from '@/components/Logo';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Fonts } from '@/constants/Fonts';
+import { Fonts, responsiveFontSize } from '@/constants/Fonts';
+
+const { width: _screenWidth } = Dimensions.get('window');
+const _BASE = 390;
+const _scale = _screenWidth / _BASE;
+const rh = (size: number, min = size * 0.88, max = size * 1.12) =>
+  Math.round(Math.min(max, Math.max(min, size * _scale)));
+
+const HEADER_H_PADDING = rh(16, 14, 20);
+const ACTION_BTN_SIZE = rh(44, 40, 48);
+const ICON_CIRCLE_SIZE = rh(36, 32, 40);
+const ICON_SIZE = rh(20, 18, 22);
+const TITLE_FONT_SIZE = responsiveFontSize(22);
+const TITLE_CONTAINER_HEIGHT = rh(44, 40, 48);
+const HEADER_MARGIN_BOTTOM = rh(15, 12, 18);
 
 interface HeaderAction {
   icon: string;
@@ -71,11 +85,11 @@ export function CustomHeader({
         ]}
       >
         {action.icon === 'chevron-back' ? (
-          <FontAwesome6 name="chevron-left" size={20} color={action.color || '#FF3B30'} />
+          <FontAwesome6 name="chevron-left" size={ICON_SIZE} color={action.color || '#FF3B30'} />
         ) : action.icon === 'chevron-forward' ? (
-          <FontAwesome6 name="chevron-right" size={20} color={action.color || '#FF3B30'} />
+          <FontAwesome6 name="chevron-right" size={ICON_SIZE} color={action.color || '#FF3B30'} />
         ) : (
-          <Ionicons name={action.icon as any} size={20} color={action.color || '#FF3B30'} />
+          <Ionicons name={action.icon as any} size={ICON_SIZE} color={action.color || '#FF3B30'} />
         )}
       </View>
     </TouchableOpacity>
@@ -90,7 +104,7 @@ export function CustomHeader({
           paddingBottom: 0,
           height: headerHeight + insets.top,
           borderBottomWidth: 0,
-          marginBottom: 15,
+          marginBottom: HEADER_MARGIN_BOTTOM,
           backgroundColor: 'transparent',
         },
         style,
@@ -100,7 +114,7 @@ export function CustomHeader({
         renderActionButton(leftAction, true)
       ) : (
         <View style={styles.actionButton}>
-          <View style={{ width: 36, height: 36 }} />
+          <View style={{ width: ICON_CIRCLE_SIZE, height: ICON_CIRCLE_SIZE }} />
         </View>
       )}
 
@@ -123,7 +137,7 @@ export function CustomHeader({
         renderActionButton(rightAction, false)
       ) : (
         <View style={styles.actionButton}>
-          <View style={{ width: 36, height: 36 }} />
+          <View style={{ width: ICON_CIRCLE_SIZE, height: ICON_CIRCLE_SIZE }} />
         </View>
       )}
     </View>
@@ -136,7 +150,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     width: '100%',
-    paddingHorizontal: 16,
+    paddingHorizontal: HEADER_H_PADDING,
     zIndex: 1000,
     position: 'relative',
     overflow: 'hidden',
@@ -149,16 +163,16 @@ const styles = StyleSheet.create({
     }),
   },
   actionButton: {
-    width: 44,
-    height: 44,
+    width: ACTION_BTN_SIZE,
+    height: ACTION_BTN_SIZE,
     justifyContent: 'center',
     zIndex: 2,
     paddingBottom: 0,
   },
   headerIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: ICON_CIRCLE_SIZE,
+    height: ICON_CIRCLE_SIZE,
+    borderRadius: Math.round(ICON_CIRCLE_SIZE / 2),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -167,10 +181,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     zIndex: 1,
-    height: 44,
+    height: TITLE_CONTAINER_HEIGHT,
   },
   title: {
-    fontSize: 22,
+    fontSize: TITLE_FONT_SIZE,
     fontFamily: Fonts.bold,
     marginTop: 0,
   },

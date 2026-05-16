@@ -1,17 +1,18 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
+import { responsiveFontSize } from '@/constants/Fonts';
 import {
   View,
   Text,
   ScrollView,
   TextInput,
   TouchableOpacity,
-  Alert,
   StyleSheet,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useAppAlert } from '@/context/AppAlertContext';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
@@ -19,6 +20,7 @@ import { serviceProviderService } from '@/services/serviceProvider';
 
 export default function ProviderRegistration() {
   const colorScheme = useColorScheme();
+  const { showAlert } = useAppAlert();
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState({
     business_name: '',
@@ -60,7 +62,7 @@ export default function ProviderRegistration() {
       !formData.phone ||
       !formData.address
     ) {
-      Alert.alert('Error', 'Please fill in all required fields');
+      showAlert({ title: 'Error', message: 'Please fill in all required fields', buttons: [{ text: 'OK' }] });
       return;
     }
 
@@ -77,18 +79,18 @@ export default function ProviderRegistration() {
 
       if (error) {
         console.error('Registration error:', error);
-        Alert.alert('Error', 'Failed to register as service provider');
+        showAlert({ title: 'Error', message: 'Failed to register as service provider', buttons: [{ text: 'OK' }] });
         return;
       }
 
-      Alert.alert(
-        'Success!',
-        'Your service provider account has been created. You can now start adding content.',
-        [{ text: 'OK', onPress: () => router.replace('/profile') }]
-      );
+      showAlert({
+        title: 'Success!',
+        message: 'Your service provider account has been created. You can now start adding content.',
+        buttons: [{ text: 'OK', onPress: () => router.replace('/profile') }],
+      });
     } catch (error) {
       console.error('Registration error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showAlert({ title: 'Error', message: 'An unexpected error occurred', buttons: [{ text: 'OK' }] });
     } finally {
       setLoading(false);
     }
@@ -364,12 +366,12 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
   },
   title: {
-    fontSize: 28,
+    fontSize: responsiveFontSize(28),
     fontWeight: 'bold',
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     opacity: 0.7,
     lineHeight: 22,
   },
@@ -380,7 +382,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontWeight: '600',
     marginBottom: 16,
   },
@@ -388,7 +390,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   label: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontWeight: '500',
     marginBottom: 6,
   },
@@ -396,13 +398,13 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 8,
     padding: 12,
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
   },
   textArea: {
     borderWidth: 1,
     borderRadius: 8,
     padding: 12,
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     minHeight: 100,
     textAlignVertical: 'top',
   },
@@ -422,7 +424,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 122, 255, 0.1)',
   },
   businessTypeText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontWeight: '500',
   },
   submitButton: {
@@ -433,7 +435,7 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '600',
   },
 });

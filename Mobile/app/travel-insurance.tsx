@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Image } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { CustomHeader } from '@/components/CustomHeader';
@@ -9,16 +9,18 @@ import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
 import { WallpaperPattern } from '@/components/WallpaperPattern';
 import { EmptyState } from '@/components/EmptyState';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import { getCardSurfaceColors } from '@/constants/CardStyles';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useAppAlert } from '@/context/AppAlertContext';
 import { Colors } from '@/constants/Colors';
 
 export default function TravelInsuranceScreen() {
   const backgroundColor = useThemeColor({}, 'background');
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const { showAlert } = useAppAlert();
   const cardColors = getCardSurfaceColors(colorScheme as 'light' | 'dark' | undefined);
 
   const contactPillBase = useMemo(
@@ -37,11 +39,11 @@ export default function TravelInsuranceScreen() {
   };
 
   const handleMessage = (provider: string) => {
-    Alert.alert('Message', `${provider}: Messaging not configured yet.`);
+    showAlert({ title: 'Message', message: `${provider}: Messaging not configured yet.`, buttons: [{ text: 'OK' }] });
   };
 
   const handleStart = (provider: string) => {
-    Alert.alert('Start', `${provider}: Flow not configured yet.`);
+    showAlert({ title: 'Start', message: `${provider}: Flow not configured yet.`, buttons: [{ text: 'OK' }] });
   };
 
   return (
@@ -253,7 +255,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   pageTitle: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     textAlign: 'left',
   },
   content: {
@@ -271,9 +273,9 @@ const styles = StyleSheet.create({
     borderWidth: StyleSheet.hairlineWidth,
     padding: 16,
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 0,
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   iconCircle: {
@@ -285,7 +287,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
     overflow: 'hidden',
   },
-  title: { fontSize: 20, lineHeight: 28, fontFamily: Fonts.bold, marginBottom: 10 },
+  title: { fontSize: responsiveFontSize(20), lineHeight: 28, fontFamily: Fonts.bold, marginBottom: 10 },
   pillsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -310,9 +312,9 @@ const styles = StyleSheet.create({
     marginRight: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 2,
-    elevation: 2,
+    elevation: 0,
   },
   iconBubbleRight: {
     width: 24,
@@ -323,9 +325,9 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 2,
-    elevation: 2,
+    elevation: 0,
   },
-  pillText: { fontSize: 15, lineHeight: 20, fontFamily: Fonts.bold, letterSpacing: 0.2 },
+  pillText: { fontSize: responsiveFontSize(15), lineHeight: 20, fontFamily: Fonts.bold, letterSpacing: 0.2 },
 });

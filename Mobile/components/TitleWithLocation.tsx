@@ -3,7 +3,7 @@ import { StyleSheet, View, type StyleProp, type TextStyle, type ViewStyle } from
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText, type ThemedTextProps } from './ThemedText';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
 export interface TitleWithLocationProps {
@@ -86,7 +86,7 @@ const styles = StyleSheet.create({
     flexWrap: 'nowrap',
   },
   title: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     fontFamily: Fonts.bold,
     textAlign: 'left',
     marginRight: 16,
@@ -105,7 +105,7 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   pillText: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
     flexShrink: 1,

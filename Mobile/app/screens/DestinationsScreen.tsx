@@ -23,7 +23,7 @@ import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { destinationsService } from '@/services/database';
 import { weatherService, locationMappings } from '@/services/weather';
@@ -460,12 +460,12 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   destinationName: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
     letterSpacing: 0.3,
   },
   destinationWeather: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
     letterSpacing: 0.3,
     marginTop: 2,
@@ -493,7 +493,7 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   pillText: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     fontFamily: Fonts.bold,
   },
   emptyStateContainer: {
@@ -503,7 +503,7 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   emptyStateText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     marginTop: 16,
     textAlign: 'center',
     opacity: 0.7,

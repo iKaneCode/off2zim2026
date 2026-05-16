@@ -1,4 +1,5 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
+﻿import React, { useCallback, useMemo, useRef, useState } from 'react';
+import { responsiveFontSize, responsiveLineHeight, responsiveSize, Fonts } from '@/constants/Fonts';
 import type { ComponentProps } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -40,6 +41,8 @@ type StoryItem = {
 
 const AnimatedImage = Animated.createAnimatedComponent(Image);
 const STORY_SLIDE_DURATION = 4500;
+const SCREEN_HORIZONTAL_PADDING = responsiveSize(16, 14, 20);
+const TITLE_BOTTOM_PADDING = responsiveSize(8, 6, 10);
 
 export default function ExploreScreen() {
   const colorScheme = useColorScheme();
@@ -634,7 +637,7 @@ export default function ExploreScreen() {
                         {heroVideo.title}
                       </ThemedText>
                       <ThemedText type="default" style={styles.heroSubtitle}>
-                        {heroVideo.operator} • {heroVideo.views}
+                        {heroVideo.operator} â€¢ {heroVideo.views}
                       </ThemedText>
 
                       <Pressable style={styles.playButton} onPress={() => {}}>
@@ -809,12 +812,14 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   titleSection: {
-    paddingHorizontal: 16,
+    paddingHorizontal: SCREEN_HORIZONTAL_PADDING,
     paddingTop: 0,
-    paddingBottom: 8,
+    paddingBottom: TITLE_BOTTOM_PADDING,
   },
   pageTitle: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
+    lineHeight: responsiveLineHeight(24),
+    fontFamily: Fonts.bold,
     textAlign: 'left',
   },
   scroll: {
@@ -864,8 +869,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   storyLabel: {
-    fontSize: 12,
-    lineHeight: 16,
+    fontSize: responsiveFontSize(12),
+    lineHeight: responsiveLineHeight(12),
     textAlign: 'center',
   },
   categoryRow: {
@@ -995,8 +1000,8 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   cardTitle: {
-    fontSize: 18,
-    lineHeight: 24,
+    fontSize: responsiveFontSize(18),
+    lineHeight: responsiveLineHeight(18),
   },
   cardOperator: {
     color: 'rgba(60,60,67,0.75)',
@@ -1015,10 +1020,10 @@ const styles = StyleSheet.create({
   },
   placeholderCopy: {
     marginTop: 8,
-    lineHeight: 20,
+    lineHeight: responsiveLineHeight(15),
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     marginBottom: 4,
   },
   storyModal: {
@@ -1081,11 +1086,11 @@ const styles = StyleSheet.create({
   },
   storyTitle: {
     color: '#fff',
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
   },
   storyCounter: {
     color: 'rgba(255,255,255,0.75)',
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
   },
   storyCloseButton: {
     padding: 8,
@@ -1099,8 +1104,8 @@ const styles = StyleSheet.create({
   },
   storyCaption: {
     color: '#fff',
-    fontSize: 16,
-    lineHeight: 22,
+    fontSize: responsiveFontSize(16),
+    lineHeight: responsiveLineHeight(16),
   },
   storyTouchLayer: {
     position: 'absolute',

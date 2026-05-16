@@ -1,16 +1,17 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
+import { responsiveFontSize } from '@/constants/Fonts';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
-  Alert,
   RefreshControl,
   StyleSheet,
   Modal,
   TextInput,
 } from 'react-native';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useAppAlert } from '@/context/AppAlertContext';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
@@ -23,6 +24,7 @@ import {
 
 export default function AdminContentReview() {
   const colorScheme = useColorScheme();
+  const { showAlert } = useAppAlert();
   const [reviews, setReviews] = useState<ContentReview[]>([]);
   const [providers, setProviders] = useState<ServiceProvider[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,7 +50,7 @@ export default function AdminContentReview() {
       }
     } catch (error) {
       console.error('Error loading admin data:', error);
-      Alert.alert('Error', 'Failed to load review data');
+        showAlert({ title: 'Error', message: 'Failed to load review data', buttons: [{ text: 'OK' }] });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -76,11 +78,11 @@ export default function AdminContentReview() {
       );
 
       if (error) {
-        Alert.alert('Error', 'Failed to submit review');
+        showAlert({ title: 'Error', message: 'Failed to submit review', buttons: [{ text: 'OK' }] });
         return;
       }
 
-      Alert.alert('Success', `Content ${approved ? 'approved' : 'rejected'} successfully`);
+      showAlert({ title: 'Success', message: `Content ${approved ? 'approved' : 'rejected'} successfully`, buttons: [{ text: 'OK' }] });
 
       // Refresh the list
       setModalVisible(false);
@@ -90,7 +92,7 @@ export default function AdminContentReview() {
       loadData();
     } catch (error) {
       console.error('Error submitting review:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showAlert({ title: 'Error', message: 'An unexpected error occurred', buttons: [{ text: 'OK' }] });
     }
   };
 
@@ -109,13 +111,13 @@ export default function AdminContentReview() {
   const getContentTypeIcon = (type: string) => {
     switch (type) {
       case 'destination':
-        return '🏞️';
+        return 'ðŸžï¸';
       case 'stay':
-        return '🏨';
+        return 'ðŸ¨';
       case 'event':
-        return '🎭';
+        return 'ðŸŽ­';
       default:
-        return '📄';
+        return 'ðŸ“„';
     }
   };
 
@@ -317,12 +319,12 @@ const styles = StyleSheet.create({
     borderBottomColor: '#E5E5E5',
   },
   title: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     fontWeight: 'bold',
     marginBottom: 4,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     opacity: 0.7,
   },
   scrollView: {
@@ -336,7 +338,7 @@ const styles = StyleSheet.create({
     paddingVertical: 60,
   },
   emptyStateText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     opacity: 0.7,
   },
   reviewCard: {
@@ -356,26 +358,26 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentIcon: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     marginRight: 12,
   },
   contentDetails: {
     flex: 1,
   },
   contentTitle: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '600',
     marginBottom: 2,
   },
   providerName: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     opacity: 0.7,
   },
   reviewStatus: {
     alignItems: 'flex-end',
   },
   statusBadge: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     fontWeight: '600',
     paddingHorizontal: 8,
     paddingVertical: 4,
@@ -386,12 +388,12 @@ const styles = StyleSheet.create({
     color: '#92400E',
   },
   submissionDate: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     opacity: 0.6,
     marginBottom: 8,
   },
   submissionNotes: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontStyle: 'italic',
     opacity: 0.8,
     marginBottom: 12,
@@ -410,7 +412,7 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontWeight: '600',
   },
   modalContainer: {
@@ -429,10 +431,10 @@ const styles = StyleSheet.create({
   },
   closeButtonText: {
     color: '#007AFF',
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontWeight: '600',
   },
   modalContent: {
@@ -448,7 +450,7 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   contentSummaryText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '500',
     marginLeft: 12,
   },
@@ -456,12 +458,12 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   notesTitle: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontWeight: '600',
     marginBottom: 8,
   },
   notesText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     opacity: 0.8,
     lineHeight: 20,
   },
@@ -469,7 +471,7 @@ const styles = StyleSheet.create({
     marginBottom: 30,
   },
   formLabel: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontWeight: '600',
     marginBottom: 8,
     marginTop: 16,
@@ -478,7 +480,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 8,
     padding: 12,
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     textAlignVertical: 'top',
   },
   modalActions: {
@@ -501,7 +503,7 @@ const styles = StyleSheet.create({
   },
   modalActionButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '600',
   },
 });

@@ -1,169 +1,76 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Animated, StyleSheet, Dimensions } from 'react-native';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import React from 'react';
+import { View, StyleSheet, Dimensions } from 'react-native';
+import { ShimmerPlaceholder } from './ShimmerPlaceholder';
 
 const { width: screenWidth } = Dimensions.get('window');
-const CARD_WIDTH = (screenWidth - 80) / 2; // Match the actual destination card width
-
-interface ShimmerPlaceholderProps {
-  width?: number;
-  height?: number;
-  borderRadius?: number;
-  style?: any;
-}
-
-const ShimmerPlaceholder: React.FC<ShimmerPlaceholderProps> = ({
-  width = 100,
-  height = 20,
-  borderRadius = 4,
-  style,
-}) => {
-  const colorScheme = useColorScheme();
-  const animatedValue = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const shimmerAnimation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(animatedValue, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(animatedValue, {
-          toValue: 0,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-
-    shimmerAnimation.start();
-
-    return () => {
-      shimmerAnimation.stop();
-    };
-  }, [animatedValue]);
-
-  const opacity = animatedValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.3, 0.7],
-  });
-
-  const backgroundColor = colorScheme === 'dark' ? '#333333' : '#E0E0E0';
-
-  return (
-    <Animated.View
-      style={[
-        {
-          width,
-          height,
-          backgroundColor,
-          borderRadius,
-          opacity,
-        },
-        style,
-      ]}
-    />
-  );
-};
+const CARD_WIDTH = (screenWidth - 80) / 2;
 
 interface DestinationCardShimmerProps {
   count?: number;
 }
 
 export const DestinationCardShimmer: React.FC<DestinationCardShimmerProps> = ({ count = 4 }) => {
-  const renderShimmerCard = (index: number) => (
-    <View key={index} style={styles.shimmerCard}>
-      {/* Image placeholder */}
-      <ShimmerPlaceholder
-        width={CARD_WIDTH}
-        height={200}
-        borderRadius={12}
-        style={styles.shimmerImage}
-      />
-
-      {/* Content area - positioned at bottom like real cards */}
-      <View style={styles.shimmerContent}>
-        {/* Destination name */}
-        <ShimmerPlaceholder
-          width={CARD_WIDTH * 0.7}
-          height={18}
-          borderRadius={9}
-          style={styles.shimmerTitle}
-        />
-
-        {/* Weather info */}
-        <ShimmerPlaceholder
-          width={CARD_WIDTH * 0.5}
-          height={18}
-          borderRadius={9}
-          style={styles.shimmerWeather}
-        />
-      </View>
-
-      {/* Heart icon placeholder */}
-      <View style={styles.shimmerHeartContainer}>
-        <ShimmerPlaceholder width={18} height={18} borderRadius={9} />
-      </View>
-    </View>
-  );
-
   return (
-    <View style={styles.shimmerContainer}>
-      {Array.from({ length: count }, (_, index) => renderShimmerCard(index))}
+    <View style={styles.container}>
+      {Array.from({ length: count }, (_, index) => (
+        <View key={index} style={styles.card}>
+          <ShimmerPlaceholder width="100%" height="100%" borderRadius={12} />
+
+          <View style={styles.heartPlaceholder}>
+            <ShimmerPlaceholder width={18} height={18} borderRadius={9} />
+          </View>
+
+          <View style={styles.overlay}>
+            <ShimmerPlaceholder width={CARD_WIDTH * 0.58} height={18} borderRadius={9} />
+            <View style={styles.metaRow}>
+              <ShimmerPlaceholder width={CARD_WIDTH * 0.45} height={18} borderRadius={999} />
+              <ShimmerPlaceholder width={42} height={18} borderRadius={999} />
+            </View>
+          </View>
+        </View>
+      ))}
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  shimmerContainer: {
+  container: {
     flexDirection: 'row',
     paddingHorizontal: 16,
     paddingBottom: 16,
   },
-  shimmerCard: {
+  card: {
     width: CARD_WIDTH,
+    height: 200,
     marginRight: 16,
     borderRadius: 12,
     overflow: 'hidden',
     position: 'relative',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    backgroundColor: '#EEF1F4',
   },
-  shimmerImage: {
-    marginBottom: 0, // No gap, overlay goes on top
-  },
-  shimmerContent: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    padding: 8,
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
-  },
-  shimmerTitle: {
-    marginBottom: 2,
-  },
-  shimmerWeather: {
-    marginBottom: 0,
-  },
-  shimmerHeartContainer: {
+  heartPlaceholder: {
     position: 'absolute',
     top: 10,
     right: 10,
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    backgroundColor: 'rgba(255,255,255,0.42)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  overlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(17,24,39,0.58)',
+    padding: 8,
+  },
+  metaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 6,
+    marginTop: 6,
   },
 });

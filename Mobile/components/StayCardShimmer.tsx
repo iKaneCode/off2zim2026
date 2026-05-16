@@ -1,70 +1,11 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Animated, StyleSheet, Dimensions } from 'react-native';
+import React from 'react';
+import { View, StyleSheet, Dimensions } from 'react-native';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { ShimmerPlaceholder } from './ShimmerPlaceholder';
 
 const { width: screenWidth } = Dimensions.get('window');
 const STAY_CARD_WIDTH = screenWidth - 120; // Match the actual stay card width
 const STAY_CARD_SPACING = 16;
-
-interface ShimmerPlaceholderProps {
-  width?: number;
-  height?: number;
-  borderRadius?: number;
-  style?: any;
-}
-
-const ShimmerPlaceholder: React.FC<ShimmerPlaceholderProps> = ({
-  width = 100,
-  height = 20,
-  borderRadius = 4,
-  style,
-}) => {
-  const colorScheme = useColorScheme();
-  const animatedValue = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const shimmerAnimation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(animatedValue, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(animatedValue, {
-          toValue: 0,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-
-    shimmerAnimation.start();
-
-    return () => {
-      shimmerAnimation.stop();
-    };
-  }, [animatedValue]);
-
-  const opacity = animatedValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.3, 0.7],
-  });
-
-  return (
-    <Animated.View
-      style={[
-        {
-          width,
-          height,
-          borderRadius,
-          backgroundColor: colorScheme === 'dark' ? '#333333' : '#E1E9EE',
-          opacity,
-        },
-        style,
-      ]}
-    />
-  );
-};
 
 interface StayCardShimmerProps {
   count?: number;
@@ -148,14 +89,6 @@ const styles = StyleSheet.create({
     width: STAY_CARD_WIDTH,
     borderRadius: 12,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
     position: 'relative',
   },
   imageShimmer: {

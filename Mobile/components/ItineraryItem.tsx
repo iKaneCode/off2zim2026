@@ -18,7 +18,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { ThemedText } from '@/components/ThemedText';
 import { DateTimePill, type IoniconName } from '@/components/DateTimePill';
 import { StatusPill } from '@/components/StatusPill';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import { SwipeActions, type SwipeAction } from './SwipeActions';
 import { formatTime } from '@/utils/itineraryUtils';
 
@@ -99,7 +99,7 @@ const shadowStyle: ViewStyle =
       shadowRadius: 10,
     },
     default: {
-      elevation: 5,
+      elevation: 0,
     },
   }) ?? {};
 
@@ -677,24 +677,24 @@ const styles = StyleSheet.create({
   title: {
     flex: 1,
     marginRight: 8,
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     lineHeight: 26,
     fontFamily: Fonts.bold,
   },
   timeText: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     fontFamily: Fonts.medium,
     color: '#8E8E93',
     flexShrink: 0,
   },
   timeOnlyText: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     fontFamily: Fonts.medium,
     color: '#8E8E93',
     marginLeft: 'auto',
   },
   metaText: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     color: '#8E8E93',
     flexShrink: 1,
   },
@@ -718,10 +718,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 1.5,
-    elevation: 1,
+    elevation: 0,
   },
   infoPillText: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     lineHeight: 18,
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,

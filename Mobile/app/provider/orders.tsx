@@ -6,7 +6,7 @@ import { CustomHeader } from '@/components/CustomHeader';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { serviceProviderService } from '@/services/serviceProvider';
 
@@ -107,13 +107,13 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingBottom: 40, gap: 16 },
   orderCard: { borderWidth: 1, borderRadius: 24, paddingHorizontal: 18, paddingVertical: 18, gap: 10 },
   orderHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: 12 },
-  orderTitle: { flex: 1, fontFamily: Fonts.bold, fontSize: 17 },
-  orderStatus: { fontFamily: Fonts.bold, fontSize: 13, textTransform: 'capitalize' },
-  orderMeta: { fontFamily: Fonts.medium, fontSize: 13 },
+  orderTitle: { flex: 1, fontFamily: Fonts.bold, fontSize: responsiveFontSize(17) },
+  orderStatus: { fontFamily: Fonts.bold, fontSize: responsiveFontSize(13), textTransform: 'capitalize' },
+  orderMeta: { fontFamily: Fonts.medium, fontSize: responsiveFontSize(13) },
   orderFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  orderAmount: { fontFamily: Fonts.bold, fontSize: 16 },
+  orderAmount: { fontFamily: Fonts.bold, fontSize: responsiveFontSize(16) },
   emptyState: { borderWidth: 1, borderRadius: 24, paddingHorizontal: 18, paddingVertical: 22, gap: 8 },
-  emptyTitle: { fontFamily: Fonts.bold, fontSize: 18 },
-  emptyMeta: { fontFamily: Fonts.regular, fontSize: 14 },
+  emptyTitle: { fontFamily: Fonts.bold, fontSize: responsiveFontSize(18) },
+  emptyMeta: { fontFamily: Fonts.regular, fontSize: responsiveFontSize(14) },
 });
 

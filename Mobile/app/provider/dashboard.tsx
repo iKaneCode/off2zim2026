@@ -1,16 +1,17 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
+import { responsiveFontSize } from '@/constants/Fonts';
 import {
   View,
   Text,
   ScrollView,
   TouchableOpacity,
-  Alert,
   RefreshControl,
   StyleSheet,
   Image,
 } from 'react-native';
 import { router } from 'expo-router';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useAppAlert } from '@/context/AppAlertContext';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
@@ -29,6 +30,7 @@ interface DashboardStats {
 
 export default function ProviderDashboard() {
   const colorScheme = useColorScheme();
+  const { showAlert } = useAppAlert();
   const [provider, setProvider] = useState<ServiceProvider | null>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
@@ -52,7 +54,7 @@ export default function ProviderDashboard() {
       setStats(statsResult.data);
     } catch (error) {
       console.error('Error loading dashboard:', error);
-      Alert.alert('Error', 'Failed to load dashboard data');
+      showAlert({ title: 'Error', message: 'Failed to load dashboard data', buttons: [{ text: 'OK' }] });
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -84,7 +86,7 @@ export default function ProviderDashboard() {
   const getVerificationStatusText = (status: string) => {
     switch (status) {
       case 'verified':
-        return 'Verified ✓';
+        return 'Verified âœ“';
       case 'under_review':
         return 'Under Review';
       case 'rejected':
@@ -321,12 +323,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   businessName: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontWeight: 'bold',
     marginBottom: 4,
   },
   businessType: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     opacity: 0.7,
     marginBottom: 8,
   },
@@ -334,7 +336,7 @@ const styles = StyleSheet.create({
     alignSelf: 'flex-start',
   },
   verificationText: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     fontWeight: '600',
   },
   editButton: {
@@ -346,7 +348,7 @@ const styles = StyleSheet.create({
   },
   editButtonText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontWeight: '600',
   },
   alertCard: {
@@ -360,13 +362,13 @@ const styles = StyleSheet.create({
     borderColor: '#F59E0B',
   },
   alertTitle: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: 'bold',
     marginBottom: 8,
     color: '#92400E',
   },
   alertText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     marginBottom: 12,
     color: '#92400E',
   },
@@ -379,7 +381,7 @@ const styles = StyleSheet.create({
   },
   alertButtonText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontWeight: '600',
   },
   statsContainer: {
@@ -388,7 +390,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontWeight: 'bold',
     marginBottom: 16,
   },
@@ -402,17 +404,17 @@ const styles = StyleSheet.create({
     marginHorizontal: 4,
   },
   statNumber: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     fontWeight: 'bold',
     marginBottom: 4,
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     opacity: 0.7,
     marginBottom: 2,
   },
   statSubtext: {
-    fontSize: 10,
+    fontSize: responsiveFontSize(10),
     opacity: 0.5,
   },
   section: {
@@ -433,7 +435,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   contentTitle: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '600',
   },
   contentStats: {
@@ -441,7 +443,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   contentCount: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontWeight: '600',
     marginRight: 8,
   },
@@ -452,12 +454,12 @@ const styles = StyleSheet.create({
     borderRadius: 4,
   },
   pendingText: {
-    fontSize: 10,
+    fontSize: responsiveFontSize(10),
     color: '#92400E',
     fontWeight: '600',
   },
   contentDescription: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     opacity: 0.7,
   },
   actionGrid: {
@@ -474,7 +476,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   actionButtonText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontWeight: '600',
   },
 });

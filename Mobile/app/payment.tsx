@@ -1,7 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import type { ComponentProps } from 'react';
 import {
-  Alert,
   Image,
   Platform,
   ScrollView,
@@ -14,12 +13,13 @@ import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { CustomHeader } from '@/components/CustomHeader';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useAppAlert } from '@/context/AppAlertContext';
 import { router, useLocalSearchParams } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import * as Haptics from 'expo-haptics';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import { WallpaperPattern } from '@/components/WallpaperPattern';
 import { useAuth } from '@/context/AuthContext';
 import { getCardSurfaceColors } from '@/constants/CardStyles';
@@ -105,6 +105,7 @@ const PaymentScreen = () => {
   const isDark = colorScheme === 'dark';
   const params = useLocalSearchParams<PaymentParams>();
   const { user, isGuest } = useAuth();
+  const { showAlert } = useAppAlert();
   const cardColors = getCardSurfaceColors(colorScheme);
 
   const totalAmount = getParamValue(params.total) ?? getParamValue(params.totalAmount) ?? '0.00';
@@ -517,14 +518,14 @@ const PaymentScreen = () => {
 
     if (!selectedGatewayDetails) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-      Alert.alert('Select a payment partner', 'Choose your preferred payment gateway to proceed.');
+      showAlert({ title: 'Select a payment partner', message: 'Choose your preferred payment gateway to proceed.', buttons: [{ text: 'OK' }] });
       return;
     }
 
     if (serviceType === 'stay') {
       if (!user?.id || isGuest) {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-        Alert.alert('Sign in required', 'Please sign in to save your stay booking.');
+        showAlert({ title: 'Sign in required', message: 'Please sign in to save your stay booking.', buttons: [{ text: 'OK' }] });
         return;
       }
 
@@ -538,7 +539,7 @@ const PaymentScreen = () => {
 
       if (!checkInDate || !checkOutDate) {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-        Alert.alert('Dates required', 'Please select valid check-in and check-out dates.');
+        showAlert({ title: 'Dates required', message: 'Please select valid check-in and check-out dates.', buttons: [{ text: 'OK' }] });
         return;
       }
 
@@ -583,10 +584,10 @@ const PaymentScreen = () => {
         }
 
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-        Alert.alert(
-          'Booking saved',
-          'Your stay booking details have been saved. Payment gateway integration is coming soon.',
-          [
+        showAlert({
+          title: 'Booking saved',
+          message: 'Your stay booking details have been saved. Payment gateway integration is coming soon.',
+          buttons: [
             {
               text: 'Orders',
               onPress: () => {
@@ -602,15 +603,16 @@ const PaymentScreen = () => {
                 router.replace('/(tabs)');
               },
             },
-          ]
-        );
+          ],
+        });
       } catch (error) {
         console.error('Failed to save stay booking', error);
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
-        Alert.alert(
-          'Unable to save booking',
-          'Something went wrong while saving your stay booking. Please try again.'
-        );
+        showAlert({
+          title: 'Unable to save booking',
+          message: 'Something went wrong while saving your stay booking. Please try again.',
+          buttons: [{ text: 'OK' }],
+        });
       } finally {
         setIsProcessing(false);
       }
@@ -618,10 +620,11 @@ const PaymentScreen = () => {
     }
 
     await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
-    Alert.alert(
-      `${selectedGatewayDetails.name} coming soon`,
-      'We will redirect you to a secure checkout in the next release.'
-    );
+    showAlert({
+      title: `${selectedGatewayDetails.name} coming soon`,
+      message: 'We will redirect you to a secure checkout in the next release.',
+      buttons: [{ text: 'OK' }],
+    });
   }, [
     isProcessing,
     selectedGatewayDetails,
@@ -754,7 +757,7 @@ const PaymentScreen = () => {
                           shadowOffset: { width: 0, height: 1 },
                           shadowOpacity: 0.1,
                           shadowRadius: 2,
-                          elevation: 2,
+                          elevation: 0,
                           marginRight: 6,
                         }}
                       >
@@ -1032,7 +1035,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   pageTitle: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     textAlign: 'left',
   },
   contentContainer: {
@@ -1053,10 +1056,10 @@ const styles = StyleSheet.create({
   },
   summaryTitle: {
     fontFamily: Fonts.bold,
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
   },
   summaryStayName: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontFamily: Fonts.bold,
   },
   detailsGrid: {
@@ -1068,12 +1071,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   summaryLabel: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     lineHeight: 20,
     fontFamily: Fonts.medium,
   },
   summaryValue: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.bold,
   },
   summaryPill: {
@@ -1084,7 +1087,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   summaryPillText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     lineHeight: 18,
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
@@ -1095,7 +1098,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   totalAmount: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     fontFamily: Fonts.bold,
     letterSpacing: 0.5,
     lineHeight: 30,
@@ -1121,10 +1124,10 @@ const styles = StyleSheet.create({
   },
   gatewayTitle: {
     fontFamily: Fonts.bold,
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
   },
   gatewaySubtitle: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
   },
   gatewayList: {
     gap: 12,
@@ -1145,7 +1148,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 0,
   },
   gatewayIconBadge: {
     width: 36,
@@ -1200,7 +1203,7 @@ const styles = StyleSheet.create({
   },
   gatewayBadgeLabel: {
     fontFamily: Fonts.bold,
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     textTransform: 'uppercase',
     letterSpacing: 0.6,
   },
@@ -1216,14 +1219,14 @@ const styles = StyleSheet.create({
   },
   gatewayName: {
     fontFamily: Fonts.bold,
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
   },
   gatewayDescription: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     lineHeight: 18,
   },
   gatewayHint: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     lineHeight: 18,
   },
   supportCard: {
@@ -1248,10 +1251,10 @@ const styles = StyleSheet.create({
   },
   supportTitle: {
     fontFamily: Fonts.bold,
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
   },
   supportDescription: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     lineHeight: 18,
   },
   payButtonEnabled: {
@@ -1271,19 +1274,19 @@ const styles = StyleSheet.create({
   },
   payButtonText: {
     color: '#FFFFFF',
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
     letterSpacing: 0.6,
   },
   payDisclaimer: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     fontFamily: Fonts.bold,
     textAlign: 'center',
     lineHeight: 18,
     marginTop: 4,
   },
   dueTodayTitle: {
-    fontSize: 22,
+    fontSize: responsiveFontSize(22),
     lineHeight: 28,
     fontFamily: Fonts.bold,
     marginBottom: 4,
@@ -1317,7 +1320,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   totalMainLabel: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
     letterSpacing: 0.5,
     flex: 1,
@@ -1332,7 +1335,7 @@ const styles = StyleSheet.create({
   },
   totalNote: {
     marginTop: 4,
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     fontFamily: Fonts.regular,
   },
   priceBreakdownGrid: {
@@ -1345,19 +1348,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   priceBreakdownLabel: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     fontFamily: Fonts.regular,
   },
   priceBreakdownValue: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     fontFamily: Fonts.medium,
   },
   priceBreakdownLabelBold: {
-    fontSize: 17,
+    fontSize: responsiveFontSize(17),
     fontFamily: Fonts.bold,
   },
   priceBreakdownValueBold: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
   },
   priceBreakdownDivider: {

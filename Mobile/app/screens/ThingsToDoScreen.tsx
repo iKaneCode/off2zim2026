@@ -7,7 +7,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
 import { useCollapsibleSearchSection } from '@/components/CollapsibleSearchSection';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, responsiveLineHeight, Fonts } from '@/constants/Fonts';
 import { thingsToDoData } from '@/constants/FeaturedData';
 import { getActivityStatus, activityStatusColor, ActivityStatus } from '@/utils/timeStatus';
 import { LocationPill } from '@/components/LocationPill';
@@ -220,21 +220,21 @@ export default function ThingsToDoScreen() {
                     style={styles.priceIcon}
                   />
                   <ThemedText
+                    style={styles.priceCurrency}
+                    lightColor={isDark ? '#FFFFFF' : '#1C1C1E'}
+                    darkColor="#FFFFFF"
+                  >
+                    $
+                  </ThemedText>
+                  <ThemedText
                     style={styles.priceValue}
                     lightColor={isDark ? '#FFFFFF' : '#1C1C1E'}
                     darkColor="#FFFFFF"
                   >
-                    <ThemedText
-                      style={styles.priceCurrency}
-                      lightColor={isDark ? '#FFFFFF' : '#1C1C1E'}
-                      darkColor="#FFFFFF"
-                    >
-                      $
-                    </ThemedText>
                     {basePackagePrice}
-                    <ThemedText style={styles.priceUnit} lightColor="#8E8E93" darkColor="#8E8E93">
-                      /person
-                    </ThemedText>
+                  </ThemedText>
+                  <ThemedText style={styles.priceUnit} lightColor="#8E8E93" darkColor="#8E8E93">
+                    /person
                   </ThemedText>
                 </View>
               </View>
@@ -308,7 +308,7 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   emptyStateText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     marginTop: 16,
     textAlign: 'center',
     opacity: 0.7,
@@ -318,32 +318,34 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   priceLabel: {
-    fontSize: 11,
+    fontSize: responsiveFontSize(11),
+    lineHeight: responsiveLineHeight(11),
     letterSpacing: 0.2,
     fontFamily: Fonts.medium,
     textTransform: 'lowercase',
-    marginBottom: 0,
   },
   priceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: -8,
   },
   priceIcon: {
-    marginRight: 6,
+    marginRight: 4,
   },
   priceValue: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
+    lineHeight: responsiveLineHeight(16),
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
   },
   priceCurrency: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
+    lineHeight: responsiveLineHeight(16),
     fontFamily: Fonts.medium,
   },
   priceUnit: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
+    lineHeight: responsiveLineHeight(16),
     fontFamily: Fonts.medium,
-    marginLeft: 4,
+    marginLeft: 2,
   },
 });

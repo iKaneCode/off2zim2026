@@ -6,7 +6,7 @@ import { CustomHeader } from '@/components/CustomHeader';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import { useAuth } from '@/context/AuthContext';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { serviceProviderService, type ServiceProvider } from '@/services/serviceProvider';
@@ -99,9 +99,9 @@ const styles = StyleSheet.create({
   screen: { flex: 1 },
   content: { paddingHorizontal: 20, paddingBottom: 40, gap: 16 },
   profileCard: { borderWidth: 1, borderRadius: 24, paddingHorizontal: 18, paddingVertical: 22, gap: 6 },
-  businessName: { fontFamily: Fonts.bold, fontSize: 22 },
-  profileMeta: { fontFamily: Fonts.medium, fontSize: 14 },
+  businessName: { fontFamily: Fonts.bold, fontSize: responsiveFontSize(22) },
+  profileMeta: { fontFamily: Fonts.medium, fontSize: responsiveFontSize(14) },
   actionRow: { borderWidth: 1, borderRadius: 24, paddingHorizontal: 18, paddingVertical: 18, gap: 4 },
-  actionTitle: { fontFamily: Fonts.bold, fontSize: 16 },
-  actionMeta: { fontFamily: Fonts.regular, fontSize: 13 },
+  actionTitle: { fontFamily: Fonts.bold, fontSize: responsiveFontSize(16) },
+  actionMeta: { fontFamily: Fonts.regular, fontSize: responsiveFontSize(13) },
 });

@@ -8,9 +8,9 @@ import {
   LayoutAnimation,
   UIManager,
   Easing,
-  Alert,
   ScrollView,
   RefreshControl,
+  Dimensions,
 } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
@@ -27,9 +27,27 @@ import type { MessageData, SwipeAction } from '@/components';
 import { generateInitialMessages } from '@/utils/messageData';
 import { messageAnimations } from '@/utils/messageAnimations';
 import { getAvatarColor, categorizeMessages, filterMessagesBySearch } from '@/utils/messageUtils';
+import { responsiveFontSize, responsiveLineHeight, responsiveSize, Fonts } from '@/constants/Fonts';
+import { useMessagesContext } from '@/context/MessagesContext';
+import { useAppAlert } from '@/context/AppAlertContext';
+import { listCardBase, listCardDynamicStyle } from '@/styles/cardStyles';
 
 // Constants
-const MESSAGE_ITEM_HEIGHT = 96;
+const { width: screenWidth } = Dimensions.get('window');
+
+const SCREEN_HORIZONTAL_PADDING = responsiveSize(16, 14, 20);
+const TITLE_BOTTOM_PADDING = responsiveSize(8, 6, 10);
+const SEARCH_TOP_PADDING = responsiveSize(8, 6, 10);
+const SEARCH_TOP_MARGIN = responsiveSize(4, 3, 6);
+const CARD_RADIUS = responsiveSize(18, 15, 22);
+const CARD_BOTTOM_GAP = responsiveSize(12, 10, 15);
+const LIST_BOTTOM_PADDING = responsiveSize(100, 82, 124);
+const EMPTY_HORIZONTAL_PADDING = responsiveSize(32, 24, 40);
+const EMPTY_TOP_PADDING = responsiveSize(80, 64, 96);
+const EMPTY_ICON_SIZE = responsiveSize(60, 52, 70);
+const EMPTY_TITLE_TOP_MARGIN = responsiveSize(12, 10, 16);
+const EMPTY_TEXT_TOP_MARGIN = responsiveSize(6, 4, 8);
+const MESSAGE_ITEM_HEIGHT = responsiveSize(96, 88, 108);
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -43,9 +61,21 @@ export default function MessagesScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const colorScheme = useColorScheme();
   const params = useLocalSearchParams();
+  const { setUnreadCount } = useMessagesContext();
+  const { showAlert } = useAppAlert();
 
   // Helper function to replace all isDark references
   const isDarkMode = () => colorScheme === 'dark';
+
+  // Keep the messages tab badge in sync — sum all unread counts across conversations
+  useEffect(() => {
+    const count = messages.reduce((sum, m) => sum + (m.unreadCount || 0), 0);
+    setUnreadCount(count);
+  }, [messages]);
+
+  const showAppAlert = useCallback((config: { title: string; message: string; buttons: { text: string; style?: 'default' | 'cancel' | 'destructive'; onPress?: () => void }[] }) => {
+    showAlert(config);
+  }, [showAlert]);
 
   // Animation value for list transitions (cross-fade between lists)
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -76,6 +106,7 @@ export default function MessagesScreen() {
                 ...updatedMessages[existingIndex],
                 ...updatedMessageData,
                 time: updatedMessageData.time,
+                timestamp: Date.now(), // keep it at top after sort
               };
               // Move to top
               const [updated] = updatedMessages.splice(existingIndex, 1);
@@ -83,7 +114,7 @@ export default function MessagesScreen() {
             } else {
               // Add new message to top of list (only if there was actual conversation)
               if (updatedMessageData.message && updatedMessageData.message.trim() !== '') {
-                return [updatedMessageData, ...prevMessages];
+                return [{ ...updatedMessageData, timestamp: Date.now() }, ...prevMessages];
               }
               return prevMessages;
             }
@@ -168,8 +199,10 @@ export default function MessagesScreen() {
     const categoryMessages =
       categorizedMessages[activeFilter as keyof typeof categorizedMessages] || [];
 
-    // Apply search if needed
-    return filterMessagesBySearch(categoryMessages, searchQuery);
+    // Apply search if needed, then sort most-recent first
+    return filterMessagesBySearch(categoryMessages, searchQuery)
+      .slice()
+      .sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
   }, [categorizedMessages, searchQuery, activeFilter]);
 
   const openMessage = (message: MessageData) => {
@@ -198,11 +231,11 @@ export default function MessagesScreen() {
       swipeable.close();
     }
 
-    Alert.alert(
-      'Thank You',
-      "Your report has been submitted. We'll review this conversation shortly.",
-      [{ text: 'OK' }]
-    );
+    showAppAlert({
+      title: 'Thank You',
+      message: "Your report has been submitted. We'll review this conversation shortly.",
+      buttons: [{ text: 'Close' }],
+    });
   };
 
   const deleteMessage = (id: string) => {
@@ -211,28 +244,24 @@ export default function MessagesScreen() {
   };
 
   const clearAllMessages = () => {
-    Alert.alert(
-      'Delete All Messages',
-      'Are you sure you want to delete all messages? This action cannot be undone.',
-      [
+    showAppAlert({
+      title: 'Delete All Messages',
+      message: 'Are you sure you want to delete all messages? This action cannot be undone.',
+      buttons: [
+        { text: 'Close', style: 'cancel' },
         {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Delete All',
+          text: 'Delete',
           style: 'destructive',
           onPress: () => {
             if (Platform.OS === 'ios') {
               Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
             }
-
             LayoutAnimation.configureNext(messageAnimations.batchOperation);
             setMessages([]);
           },
         },
-      ]
-    );
+      ],
+    });
   };
 
 
@@ -247,19 +276,37 @@ export default function MessagesScreen() {
     const swipeActions: SwipeAction[] = [
       {
         icon: 'flag',
-        onPress: () => reportMessage(item.id),
-        confirmTitle: 'Report Message',
-        confirmMessage: 'Are you sure you want to report this message?',
-        confirmButtonText: 'Report',
+        onPress: () =>
+          showAppAlert({
+            title: 'Report Message',
+            message: 'Are you sure you want to report this message?',
+            buttons: [
+              { text: 'Close', style: 'cancel' },
+              {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: () => reportMessage(item.id),
+              },
+            ],
+          }),
         isDestructive: true,
       },
       {
         icon: 'trash-outline',
-        onPress: () => deleteMessage(item.id),
-        confirmTitle: 'Delete Message',
-        confirmMessage:
-          'Are you sure you want to delete this message? This action cannot be undone.',
-        confirmButtonText: 'Delete',
+        onPress: () =>
+          showAppAlert({
+            title: 'Delete Message',
+            message:
+              'Are you sure you want to delete this message? This action cannot be undone.',
+            buttons: [
+              { text: 'Close', style: 'cancel' },
+              {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: () => deleteMessage(item.id),
+              },
+            ],
+          }),
         isDestructive: true,
       },
     ];
@@ -277,12 +324,7 @@ export default function MessagesScreen() {
         onSwipeStart={handleSwipeStart}
         onSwipeOpen={() => closeOtherSwipeables(item.id)}
         getAvatarColor={getAvatarColor}
-        style={[
-          styles.messageCard,
-          {
-            backgroundColor: isDarkMode() ? 'rgba(37, 37, 41, 0.9)' : '#FFFFFF',
-          },
-        ]}
+        style={[styles.messageCard, listCardDynamicStyle(isDarkMode())]}
       />
     );
   };
@@ -392,50 +434,52 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     paddingTop: 0,
-    paddingBottom: 16,
+    paddingBottom: 0,
     paddingHorizontal: 0,
   },
   titleSection: {
-    paddingHorizontal: 16,
+    paddingHorizontal: SCREEN_HORIZONTAL_PADDING,
     paddingTop: 0,
-    paddingBottom: 8,
+    paddingBottom: TITLE_BOTTOM_PADDING,
   },
   searchFilterContainer: {
     paddingHorizontal: 0,
-    paddingTop: 8,
-    marginTop: 4,
+    paddingTop: SEARCH_TOP_PADDING,
+    marginTop: SEARCH_TOP_MARGIN,
     overflow: 'hidden',
   },
   pageTitle: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
+    lineHeight: responsiveLineHeight(24),
+    fontFamily: Fonts.bold,
     textAlign: 'left',
   },
   listContent: {
-    paddingBottom: 100, // Increased padding for better visibility of last item
+    paddingBottom: LIST_BOTTOM_PADDING,
   },
   messageCard: {
-    borderRadius: 18,
-    marginHorizontal: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    borderRadius: CARD_RADIUS,
+    marginHorizontal: SCREEN_HORIZONTAL_PADDING,
+    marginBottom: CARD_BOTTOM_GAP,
+    ...listCardBase,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'flex-start',
     alignItems: 'center',
-    paddingHorizontal: 32,
-    paddingTop: 80,
+    paddingHorizontal: EMPTY_HORIZONTAL_PADDING,
+    paddingTop: EMPTY_TOP_PADDING,
   },
   emptyText: {
-    marginTop: 12,
+    marginTop: EMPTY_TITLE_TOP_MARGIN,
+    fontSize: responsiveFontSize(17),
+    lineHeight: responsiveLineHeight(17),
   },
   emptySubText: {
     textAlign: 'center',
-    marginTop: 6,
+    marginTop: EMPTY_TEXT_TOP_MARGIN,
     color: '#8E8E93',
+    fontSize: responsiveFontSize(13),
+    lineHeight: responsiveLineHeight(13),
   },
 });

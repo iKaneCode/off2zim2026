@@ -1,4 +1,5 @@
-import React from 'react';
+﻿import React from 'react';
+import { responsiveFontSize } from '@/constants/Fonts';
 import { View, Text, StyleSheet, ScrollView } from 'react-native';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -25,12 +26,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   heading: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     fontWeight: 'bold',
     marginBottom: 16,
   },
   paragraph: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     lineHeight: 24,
     textAlign: 'center',
   },

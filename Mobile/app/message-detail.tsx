@@ -7,7 +7,6 @@ import {
   TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
-  Alert,
   ActionSheetIOS,
   Image,
   RefreshControl,
@@ -22,7 +21,8 @@ import { ThemedText } from '@/components/ThemedText';
 import { CustomHeader, WallpaperPattern } from '@/components';
 import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { Fonts, FontSizes, LineHeights } from '@/constants/Fonts';
+import { useAppAlert } from '@/context/AppAlertContext';
+import { responsiveFontSize, responsiveSize, Fonts, FontSizes, LineHeights } from '@/constants/Fonts';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { getAvatarColor } from '@/utils/messageUtils';
 import * as ImagePicker from 'expo-image-picker';
@@ -46,6 +46,7 @@ interface ChatMessage {
 export default function MessageDetailScreen() {
   const params = useLocalSearchParams();
   const colorScheme = useColorScheme();
+  const { showAlert } = useAppAlert();
   const scrollViewRef = useRef<ScrollView>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [refreshing, setRefreshing] = useState(false);
@@ -164,26 +165,26 @@ export default function MessageDetailScreen() {
         });
       } else {
         // Fallback to showing document info
-        Alert.alert(
-          name || 'Document',
-          'Document viewing is not available on this device. Here are the document details:',
-          [
+        showAlert({
+          title: name || 'Document',
+          message: 'Document viewing is not available on this device. Here are the document details:',
+          buttons: [
             { text: 'OK', style: 'default' },
             {
               text: 'Copy Path',
               onPress: () => {
-                Alert.alert('Document Path', uri);
+                showAlert({ title: 'Document Path', message: uri, buttons: [{ text: 'OK' }] });
               },
             },
-          ]
-        );
+          ],
+        });
       }
     } catch (error) {
       console.error('Error opening document:', error);
-      Alert.alert(
-        'Cannot Open Document',
-        `Unable to open ${name || 'this document'}. Try sharing it to another app.`,
-        [
+      showAlert({
+        title: 'Cannot Open Document',
+        message: `Unable to open ${name || 'this document'}. Try sharing it to another app.`,
+        buttons: [
           {
             text: 'Try Sharing',
             onPress: async () => {
@@ -193,13 +194,13 @@ export default function MessageDetailScreen() {
                   await Sharing.shareAsync(uri);
                 }
               } catch {
-                Alert.alert('Sharing Failed', 'Could not share this document.');
+                showAlert({ title: 'Sharing Failed', message: 'Could not share this document.', buttons: [{ text: 'OK' }] });
               }
             },
           },
           { text: 'OK', style: 'default' },
-        ]
-      );
+        ],
+      });
     }
   };
 
@@ -255,19 +256,23 @@ export default function MessageDetailScreen() {
         }
       );
     } else {
-      Alert.alert('Select Attachment', 'Choose an option', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Camera', onPress: pickImageFromCamera },
-        { text: 'Photo Library', onPress: pickImageFromLibrary },
-        { text: 'Document', onPress: pickDocument },
-      ]);
+      showAlert({
+        title: 'Select Attachment',
+        message: 'Choose an option',
+        buttons: [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Camera', onPress: pickImageFromCamera },
+          { text: 'Photo Library', onPress: pickImageFromLibrary },
+          { text: 'Document', onPress: pickDocument },
+        ],
+      });
     }
   };
 
   const pickImageFromCamera = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Camera permission is required to take photos.');
+      showAlert({ title: 'Permission needed', message: 'Camera permission is required to take photos.', buttons: [{ text: 'OK' }] });
       return;
     }
 
@@ -285,7 +290,7 @@ export default function MessageDetailScreen() {
   const pickImageFromLibrary = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Photo library permission is required to select photos.');
+      showAlert({ title: 'Permission needed', message: 'Photo library permission is required to select photos.', buttons: [{ text: 'OK' }] });
       return;
     }
 
@@ -312,7 +317,7 @@ export default function MessageDetailScreen() {
         sendAttachment('document', asset.uri, asset.name, asset.size);
       }
     } catch {
-      Alert.alert('Error', 'Failed to pick document');
+      showAlert({ title: 'Error', message: 'Failed to pick document', buttons: [{ text: 'OK' }] });
     }
   };
 
@@ -500,11 +505,12 @@ export default function MessageDetailScreen() {
       <Stack.Screen
         options={{
           presentation: 'card',
-          animation: 'slide_from_right',
+          animation: Platform.OS === 'android' ? 'ios_from_right' : 'slide_from_right',
           headerShown: false,
           gestureEnabled: true,
           gestureDirection: 'horizontal',
-          fullScreenGestureEnabled: true,
+          fullScreenGestureEnabled: Platform.OS === 'ios',
+          contentStyle: { backgroundColor: colorScheme === 'dark' ? '#000000' : '#f2f2f7' },
         }}
       />
       <IOSScreenWrapper>
@@ -562,8 +568,32 @@ export default function MessageDetailScreen() {
                 </ThemedText>
               </View>
 
-              <TouchableOpacity style={styles.callButton}>
-                <Ionicons name="call" size={22} color="#25D366" />
+              <TouchableOpacity
+                style={[
+                  styles.callButton,
+                  {
+                    backgroundColor:
+                      colorScheme === 'dark'
+                        ? 'rgba(52,199,89,0.15)'
+                        : 'rgba(52,199,89,0.1)',
+                  },
+                ]}
+              >
+                <View style={[
+                  styles.callIconBubble,
+                  {
+                    backgroundColor:
+                      colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
+                  },
+                ]}>
+                  <Ionicons name="call" size={12} color="#34C759" />
+                </View>
+                <ThemedText style={styles.callLabel}
+                  lightColor="#1C1C1E"
+                  darkColor="#FFFFFF"
+                >
+                  Call
+                </ThemedText>
               </TouchableOpacity>
             </View>
 
@@ -712,7 +742,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   errorText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     color: '#8E8E93',
   },
   chatHeader: {
@@ -741,7 +771,7 @@ const styles = StyleSheet.create({
     borderRadius: 20,
   },
   avatarText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.bold,
     color: '#FFFFFF',
   },
@@ -791,7 +821,7 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.medium,
   },
   timestampText: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     marginTop: 4,
     marginHorizontal: 16,
   },
@@ -818,7 +848,7 @@ const styles = StyleSheet.create({
   },
   textInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     maxHeight: 100,
     marginHorizontal: 8,
     paddingVertical: 8,
@@ -857,12 +887,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   documentName: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.medium,
     marginBottom: 2,
   },
   documentSize: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
   },
   chatContactHeader: {
     flexDirection: 'row',
@@ -876,10 +906,27 @@ const styles = StyleSheet.create({
     marginLeft: 12,
   },
   callButton: {
-    padding: 8,
-    marginRight: 8,
-    borderRadius: 20,
-    backgroundColor: 'rgba(37, 211, 102, 0.1)',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: responsiveSize(12, 10, 14),
+    paddingVertical: responsiveSize(7, 5, 9),
+    borderRadius: 999,
+    marginRight: 4,
+  },
+  callIconBubble: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 4,
+    elevation: 0,
+  },
+  callLabel: {
+    fontSize: responsiveFontSize(14),
+    fontFamily: Fonts.bold,
+    letterSpacing: 0.2,
   },
   videoCallButton: {
     padding: 8,

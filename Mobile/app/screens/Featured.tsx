@@ -10,11 +10,14 @@ import {
   TouchableOpacity,
   FlatList,
   RefreshControl,
+  Platform,
 } from 'react-native';
+import { useBottomTabBarHeight } from '@react-navigation/bottom-tabs';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
-import { Fonts } from '@/constants/Fonts';
+import { Fonts, responsiveFontSize, responsiveLineHeight } from '@/constants/Fonts';
 import {
   staysData,
   thingsToDoData,
@@ -36,6 +39,7 @@ import {
   WallpaperPattern,
   DestinationCardShimmer,
   CarouselShimmer,
+  ShimmerPlaceholder,
   LocationPill,
   RatingPill,
   DateTimePill,
@@ -58,21 +62,32 @@ import { router } from 'expo-router';
 import { useNavigation } from '@react-navigation/native';
 
 const { width: screenWidth } = Dimensions.get('window');
-// Destinations: original width
-const CARD_WIDTH = (screenWidth - 80) / 2;
-// Stays: reduced width as requested
-const STAY_CARD_WIDTH = screenWidth - 120;
-const STAY_CARD_SPACING = 8;
-// Things to Do: mirror stays layout spacing
+const BASE_SCREEN_WIDTH = 390;
+const layoutScale = screenWidth / BASE_SCREEN_WIDTH;
+const responsiveSize = (size: number, min = size * 0.86, max = size * 1.18) =>
+  Math.round(Math.min(max, Math.max(min, size * layoutScale)));
+
+const SECTION_HORIZONTAL_MARGIN = responsiveSize(16);
+const GALLERY_CONTAINER_PADDING = SECTION_HORIZONTAL_MARGIN;
+const DESTINATION_CARD_SPACING = responsiveSize(16);
+const CARD_WIDTH = (screenWidth - GALLERY_CONTAINER_PADDING * 2 - DESTINATION_CARD_SPACING) / 2;
+const STAY_CARD_SPACING = responsiveSize(8, 7, 12);
+const STAY_CARD_WIDTH = screenWidth - responsiveSize(120, 96, 136);
 const THINGS_CARD_WIDTH = STAY_CARD_WIDTH;
 const THINGS_CARD_SPACING = STAY_CARD_SPACING;
-// Events: increase width for visibility (similar to Stays)
-const EVENT_CARD_WIDTH = screenWidth - 120;
+const EVENT_CARD_WIDTH = STAY_CARD_WIDTH;
 const EVENT_CARD_SPACING = STAY_CARD_SPACING;
-// Consistent margin for all sections
-const SECTION_HORIZONTAL_MARGIN = 16;
-// Consistent padding for containers
-const GALLERY_CONTAINER_PADDING = 16;
+const CARD_HEIGHT = responsiveSize(200, 176, 224);
+const CAROUSEL_HEIGHT = responsiveSize(240, 216, 276);
+const CAROUSEL_ITEM_HEIGHT = responsiveSize(200, 180, 236);
+const CARD_RADIUS = responsiveSize(12, 10, 16);
+const SECTION_RADIUS = responsiveSize(16, 14, 20);
+const SECTION_GAP = responsiveSize(24, 18, 30);
+const CARD_INSET = responsiveSize(10, 8, 12);
+const OVERLAY_PADDING = responsiveSize(8, 7, 10);
+const HEART_SIZE = responsiveSize(36, 32, 42);
+const HEART_ICON_SIZE = responsiveSize(18, 16, 20);
+const FEATURED_BOTTOM_NAV_GAP = responsiveSize(16, 12, 22);
 
 // Types for carousel data
 interface CarouselItem {
@@ -109,6 +124,77 @@ const defaultCarouselData: CarouselItem[] = [
     location: 'Great Zimbabwe',
   },
 ];
+
+type FeaturedSkeletonVariant = 'stay' | 'event' | 'simple';
+
+const FEATURED_SKELETON_ITEMS = [
+  { id: 'featured-skeleton-1' },
+  { id: 'featured-skeleton-2' },
+  { id: 'featured-skeleton-3' },
+];
+
+const FeaturedSectionCardShimmer = React.memo(
+  ({ variant = 'event' }: { variant?: FeaturedSkeletonVariant }) => {
+    const cardWidth = variant === 'stay' ? STAY_CARD_WIDTH : EVENT_CARD_WIDTH;
+    const cardSpacing = variant === 'stay' ? STAY_CARD_SPACING : EVENT_CARD_SPACING;
+
+    return (
+      <View
+        style={[
+          styles.featuredSkeletonCard,
+          {
+            width: cardWidth,
+            marginRight: cardSpacing,
+          },
+        ]}
+      >
+        <ShimmerPlaceholder width="100%" height="100%" borderRadius={CARD_RADIUS} />
+
+        <View style={styles.featuredSkeletonHeart}>
+          <ShimmerPlaceholder
+            width={HEART_ICON_SIZE}
+            height={HEART_ICON_SIZE}
+            borderRadius={HEART_ICON_SIZE / 2}
+          />
+        </View>
+
+        {variant !== 'simple' && (
+          <View style={styles.featuredSkeletonRating}>
+            <ShimmerPlaceholder
+              width={responsiveSize(52, 46, 60)}
+              height={responsiveSize(24, 22, 28)}
+              borderRadius={999}
+            />
+          </View>
+        )}
+
+        <View style={styles.featuredSkeletonOverlay}>
+          <ShimmerPlaceholder
+            width={cardWidth * 0.58}
+            height={responsiveSize(18, 16, 22)}
+            borderRadius={responsiveSize(9, 8, 11)}
+          />
+          <View style={styles.featuredSkeletonMetaRow}>
+            <ShimmerPlaceholder
+              width={cardWidth * 0.34}
+              height={responsiveSize(22, 20, 26)}
+              borderRadius={999}
+            />
+            {variant !== 'simple' && (
+              <ShimmerPlaceholder
+                width={cardWidth * 0.3}
+                height={responsiveSize(22, 20, 26)}
+                borderRadius={999}
+              />
+            )}
+          </View>
+        </View>
+      </View>
+    );
+  }
+);
+
+FeaturedSectionCardShimmer.displayName = 'FeaturedSectionCardShimmer';
 
 // Database destination type
 type DatabaseDestination = {
@@ -175,7 +261,7 @@ const DestinationCard = React.memo(
         style={[
           styles.destinationCard,
           { backgroundColor: cardBg },
-          isLastItem && { marginRight: 2 },
+          isLastItem && { marginRight: responsiveSize(2, 1, 3) },
         ]}
         onPress={onPress}
       >
@@ -196,7 +282,12 @@ const DestinationCard = React.memo(
         <TouchableOpacity
           style={[styles.heartContainer, { backgroundColor: pillBg }]}
           onPress={handleFavoritePress}
-          hitSlop={{ top: 8, left: 8, bottom: 8, right: 8 }}
+          hitSlop={{
+            top: OVERLAY_PADDING,
+            left: OVERLAY_PADDING,
+            bottom: OVERLAY_PADDING,
+            right: OVERLAY_PADDING,
+          }}
           accessibilityRole="button"
           accessibilityLabel={`Favorite ${item.name} ${isFavorited ? 'selected' : 'not selected'}`}
         >
@@ -278,7 +369,12 @@ const StayCard = React.memo(
         <TouchableOpacity
           style={[styles.heartContainer, { backgroundColor: pillBg }]}
           onPress={handleFavoritePress}
-          hitSlop={{ top: 8, left: 8, bottom: 8, right: 8 }}
+          hitSlop={{
+            top: OVERLAY_PADDING,
+            left: OVERLAY_PADDING,
+            bottom: OVERLAY_PADDING,
+            right: OVERLAY_PADDING,
+          }}
           accessibilityRole="button"
           accessibilityLabel={`Favorite ${item.name} ${isFavorited ? 'selected' : 'not selected'}`}
         >
@@ -324,7 +420,7 @@ const StayCard = React.memo(
               <View
                 style={[
                   styles.pillTag,
-                  { backgroundColor: pillBg, marginLeft: 'auto', paddingVertical: 8 },
+                  { backgroundColor: pillBg, marginLeft: 'auto', paddingVertical: OVERLAY_PADDING },
                 ]}
               >
                 {displayAmenities.map((amenity, index) => (
@@ -387,7 +483,12 @@ const EventCard = React.memo(
         <TouchableOpacity
           style={[styles.heartContainer, { backgroundColor: pillBg }]}
           onPress={() => onToggleFavorite(item.id, 'event')}
-          hitSlop={{ top: 8, left: 8, bottom: 8, right: 8 }}
+          hitSlop={{
+            top: OVERLAY_PADDING,
+            left: OVERLAY_PADDING,
+            bottom: OVERLAY_PADDING,
+            right: OVERLAY_PADDING,
+          }}
           accessibilityRole="button"
           accessibilityLabel={`Favorite ${item.name} ${isFavorited ? 'selected' : 'not selected'}`}
         >
@@ -495,7 +596,12 @@ const ThingsCard = React.memo(
         <TouchableOpacity
           style={[styles.heartContainer, { backgroundColor: pillBg }]}
           onPress={() => onToggleFavorite(item.id, 'activity')}
-          hitSlop={{ top: 8, left: 8, bottom: 8, right: 8 }}
+          hitSlop={{
+            top: OVERLAY_PADDING,
+            left: OVERLAY_PADDING,
+            bottom: OVERLAY_PADDING,
+            right: OVERLAY_PADDING,
+          }}
           accessibilityRole="button"
           accessibilityLabel={`Favorite ${item.name} ${isFavorited ? 'selected' : 'not selected'}`}
         >
@@ -594,7 +700,12 @@ const BusCard = React.memo(
         <TouchableOpacity
           style={[styles.heartContainer, { backgroundColor: pillBg }]}
           onPress={() => onToggleFavorite(item.id, 'bus')}
-          hitSlop={{ top: 8, left: 8, bottom: 8, right: 8 }}
+          hitSlop={{
+            top: OVERLAY_PADDING,
+            left: OVERLAY_PADDING,
+            bottom: OVERLAY_PADDING,
+            right: OVERLAY_PADDING,
+          }}
           accessibilityRole="button"
           accessibilityLabel={`Favorite ${item.name} ${isFavorited ? 'selected' : 'not selected'}`}
         >
@@ -675,7 +786,12 @@ const FlightCard = React.memo(
         <TouchableOpacity
           style={[styles.heartContainer, { backgroundColor: pillBg }]}
           onPress={() => onToggleFavorite(item.id, 'flight')}
-          hitSlop={{ top: 8, left: 8, bottom: 8, right: 8 }}
+          hitSlop={{
+            top: OVERLAY_PADDING,
+            left: OVERLAY_PADDING,
+            bottom: OVERLAY_PADDING,
+            right: OVERLAY_PADDING,
+          }}
           accessibilityRole="button"
           accessibilityLabel={`Favorite ${item.name} ${isFavorited ? 'selected' : 'not selected'}`}
         >
@@ -722,6 +838,8 @@ FlightCard.displayName = 'FeaturedFlightCard';
 export default function Featured() {
   const colorScheme = useColorScheme();
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
+  const bottomTabBarHeight = useBottomTabBarHeight();
   const scrollViewRef = useRef<ScrollView>(null); // Carousel horizontal scroll
   const mainScrollViewRef = useRef<ScrollView>(null); // Main vertical scroll
   const currentIndexRef = useRef(0);
@@ -745,11 +863,19 @@ export default function Featured() {
   // Events loading state
   const [eventsLoading, setEventsLoading] = useState(true);
   const [events, setEvents] = useState<Event[]>([]);
+  const [localSectionsLoading, setLocalSectionsLoading] = useState(true);
 
   // Refresh state
   const [refreshing, setRefreshing] = useState(false);
   // Track favorites to force rerender when global favorites change
   const [favoritesVersion, setFavoritesVersion] = useState(0);
+  const featuredBottomPadding = useMemo(
+    () =>
+      Platform.OS === 'ios'
+        ? bottomTabBarHeight + FEATURED_BOTTOM_NAV_GAP
+        : Math.max(insets.bottom + FEATURED_BOTTOM_NAV_GAP, FEATURED_BOTTOM_NAV_GAP),
+    [bottomTabBarHeight, insets.bottom]
+  );
   useEffect(() => {
     const unsub = subscribeFavorites(() => {
       // sync local favorites mapping from global store
@@ -789,6 +915,7 @@ export default function Featured() {
 
       if (data && data.length > 0) {
         const carouselItems: CarouselItem[] = data.map(carouselItem => {
+          const carouselSubtitle = 'subtitle' in carouselItem ? carouselItem.subtitle : '';
           const resolvedImage = normalizeStorageImageUrl(carouselItem.image_url);
           const fallbackUri = `https://picsum.photos/800/600?random=${carouselItem.id.slice(-6)}`;
           const imageUri = resolvedImage ?? fallbackUri;
@@ -807,7 +934,7 @@ export default function Featured() {
             id: carouselItem.id,
             image: { uri: imageUri },
             title: carouselItem.title,
-            location: carouselItem.location || carouselItem.subtitle || '',
+            location: carouselItem.location || carouselSubtitle || '',
           };
         });
 
@@ -1103,6 +1230,14 @@ export default function Featured() {
     fetchEvents();
   }, [fetchEvents]);
 
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      setLocalSectionsLoading(false);
+    }, 500);
+
+    return () => clearTimeout(timeout);
+  }, []);
+
   // Heart animation scales per destination
   const heartScalesRef = useRef<Record<string, Animated.Value>>({});
   const getHeartScale = useCallback((key: string) => {
@@ -1257,8 +1392,8 @@ export default function Featured() {
 
   const getItemLayout = useCallback(
     (data: any, index: number) => ({
-      length: CARD_WIDTH + 16,
-      offset: (CARD_WIDTH + 16) * index,
+      length: CARD_WIDTH + DESTINATION_CARD_SPACING,
+      offset: (CARD_WIDTH + DESTINATION_CARD_SPACING) * index,
       index,
     }),
     []
@@ -1283,88 +1418,18 @@ export default function Featured() {
 
   // Render shimmer stay card for loading state
   const renderShimmerStayCard = useCallback(
-    ({ item }: { item: Stay }) => {
-      return (
-        <View
-          style={[
-            styles.stayCard,
-            { backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF' },
-          ]}
-        >
-          {/* Image shimmer */}
-          <View
-            style={[
-              styles.destinationImage,
-              { backgroundColor: colorScheme === 'dark' ? '#333333' : '#E1E9EE' },
-            ]}
-          />
+    () => <FeaturedSectionCardShimmer variant="stay" />,
+    []
+  );
 
-          {/* Heart shimmer */}
-          <View
-            style={[
-              styles.heartContainer,
-              { backgroundColor: colorScheme === 'dark' ? '#333333' : '#E1E9EE' },
-            ]}
-          />
+  const renderEventShimmerCard = useCallback(
+    () => <FeaturedSectionCardShimmer variant="event" />,
+    []
+  );
 
-          {/* Content shimmer */}
-          <View style={styles.stayInfoContainer}>
-            {/* Rating pill shimmer */}
-            <View style={styles.stayTopRow}>
-              <View
-                style={[
-                  styles.pillTag,
-                  {
-                    backgroundColor: colorScheme === 'dark' ? '#333333' : '#E1E9EE',
-                    width: 60,
-                    height: 24,
-                  },
-                ]}
-              />
-            </View>
-
-            <View style={styles.stayOverlay}>
-              {/* Name shimmer */}
-              <View
-                style={{
-                  backgroundColor: colorScheme === 'dark' ? '#333333' : '#E1E9EE',
-                  width: 180,
-                  height: 20,
-                  borderRadius: 4,
-                  marginBottom: 8,
-                }}
-              />
-
-              {/* Meta row shimmer */}
-              <View style={styles.stayMetaRow}>
-                <View
-                  style={[
-                    styles.pillTag,
-                    {
-                      backgroundColor: colorScheme === 'dark' ? '#333333' : '#E1E9EE',
-                      width: 100,
-                      height: 24,
-                    },
-                  ]}
-                />
-                <View
-                  style={[
-                    styles.pillTag,
-                    {
-                      backgroundColor: colorScheme === 'dark' ? '#333333' : '#E1E9EE',
-                      width: 80,
-                      height: 24,
-                      marginLeft: 'auto',
-                    },
-                  ]}
-                />
-              </View>
-            </View>
-          </View>
-        </View>
-      );
-    },
-    [colorScheme]
+  const renderSimpleShimmerCard = useCallback(
+    () => <FeaturedSectionCardShimmer variant="simple" />,
+    []
   );
 
   const getStayItemLayout = useCallback(
@@ -1707,7 +1772,7 @@ export default function Featured() {
               scrollEventThrottle={16}
               style={styles.carousel}
             >
-              {carouselLoading ? (
+              {carouselLoading || extendedCarouselData.length === 0 ? (
                 <CarouselShimmer />
               ) : (
                 extendedCarouselData.map((item, index) => renderCarouselItem(item, index))
@@ -1726,7 +1791,7 @@ export default function Featured() {
           </View>
 
           {/* Content Below Carousel */}
-          <View style={styles.contentContainer}>
+          <View style={[styles.contentContainer, { paddingBottom: featuredBottomPadding }]}>
             {/* Section Header */}
             <View style={styles.sectionHeader}>
               <ThemedText type="sectionTitle" style={styles.sectionTitle}>
@@ -1736,14 +1801,8 @@ export default function Featured() {
             </View>
 
             {/* Destinations Grid with Shimmer Loading */}
-            {destinationsLoading ? (
+            {destinationsLoading || destinationsData.length === 0 ? (
               <DestinationCardShimmer count={4} />
-            ) : destinationsData.length === 0 ? (
-              <View style={styles.destinationsEmptyContainer}>
-                <ThemedText style={styles.destinationsEmptyText}>
-                  No destinations available
-                </ThemedText>
-              </View>
             ) : (
               <FlatList
                 data={destinationsData as any}
@@ -1757,29 +1816,24 @@ export default function Featured() {
                 }}
                 style={{ width: '100%', paddingHorizontal: 0 }}
                 decelerationRate="fast"
-                snapToInterval={CARD_WIDTH + 16}
+                snapToInterval={CARD_WIDTH + DESTINATION_CARD_SPACING}
                 snapToAlignment="start"
                 getItemLayout={getItemLayout}
               />
             )}
 
             {/* Section divider */}
-            <View style={{ marginBottom: 24 }} />
+            <View style={{ marginBottom: SECTION_GAP }} />
 
             {/* Stays Section */}
             <View
               style={[
                 {
                   marginHorizontal: SECTION_HORIZONTAL_MARGIN,
-                  borderRadius: 16,
+                  borderRadius: SECTION_RADIUS,
                   backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 8,
-                  elevation: 4,
                   overflow: 'hidden',
-                  marginBottom: 24,
+                  marginBottom: SECTION_GAP,
                 },
               ]}
             >
@@ -1792,46 +1846,8 @@ export default function Featured() {
 
               {/* Stays List */}
               <FlatList
-                data={
-                  staysLoading
-                    ? ([
-                        {
-                          id: '1',
-                          name: '',
-                          location: '',
-                          description: '',
-                          rating: 0,
-                          price: 0,
-                          images: [],
-                          amenities: [],
-                          imageUrl: '',
-                        },
-                        {
-                          id: '2',
-                          name: '',
-                          location: '',
-                          description: '',
-                          rating: 0,
-                          price: 0,
-                          images: [],
-                          amenities: [],
-                          imageUrl: '',
-                        },
-                        {
-                          id: '3',
-                          name: '',
-                          location: '',
-                          description: '',
-                          rating: 0,
-                          price: 0,
-                          images: [],
-                          amenities: [],
-                          imageUrl: '',
-                        },
-                      ] as any as Stay[])
-                    : stays.slice(0, 5)
-                }
-                renderItem={staysLoading ? renderShimmerStayCard : renderStayCard}
+                data={(staysLoading || stays.length === 0 ? FEATURED_SKELETON_ITEMS : stays.slice(0, 5)) as any}
+                renderItem={staysLoading || stays.length === 0 ? renderShimmerStayCard : renderStayCard}
                 keyExtractor={item => item.id}
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -1853,15 +1869,10 @@ export default function Featured() {
               style={[
                 {
                   marginHorizontal: SECTION_HORIZONTAL_MARGIN,
-                  borderRadius: 16,
+                  borderRadius: SECTION_RADIUS,
                   backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 8,
-                  elevation: 4,
                   overflow: 'hidden',
-                  marginBottom: 24,
+                  marginBottom: SECTION_GAP,
                 },
               ]}
             >
@@ -1873,67 +1884,8 @@ export default function Featured() {
               </View>
 
               <FlatList
-                data={
-                  eventsLoading
-                    ? ([
-                        {
-                          id: '1',
-                          name: '',
-                          location: '',
-                          venue: '',
-                          date: '',
-                          time: '',
-                          images: [],
-                          description: '',
-                          rating: 0,
-                          totalRatings: 0,
-                          ticketPrice: 0,
-                          currency: 'USD',
-                          ticketTypes: [],
-                          category: '',
-                          tags: [],
-                          organizer: { name: '', contact: '', verified: false },
-                        },
-                        {
-                          id: '2',
-                          name: '',
-                          location: '',
-                          venue: '',
-                          date: '',
-                          time: '',
-                          images: [],
-                          description: '',
-                          rating: 0,
-                          totalRatings: 0,
-                          ticketPrice: 0,
-                          currency: 'USD',
-                          ticketTypes: [],
-                          category: '',
-                          tags: [],
-                          organizer: { name: '', contact: '', verified: false },
-                        },
-                        {
-                          id: '3',
-                          name: '',
-                          location: '',
-                          venue: '',
-                          date: '',
-                          time: '',
-                          images: [],
-                          description: '',
-                          rating: 0,
-                          totalRatings: 0,
-                          ticketPrice: 0,
-                          currency: 'USD',
-                          ticketTypes: [],
-                          category: '',
-                          tags: [],
-                          organizer: { name: '', contact: '', verified: false },
-                        },
-                      ] as any as Event[])
-                    : events.slice(0, 5)
-                }
-                renderItem={renderEventCard}
+                data={(eventsLoading || events.length === 0 ? FEATURED_SKELETON_ITEMS : events.slice(0, 5)) as any}
+                renderItem={eventsLoading || events.length === 0 ? renderEventShimmerCard : renderEventCard}
                 keyExtractor={item => item.id}
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -1955,15 +1907,10 @@ export default function Featured() {
               style={[
                 {
                   marginHorizontal: SECTION_HORIZONTAL_MARGIN,
-                  borderRadius: 16,
+                  borderRadius: SECTION_RADIUS,
                   backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 8,
-                  elevation: 4,
                   overflow: 'hidden',
-                  marginBottom: 24,
+                  marginBottom: SECTION_GAP,
                 },
               ]}
             >
@@ -1975,8 +1922,8 @@ export default function Featured() {
               </View>
 
               <FlatList
-                data={thingsToDoData}
-                renderItem={renderThingsCard}
+                data={(localSectionsLoading ? FEATURED_SKELETON_ITEMS : thingsToDoData) as any}
+                renderItem={localSectionsLoading ? renderEventShimmerCard : renderThingsCard}
                 keyExtractor={item => item.id}
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -1998,15 +1945,10 @@ export default function Featured() {
               style={[
                 {
                   marginHorizontal: SECTION_HORIZONTAL_MARGIN,
-                  borderRadius: 16,
+                  borderRadius: SECTION_RADIUS,
                   backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 8,
-                  elevation: 4,
                   overflow: 'hidden',
-                  marginBottom: 24,
+                  marginBottom: SECTION_GAP,
                 },
               ]}
             >
@@ -2018,8 +1960,8 @@ export default function Featured() {
               </View>
 
               <FlatList
-                data={busOperatorsData}
-                renderItem={renderBusCard}
+                data={(localSectionsLoading ? FEATURED_SKELETON_ITEMS : busOperatorsData) as any}
+                renderItem={localSectionsLoading ? renderSimpleShimmerCard : renderBusCard}
                 keyExtractor={item => item.id}
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -2041,15 +1983,10 @@ export default function Featured() {
               style={[
                 {
                   marginHorizontal: SECTION_HORIZONTAL_MARGIN,
-                  borderRadius: 16,
+                  borderRadius: SECTION_RADIUS,
                   backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
-                  shadowColor: '#000',
-                  shadowOffset: { width: 0, height: 2 },
-                  shadowOpacity: 0.1,
-                  shadowRadius: 8,
-                  elevation: 4,
                   overflow: 'hidden',
-                  marginBottom: 24,
+                  marginBottom: SECTION_GAP,
                 },
               ]}
             >
@@ -2061,8 +1998,8 @@ export default function Featured() {
               </View>
 
               <FlatList
-                data={flightOperatorsData}
-                renderItem={renderFlightCard}
+                data={(localSectionsLoading ? FEATURED_SKELETON_ITEMS : flightOperatorsData) as any}
+                renderItem={localSectionsLoading ? renderSimpleShimmerCard : renderFlightCard}
                 keyExtractor={item => item.id}
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -2097,23 +2034,23 @@ const styles = StyleSheet.create({
     flexGrow: 1,
   },
   carouselContainer: {
-    height: 240, // reduced from 320
-    marginTop: 16,
-    paddingTop: 16,
+    height: CAROUSEL_HEIGHT,
+    marginTop: SECTION_HORIZONTAL_MARGIN,
+    paddingTop: SECTION_HORIZONTAL_MARGIN,
   },
   carousel: {
     flex: 1,
   },
   carouselItem: {
-    height: 200, // reduced from 260
+    height: CAROUSEL_ITEM_HEIGHT,
     position: 'relative',
-    paddingHorizontal: 16,
+    paddingHorizontal: GALLERY_CONTAINER_PADDING,
   },
   imageContainer: {
     flex: 1,
     position: 'relative',
     backgroundColor: '#F2F2F7',
-    borderRadius: 16,
+    borderRadius: SECTION_RADIUS,
     overflow: 'hidden',
   },
   loadingContainer: {
@@ -2125,13 +2062,13 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: '#F2F2F7',
-    borderRadius: 16,
+    borderRadius: SECTION_RADIUS,
     zIndex: 1,
   },
   carouselImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 16,
+    borderRadius: SECTION_RADIUS,
   },
   gradientOverlay: {
     position: 'absolute',
@@ -2139,7 +2076,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: 16,
+    borderRadius: SECTION_RADIUS,
     overflow: 'hidden',
   },
   gradientTop: {
@@ -2150,23 +2087,23 @@ const styles = StyleSheet.create({
   },
   textContainer: {
     position: 'absolute',
-    bottom: 12, // reduced from 24
-    left: 20,
-    right: 20,
+    bottom: responsiveSize(12, 10, 16),
+    left: responsiveSize(20, 16, 24),
+    right: responsiveSize(20, 16, 24),
     alignItems: 'center',
     alignSelf: 'center',
-    maxWidth: screenWidth - 40,
+    maxWidth: screenWidth - responsiveSize(40, 32, 48),
   },
   carouselLocationPill: {
-    marginLeft: 6,
+    marginLeft: responsiveSize(6, 4, 8),
   },
   carouselTitle: {
     color: '#FFFFFF',
     textAlign: 'center',
-    marginBottom: 8,
+    marginBottom: OVERLAY_PADDING,
     textShadowColor: 'rgba(0, 0, 0, 0.5)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
+    textShadowOffset: { width: 0, height: responsiveSize(1, 1, 2) },
+    textShadowRadius: responsiveSize(3, 2, 4),
     alignSelf: 'center',
   },
   indicatorContainer: {
@@ -2174,25 +2111,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     position: 'absolute',
-    bottom: -2,
+    bottom: -responsiveSize(2, 1, 3),
     left: 0,
     right: 0,
-    paddingHorizontal: 20,
+    paddingHorizontal: responsiveSize(20, 16, 24),
   },
   contentContainer: {
     width: '100%',
     paddingHorizontal: 0,
-    paddingTop: 24,
-    paddingBottom: 70,
+    paddingTop: SECTION_GAP,
   },
   sectionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     width: '100%',
-    marginBottom: 12, // Adjusted for spacing between header and content
-    paddingHorizontal: 16, // Match gallery container padding
-    paddingTop: 16,
+    marginBottom: responsiveSize(12, 10, 16),
+    paddingHorizontal: GALLERY_CONTAINER_PADDING,
+    paddingTop: SECTION_HORIZONTAL_MARGIN,
   },
   sectionTitle: {
     marginBottom: 0,
@@ -2201,7 +2137,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     width: '100%',
-    marginBottom: 30,
+    marginBottom: responsiveSize(30, 24, 36),
   },
   destinationsScrollView: {
     width: '100%',
@@ -2212,48 +2148,35 @@ const styles = StyleSheet.create({
     paddingBottom: GALLERY_CONTAINER_PADDING,
   },
   destinationCard: {
-    width: CARD_WIDTH, // synced with snapToInterval
-    marginRight: 16,
-    borderRadius: 12,
+    width: CARD_WIDTH,
+    marginRight: DESTINATION_CARD_SPACING,
+    borderRadius: CARD_RADIUS,
     overflow: 'hidden',
     backgroundColor: '#FFFFFF', // Will be overridden dynamically
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
     position: 'relative',
   },
   stayCard: {
-    width: STAY_CARD_WIDTH, // synced with snapToInterval
+    width: STAY_CARD_WIDTH,
     marginRight: STAY_CARD_SPACING,
-    borderRadius: 12,
+    borderRadius: CARD_RADIUS,
     overflow: 'hidden',
     backgroundColor: '#FFFFFF', // Will be overridden dynamically
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
     position: 'relative',
   },
   destinationImage: {
     width: '100%',
-    height: 200,
+    height: CARD_HEIGHT,
   },
   heartContainer: {
     position: 'absolute',
-    top: 10,
-    right: 10,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    top: CARD_INSET,
+    right: CARD_INSET,
+    width: HEART_SIZE,
+    height: HEART_SIZE,
+    borderRadius: HEART_SIZE / 2,
     backgroundColor: 'rgba(255, 255, 255, 0.3)', // overridden per card with pillBg
     justifyContent: 'center',
     alignItems: 'center',
@@ -2273,32 +2196,34 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    padding: 8, // reduced from 12
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
+    padding: OVERLAY_PADDING,
+    borderBottomLeftRadius: CARD_RADIUS,
+    borderBottomRightRadius: CARD_RADIUS,
   },
   stayOverlay: {
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    padding: 8,
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
+    padding: OVERLAY_PADDING,
+    borderBottomLeftRadius: CARD_RADIUS,
+    borderBottomRightRadius: CARD_RADIUS,
   },
   stayTopRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     alignItems: 'center',
-    marginBottom: 4,
-    paddingRight: 10,
+    marginBottom: responsiveSize(4, 3, 6),
+    paddingRight: CARD_INSET,
   },
   destinationName: {
-    fontSize: 18, // increased from 14
+    fontSize: responsiveFontSize(18),
+    lineHeight: responsiveLineHeight(18),
     fontFamily: Fonts.bold,
     textAlign: 'left',
     color: '#FFFFFF',
     letterSpacing: 0.3,
   },
   destinationWeather: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
+    lineHeight: responsiveLineHeight(18),
     textAlign: 'left',
     color: '#FFFFFF',
     marginTop: 2,
@@ -2306,43 +2231,33 @@ const styles = StyleSheet.create({
     letterSpacing: 0.3,
   },
   stayMetaRow: {
-    marginTop: 4,
+    marginTop: responsiveSize(4, 3, 6),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 8,
+    gap: STAY_CARD_SPACING,
   },
   eventMetaRow: {
-    marginTop: 4,
+    marginTop: responsiveSize(4, 3, 6),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'flex-start',
-    gap: 8,
+    gap: EVENT_CARD_SPACING,
   },
   eventCard: {
-    width: EVENT_CARD_WIDTH, // synced with snapToInterval
+    width: EVENT_CARD_WIDTH,
     marginRight: EVENT_CARD_SPACING,
-    borderRadius: 12,
+    borderRadius: CARD_RADIUS,
     overflow: 'hidden',
     backgroundColor: '#FFFFFF', // Will be overridden dynamically
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
     position: 'relative',
   },
   thingsCard: {
     width: THINGS_CARD_WIDTH,
     marginRight: THINGS_CARD_SPACING,
     backgroundColor: '#FFFFFF', // Will be overridden dynamically
-    borderRadius: 12,
+    borderRadius: CARD_RADIUS,
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
     position: 'relative',
   },
   eventInfoContainer: {
@@ -2356,60 +2271,103 @@ const styles = StyleSheet.create({
   pillTag: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: OVERLAY_PADDING,
+    paddingVertical: responsiveSize(3, 3, 5),
     borderRadius: 999,
     backgroundColor: 'rgba(255,255,255,0.9)',
   },
   infoPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingHorizontal: responsiveSize(12, 10, 14),
+    paddingVertical: responsiveSize(5, 4, 7),
   },
   eventOverlay: {
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    padding: 8,
-    borderBottomLeftRadius: 12,
-    borderBottomRightRadius: 12,
+    padding: OVERLAY_PADDING,
+    borderBottomLeftRadius: CARD_RADIUS,
+    borderBottomRightRadius: CARD_RADIUS,
   },
   eventTopRow: {
     flexDirection: 'row',
     justifyContent: 'flex-end',
     alignItems: 'center',
-    marginBottom: 4,
-    paddingRight: 10,
+    marginBottom: responsiveSize(4, 3, 6),
+    paddingRight: CARD_INSET,
   },
   pillIcon: {
-    marginRight: 4,
+    marginRight: responsiveSize(4, 3, 6),
   },
   pillText: {
-    fontSize: 11,
+    fontSize: responsiveFontSize(11),
+    lineHeight: responsiveLineHeight(11),
     fontFamily: Fonts.bold,
     color: '#1C1C1E',
   },
   infoPillText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
+    lineHeight: responsiveLineHeight(14),
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
   },
   sectionContainer: {
     width: '100%',
   },
+  featuredSkeletonCard: {
+    height: CARD_HEIGHT,
+    borderRadius: CARD_RADIUS,
+    overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: '#EEF1F4',
+  },
+  featuredSkeletonHeart: {
+    position: 'absolute',
+    top: CARD_INSET,
+    right: CARD_INSET,
+    width: HEART_SIZE,
+    height: HEART_SIZE,
+    borderRadius: HEART_SIZE / 2,
+    backgroundColor: 'rgba(255,255,255,0.42)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  featuredSkeletonRating: {
+    position: 'absolute',
+    right: CARD_INSET,
+    bottom: responsiveSize(70, 60, 82),
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.42)',
+  },
+  featuredSkeletonOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(17,24,39,0.58)',
+    padding: CARD_INSET,
+  },
+  featuredSkeletonMetaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: STAY_CARD_SPACING,
+    marginTop: responsiveSize(7, 6, 9),
+  },
   destinationsEmptyContainer: {
-    paddingVertical: 40,
+    paddingVertical: responsiveSize(40, 32, 52),
     alignItems: 'center',
     justifyContent: 'center',
   },
   destinationsEmptyText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
+    lineHeight: responsiveLineHeight(16),
     opacity: 0.5,
   },
   staysEmptyContainer: {
-    paddingVertical: 40,
+    paddingVertical: responsiveSize(40, 32, 52),
     alignItems: 'center',
     justifyContent: 'center',
   },
   staysEmptyText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
+    lineHeight: responsiveLineHeight(16),
     opacity: 0.5,
   },
 });

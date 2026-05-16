@@ -8,10 +8,13 @@ import {
   LayoutAnimation,
   UIManager,
   Easing,
-  Alert,
   ScrollView,
   RefreshControl,
+  Dimensions,
   Modal,
+  Pressable,
+  TouchableOpacity,
+  Image,
 } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
@@ -22,9 +25,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Haptics from 'expo-haptics';
 
 // Import reusable components and utilities
-import { CustomHeader, MessageItem, useCollapsibleSearchSection } from '@/components';
-import { OrderSheet } from '@/components/OrderSheet';
-import type { ItineraryData } from '@/components/ItineraryItem';
+import { CustomHeader, GlassPanel, MessageItem, useCollapsibleSearchSection } from '@/components';
 import type { SwipeAction } from '@/components';
 import { generateInitialNotifications } from '@/utils/notificationData';
 import type { NotificationData } from '@/utils/notificationData';
@@ -34,6 +35,26 @@ import {
   categorizeNotifications,
   filterNotificationsBySearch,
 } from '@/utils/notificationUtils';
+import { responsiveFontSize, responsiveLineHeight, responsiveSize, Fonts } from '@/constants/Fonts';
+import { useNotificationsContext } from '@/context/NotificationsContext';
+import { useAppAlert } from '@/context/AppAlertContext';
+import { listCardBase, listCardDynamicStyle } from '@/styles/cardStyles';
+
+const { width: screenWidth } = Dimensions.get('window');
+
+const SCREEN_HORIZONTAL_PADDING = responsiveSize(16, 14, 20);
+const TITLE_BOTTOM_PADDING = responsiveSize(8, 6, 10);
+const SEARCH_TOP_PADDING = responsiveSize(8, 6, 10);
+const SEARCH_TOP_MARGIN = responsiveSize(4, 3, 6);
+const CARD_RADIUS = responsiveSize(18, 15, 22);
+const CARD_BOTTOM_GAP = responsiveSize(12, 10, 15);
+const LIST_BOTTOM_PADDING = responsiveSize(100, 82, 124);
+const EMPTY_HORIZONTAL_PADDING = responsiveSize(32, 24, 40);
+const EMPTY_TOP_PADDING = responsiveSize(80, 64, 96);
+const EMPTY_ICON_SIZE = responsiveSize(60, 52, 70);
+const EMPTY_TITLE_TOP_MARGIN = responsiveSize(12, 10, 16);
+const EMPTY_TEXT_TOP_MARGIN = responsiveSize(6, 4, 8);
+const NOTIFICATION_ROW_HEIGHT = responsiveSize(78, 70, 90);
 
 // Enable LayoutAnimation on Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -44,16 +65,33 @@ export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState<NotificationData[]>(
     generateInitialNotifications()
   );
-  const [activeOrderSheet, setActiveOrderSheet] = useState<{ order: ItineraryData; instanceId: number } | null>(null);
+  const [activeNotification, setActiveNotification] = useState<{
+    id: string;
+    name: string;
+    message: string;
+    avatar: string;
+    avatarImage?: string;
+  } | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
   const colorScheme = useColorScheme();
-  const sheetInstanceRef = useRef(0);
-  const [sheetInstanceId, setSheetInstanceId] = useState<number | undefined>(undefined);
+  const swipeableRefs = useRef<Map<string, Swipeable>>(new Map());
+  const { setUnreadCount } = useNotificationsContext();
+  const { showAlert } = useAppAlert();
+
+  // Keep the tab bar badge in sync with unread notifications
+  useEffect(() => {
+    const count = notifications.filter((n) => !n.isRead).length;
+    setUnreadCount(count);
+  }, [notifications]);
 
   // Helper function to replace all isDark references
   const isDarkMode = () => colorScheme === 'dark';
+
+  const showAppAlert = useCallback((config: { title: string; message: string; buttons: { text: string; style?: 'default' | 'cancel' | 'destructive'; onPress?: () => void }[] }) => {
+    showAlert(config);
+  }, [showAlert]);
 
   // Animation value for list transitions (cross-fade between lists)
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -63,9 +101,6 @@ export default function NotificationsScreen() {
     { key: 'all', label: 'All' },
     { key: 'unread', label: 'Unread' },
   ];
-
-  // Track open swipeables to allow auto-close when another is opened
-  const swipeableRefs = useRef<Map<string, Swipeable>>(new Map());
 
   const handleFilterChange = useCallback((filter: string) => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
@@ -137,8 +172,10 @@ export default function NotificationsScreen() {
     const categoryNotifications =
       categorizedNotifications[activeFilter as keyof typeof categorizedNotifications] || [];
 
-    // Apply search if needed
-    return filterNotificationsBySearch(categoryNotifications, searchQuery);
+    // Apply search if needed, then sort most-recent first
+    return filterNotificationsBySearch(categoryNotifications, searchQuery)
+      .slice()
+      .sort((a, b) => (b.timestamp ?? 0) - (a.timestamp ?? 0));
   }, [categorizedNotifications, searchQuery, activeFilter]);
 
   const markAsRead = (id: string) => {
@@ -154,26 +191,13 @@ export default function NotificationsScreen() {
 
   const openNotification = (notification: NotificationData) => {
     markAsRead(notification.id);
-    const order: ItineraryData = {
+    setActiveNotification({
       id: notification.id,
       name: notification.name,
       message: notification.message,
-      type: 'order',
-      date: '',
-      time: '',
-      location: `Order #${notification.id}`,
-      isRead: true,
-      unreadCount: 0,
-      avatar: getNotificationAvatarColor(notification.type),
-      status: 'received',
-      notes: 'Status: Read',
-      category: 'default',
-    };
-
-    sheetInstanceRef.current += 1;
-    const instanceId = sheetInstanceRef.current;
-    setSheetInstanceId(instanceId);
-    setActiveOrderSheet({ order, instanceId });
+      avatar: notification.avatar,
+      avatarImage: notification.avatarImage,
+    });
   };
 
   // Using OrderSheet's internal status pill logic; no local statusConfig/details needed
@@ -184,11 +208,11 @@ export default function NotificationsScreen() {
       swipeable.close();
     }
 
-    Alert.alert(
-      'Thank You',
-      "Your report has been submitted. We'll review this notification shortly.",
-      [{ text: 'OK' }]
-    );
+    showAppAlert({
+      title: 'Thank You',
+      message: "Your report has been submitted. We'll review this notification shortly.",
+      buttons: [{ text: 'Close' }],
+    });
   };
 
   const deleteNotification = (id: string) => {
@@ -197,16 +221,16 @@ export default function NotificationsScreen() {
   };
 
   const clearAllNotifications = () => {
-    Alert.alert(
-      'Delete All Notifications',
-      'Are you sure you want to delete all notifications? This action cannot be undone.',
-      [
+    showAppAlert({
+      title: 'Delete All Notifications',
+      message: 'Are you sure you want to delete all notifications? This action cannot be undone.',
+      buttons: [
         {
-          text: 'Cancel',
+          text: 'Close',
           style: 'cancel',
         },
         {
-          text: 'Delete All',
+          text: 'Delete',
           style: 'destructive',
           onPress: () => {
             if (Platform.OS === 'ios') {
@@ -217,10 +241,9 @@ export default function NotificationsScreen() {
             setNotifications([]);
           },
         },
-      ]
-    );
+      ],
+    });
   };
-
 
   // Handle swipe with better haptic timing
   const handleSwipeStart = () => {
@@ -233,19 +256,37 @@ export default function NotificationsScreen() {
     const swipeActions: SwipeAction[] = [
       {
         icon: 'flag',
-        onPress: () => reportNotification(item.id),
-        confirmTitle: 'Report Notification',
-        confirmMessage: 'Are you sure you want to report this notification?',
-        confirmButtonText: 'Report',
+        onPress: () =>
+          showAppAlert({
+            title: 'Report Notification',
+            message: 'Are you sure you want to report this notification?',
+            buttons: [
+              { text: 'Close', style: 'cancel' },
+              {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: () => reportNotification(item.id),
+              },
+            ],
+          }),
         isDestructive: true,
       },
       {
         icon: 'trash-outline',
-        onPress: () => deleteNotification(item.id),
-        confirmTitle: 'Delete Notification',
-        confirmMessage:
-          'Are you sure you want to delete this notification? This action cannot be undone.',
-        confirmButtonText: 'Delete',
+        onPress: () =>
+          showAppAlert({
+            title: 'Delete Notification',
+            message:
+              'Are you sure you want to delete this notification? This action cannot be undone.',
+            buttons: [
+              { text: 'Close', style: 'cancel' },
+              {
+                text: 'Delete',
+                style: 'destructive',
+                onPress: () => deleteNotification(item.id),
+              },
+            ],
+          }),
         isDestructive: true,
       },
     ];
@@ -263,12 +304,7 @@ export default function NotificationsScreen() {
         onSwipeStart={handleSwipeStart}
         onSwipeOpen={() => closeOtherSwipeables(item.id)}
         getAvatarColor={getNotificationAvatarColor}
-        style={[
-          styles.notificationCard,
-          {
-            backgroundColor: isDarkMode() ? 'rgba(37, 37, 41, 0.9)' : '#FFFFFF',
-          },
-        ]}
+        style={[styles.notificationCard, listCardDynamicStyle(isDarkMode())]}
       />
     );
   };
@@ -310,7 +346,7 @@ export default function NotificationsScreen() {
                   keyExtractor={item => item.id}
                   contentContainerStyle={[
                     styles.listContent,
-                    { paddingHorizontal: 0, paddingBottom: 100 },
+                    { paddingHorizontal: 0, paddingBottom: LIST_BOTTOM_PADDING },
                   ]}
                   showsVerticalScrollIndicator={false}
                   scrollEnabled={false} // Disable FlatList scroll since ScrollView handles it
@@ -318,7 +354,11 @@ export default function NotificationsScreen() {
                   maxToRenderPerBatch={10}
                   windowSize={10}
                   removeClippedSubviews={true}
-                  getItemLayout={(data, index) => ({ length: 78, offset: 78 * index, index })}
+                  getItemLayout={(data, index) => ({
+                    length: NOTIFICATION_ROW_HEIGHT,
+                    offset: NOTIFICATION_ROW_HEIGHT * index,
+                    index,
+                  })}
                   extraData={activeFilter}
                   onScrollBeginDrag={() => closeAllSwipeables()}
                 />
@@ -338,7 +378,7 @@ export default function NotificationsScreen() {
                   <>
                     <Ionicons
                       name="search-outline"
-                      size={60}
+                      size={EMPTY_ICON_SIZE}
                       color={isDarkMode() ? '#555' : '#ccc'}
                     />
                     <ThemedText type="headline" style={styles.emptyText}>
@@ -352,7 +392,7 @@ export default function NotificationsScreen() {
                   <>
                     <Ionicons
                       name="notifications-off-outline"
-                      size={60}
+                      size={EMPTY_ICON_SIZE}
                       color={isDarkMode() ? '#555' : '#ccc'}
                     />
                     <ThemedText type="headline" style={styles.emptyText}>
@@ -366,7 +406,7 @@ export default function NotificationsScreen() {
                   <>
                     <Ionicons
                       name="notifications-off-outline"
-                      size={60}
+                      size={EMPTY_ICON_SIZE}
                       color={isDarkMode() ? '#555' : '#ccc'}
                     />
                     <ThemedText type="headline" style={styles.emptyText}>
@@ -383,26 +423,125 @@ export default function NotificationsScreen() {
 
           {/* Wrap with Modal to match booking sheet presentation/position */}
           <Modal
-            visible={!!activeOrderSheet}
+            visible={!!activeNotification}
             transparent
             animationType="fade"
             presentationStyle="overFullScreen"
             statusBarTranslucent
-            onRequestClose={() => setActiveOrderSheet(null)}
+            onRequestClose={() => setActiveNotification(null)}
           >
-            {activeOrderSheet ? (
-              <OrderSheet
-                key={activeOrderSheet.instanceId}
-                order={activeOrderSheet.order}
-                onClose={() => setActiveOrderSheet(null)}
-                instanceId={activeOrderSheet.instanceId}
-                title=""
-                showStatus={false}
-                showActions={false}
-                summaryContentMode="message"
-              />
-            ) : null}
+            <Pressable style={styles.alertBackdrop} onPress={() => setActiveNotification(null)}>
+              <Pressable style={styles.alertCard}>
+                <GlassPanel
+                  intensity={isDarkMode() ? 22 : 32}
+                  tint={isDarkMode() ? 'dark' : 'light'}
+                  style={[
+                    styles.alertGlass,
+                    {
+                      backgroundColor: isDarkMode()
+                        ? Platform.OS === 'android' ? 'rgba(38, 38, 40, 0.97)' : 'rgba(44, 44, 46, 0.82)'
+                        : Platform.OS === 'android' ? 'rgba(248, 248, 250, 0.98)' : 'rgba(246, 246, 248, 0.88)',
+                      borderColor: isDarkMode()
+                        ? 'rgba(255,255,255,0.16)'
+                        : 'rgba(255,255,255,0.82)',
+                    },
+                  ]}
+                >
+                  <View style={styles.alertContent}>
+                    <View style={styles.notifProviderRow}>
+                      <View
+                        style={[
+                          styles.notifAvatar,
+                          { backgroundColor: activeNotification?.avatarImage ? 'transparent' : getNotificationAvatarColor(activeNotification?.avatar ?? '') },
+                        ]}
+                      >
+                        {activeNotification?.avatarImage ? (
+                          <Image
+                            source={{ uri: activeNotification.avatarImage }}
+                            style={styles.notifAvatarImg}
+                            resizeMode="cover"
+                          />
+                        ) : (
+                          <ThemedText allowFontScaling={false} style={styles.notifAvatarText}>
+                            {activeNotification?.avatar}
+                          </ThemedText>
+                        )}
+                      </View>
+                      <ThemedText allowFontScaling={false} style={styles.alertTitle}>
+                        {activeNotification?.name}
+                      </ThemedText>
+                    </View>
+                    <ThemedText
+                      allowFontScaling={false}
+                      style={[
+                        styles.alertMessage,
+                        { color: isDarkMode() ? 'rgba(235,235,245,0.78)' : '#2F2F36' },
+                      ]}
+                    >
+                      {activeNotification?.message}
+                    </ThemedText>
+                  </View>
+                  <View style={styles.alertButtonContainer}>
+                    <TouchableOpacity
+                      style={[
+                        styles.alertButton,
+                        {
+                          backgroundColor: isDarkMode()
+                            ? 'rgba(120,120,128,0.28)'
+                            : 'rgba(120,120,128,0.14)',
+                        },
+                      ]}
+                      activeOpacity={0.68}
+                      onPress={() => setActiveNotification(null)}
+                    >
+                      <ThemedText
+                        allowFontScaling={false}
+                        style={[styles.alertButtonText, styles.alertButtonCancel]}
+                      >
+                        Close
+                      </ThemedText>
+                    </TouchableOpacity>
+                    <TouchableOpacity
+                      style={[
+                        styles.alertButton,
+                        {
+                          backgroundColor: isDarkMode()
+                            ? 'rgba(255,69,58,0.22)'
+                            : 'rgba(255,59,48,0.12)',
+                        },
+                      ]}
+                      activeOpacity={0.68}
+                      onPress={() => {
+                        const id = activeNotification!.id;
+                        setActiveNotification(null);
+                        showAppAlert({
+                          title: 'Delete Notification',
+                          message:
+                            'Are you sure you want to delete this notification? This action cannot be undone.',
+                          buttons: [
+                            { text: 'Close', style: 'cancel' },
+                            {
+                              text: 'Delete',
+                              style: 'destructive',
+                              onPress: () => deleteNotification(id),
+                            },
+                          ],
+                        });
+                      }}
+                    >
+                      <ThemedText
+                        allowFontScaling={false}
+                        style={[styles.alertButtonText, styles.alertButtonDestructive]}
+                      >
+                        Delete
+                      </ThemedText>
+                    </TouchableOpacity>
+                  </View>
+                </GlassPanel>
+              </Pressable>
+            </Pressable>
           </Modal>
+
         </ThemedView>
       </IOSScreenWrapper>
     </GestureHandlerRootView>
@@ -417,46 +556,136 @@ const styles = StyleSheet.create({
     paddingHorizontal: 0,
   },
   titleSection: {
-    paddingHorizontal: 16,
+    paddingHorizontal: SCREEN_HORIZONTAL_PADDING,
     paddingTop: 0,
-    paddingBottom: 8,
+    paddingBottom: TITLE_BOTTOM_PADDING,
   },
   searchFilterContainer: {
     paddingHorizontal: 0,
-    paddingTop: 8,
-    marginTop: 4,
+    paddingTop: SEARCH_TOP_PADDING,
+    marginTop: SEARCH_TOP_MARGIN,
     overflow: 'hidden',
   },
   pageTitle: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
+    lineHeight: responsiveLineHeight(24),
+    fontFamily: Fonts.bold,
     textAlign: 'left',
   },
   listContent: {
-    paddingBottom: 32, // Increased bottom padding for better scrolling
+    paddingBottom: responsiveSize(32, 26, 40),
   },
   notificationCard: {
-    borderRadius: 18,
-    marginHorizontal: 16,
-    marginBottom: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    borderRadius: CARD_RADIUS,
+    marginHorizontal: SCREEN_HORIZONTAL_PADDING,
+    marginBottom: CARD_BOTTOM_GAP,
+    ...listCardBase,
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'flex-start',
     alignItems: 'center',
-    paddingHorizontal: 32,
-    paddingTop: 80,
+    paddingHorizontal: EMPTY_HORIZONTAL_PADDING,
+    paddingTop: EMPTY_TOP_PADDING,
   },
   emptyText: {
-    marginTop: 12,
+    marginTop: EMPTY_TITLE_TOP_MARGIN,
+    fontSize: responsiveFontSize(17),
+    lineHeight: responsiveLineHeight(17),
   },
   emptySubText: {
     textAlign: 'center',
-    marginTop: 6,
+    marginTop: EMPTY_TEXT_TOP_MARGIN,
     color: '#8E8E93',
+    fontSize: responsiveFontSize(13),
+    lineHeight: responsiveLineHeight(13),
+  },
+  notifProviderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: responsiveSize(8, 7, 10),
+    marginBottom: responsiveSize(2, 1, 4),
+  },
+  notifAvatar: {
+    width: responsiveSize(30, 26, 36),
+    height: responsiveSize(30, 26, 36),
+    borderRadius: responsiveSize(15, 13, 18),
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  notifAvatarImg: {
+    width: responsiveSize(30, 26, 36),
+    height: responsiveSize(30, 26, 36),
+    borderRadius: responsiveSize(15, 13, 18),
+  },
+  notifAvatarText: {
+    fontSize: responsiveFontSize(11),
+    fontFamily: Fonts.bold,
+    color: '#FFFFFF',
+  },
+  alertBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.26)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: responsiveSize(16, 14, 20),
+  },
+  alertCard: {
+    width: Math.min(Dimensions.get('window').width - responsiveSize(48, 40, 60), responsiveSize(320, 304, 340)),
+    borderRadius: responsiveSize(22, 20, 26),
+    overflow: 'hidden',
+  },
+  alertGlass: {
+    overflow: 'hidden',
+    borderRadius: responsiveSize(22, 20, 26),
+    borderWidth: StyleSheet.hairlineWidth * 1.5,
+  },
+  alertContent: {
+    paddingHorizontal: responsiveSize(18, 16, 20),
+    paddingTop: responsiveSize(18, 16, 20),
+    paddingBottom: responsiveSize(14, 12, 17),
+  },
+  alertTitle: {
+    fontSize: responsiveFontSize(17),
+    lineHeight: responsiveLineHeight(17),
+    fontFamily: Fonts.bold,
+    flexShrink: 1,
+  },
+  alertMessage: {
+    marginTop: responsiveSize(6, 4, 8),
+    fontSize: responsiveFontSize(15),
+    lineHeight: responsiveLineHeight(15),
+    fontFamily: Fonts.regular,
+    opacity: 0.92,
+  },
+  alertButtonContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: responsiveSize(14, 12, 18),
+    paddingBottom: responsiveSize(14, 12, 18),
+    paddingTop: responsiveSize(4, 3, 6),
+    gap: responsiveSize(9, 8, 11),
+  },
+  alertButton: {
+    flex: 1,
+    height: responsiveSize(44, 42, 48),
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 100,
+    paddingHorizontal: responsiveSize(10, 8, 13),
+  },
+  alertButtonText: {
+    fontSize: responsiveFontSize(17),
+    lineHeight: responsiveLineHeight(17),
+    fontFamily: Fonts.bold,
+    color: '#007AFF',
+    textAlign: 'center',
+    letterSpacing: -0.3,
+  },
+  alertButtonCancel: {
+    color: '#007AFF',
+  },
+  alertButtonDestructive: {
+    color: '#FF3B30',
   },
 });

@@ -8,7 +8,6 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Modal,
-  Alert,
 } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,8 +15,9 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useAppAlert } from '@/context/AppAlertContext';
 import { Colors } from '@/constants/Colors';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import { useAuth } from '@/context/AuthContext';
 import { countries } from '@/countries-fixed';
 import { CustomHeader } from '@/components/CustomHeader';
@@ -28,6 +28,7 @@ import { WallpaperPattern } from '@/components/WallpaperPattern';
 export default function SignUpScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const { showAlert } = useAppAlert();
   const insets = useSafeAreaInsets();
   const { signUp } = useAuth();
 
@@ -126,7 +127,7 @@ export default function SignUpScreen() {
     }
 
     if (trimmedPassword !== trimmedConfirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      showAlert({ title: 'Error', message: 'Passwords do not match', buttons: [{ text: 'OK' }] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       return;
     }
@@ -157,29 +158,34 @@ export default function SignUpScreen() {
         const lower = message.toLowerCase();
 
         if (lower.includes('already registered') || lower.includes('already exists')) {
-          Alert.alert(
-            'Account exists',
-            'It looks like this email already has an account. Try signing in instead.'
-          );
+          showAlert({
+            title: 'Account exists',
+            message: 'It looks like this email already has an account. Try signing in instead.',
+            buttons: [{ text: 'OK' }],
+          });
         } else if (lower.includes('network')) {
-          Alert.alert('Network issue', 'Please check your internet connection and try again.');
+          showAlert({ title: 'Network issue', message: 'Please check your internet connection and try again.', buttons: [{ text: 'OK' }] });
         } else {
-          Alert.alert('Sign up failed', message);
+          showAlert({ title: 'Sign up failed', message, buttons: [{ text: 'OK' }] });
         }
         return;
       }
 
-      Alert.alert('Verify your email', `Enter the 6-digit code we just sent to ${trimmedEmail}.`, [
-        {
-          text: 'OK',
-          onPress: () => {
-            router.replace('/auth');
+      showAlert({
+        title: 'Verify your email',
+        message: `Enter the 6-digit code we just sent to ${trimmedEmail}.`,
+        buttons: [
+          {
+            text: 'OK',
+            onPress: () => {
+              router.replace('/auth');
+            },
           },
-        },
-      ]);
+        ],
+      });
     } catch (error: any) {
       const message = error?.message ?? 'Something went wrong. Please try again.';
-      Alert.alert('Authentication error', message);
+      showAlert({ title: 'Authentication error', message, buttons: [{ text: 'OK' }] });
     } finally {
       setLoading(false);
     }
@@ -931,7 +937,7 @@ export default function SignUpScreen() {
                     }}
                   >
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                      <Text style={{ fontSize: 24 }}>{country.flag}</Text>
+                      <Text style={{ fontSize: responsiveFontSize(24) }}>{country.flag}</Text>
                       <Text style={[styles.pickerModalOptionText, { color: themeTextColor }]}>
                         {country.name}
                       </Text>
@@ -1027,7 +1033,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   pageTitle: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     textAlign: 'left',
   },
   header: {
@@ -1042,7 +1048,7 @@ const styles = StyleSheet.create({
     padding: 4,
   },
   headerTitle: {
-    fontSize: 17,
+    fontSize: responsiveFontSize(17),
     fontFamily: Fonts.bold,
     flex: 1,
     textAlign: 'center',
@@ -1071,18 +1077,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   label: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.medium,
   },
   errorText: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     fontFamily: Fonts.medium,
     color: '#FF3B30',
   },
   input: {
     height: 50,
     paddingHorizontal: 16,
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.regular,
     borderRadius: 8,
   },
@@ -1095,7 +1101,7 @@ const styles = StyleSheet.create({
   passwordInput: {
     flex: 1,
     paddingHorizontal: 16,
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.regular,
   },
   eyeIcon: {
@@ -1115,7 +1121,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   userTypeButtonText: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     fontFamily: Fonts.medium,
   },
   pickerField: {
@@ -1128,7 +1134,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   pickerValue: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.regular,
   },
   pickerValueRow: {
@@ -1137,7 +1143,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   pickerFlag: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
   },
   createButton: {
     height: 50,
@@ -1150,7 +1156,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   createButtonText: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
   },
   pickerModalBackdrop: {
@@ -1169,7 +1175,7 @@ const styles = StyleSheet.create({
     maxHeight: '80%',
   },
   pickerModalTitle: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontFamily: Fonts.bold,
     marginBottom: 16,
     textAlign: 'center',
@@ -1184,7 +1190,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   pickerModalOptionText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.regular,
   },
 });

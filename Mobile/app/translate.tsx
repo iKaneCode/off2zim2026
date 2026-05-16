@@ -8,7 +8,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
 import { WallpaperPattern } from '@/components/WallpaperPattern';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
@@ -270,7 +270,7 @@ export default function TranslateScreen() {
                             }}
                           >
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                              <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: accentSurface, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 }}>
+                              <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: accentSurface, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 0 }}>
                                 <Ionicons name="language" size={14} color={isDark ? '#FFFFFF' : '#1C1C1E'} />
                               </View>
                               <ThemedText style={[styles.guestSubLabel, sourceLang === lang && { fontFamily: Fonts.bold }]}>
@@ -343,7 +343,7 @@ export default function TranslateScreen() {
                             }}
                           >
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                              <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: accentSurface, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 2 }}>
+                              <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: accentSurface, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 0 }}>
                                 <Ionicons name="language" size={14} color={isDark ? '#FFFFFF' : '#1C1C1E'} />
                               </View>
                               <ThemedText style={[styles.guestSubLabel, targetLang === lang && { fontFamily: Fonts.bold }]}>
@@ -375,7 +375,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderBottomWidth: 0,
   },
-  pageTitle: { fontSize: 24, textAlign: 'left' },
+  pageTitle: { fontSize: responsiveFontSize(24), textAlign: 'left' },
   content: { flex: 1 },
   contentContainer: {
     flexGrow: 1,
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 0,
   },
   section: { marginTop: 12 },
   langRow: {
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
     minHeight: 40,
   },
   langText: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     fontFamily: Fonts.bold,
     flexShrink: 1,
     letterSpacing: 0.2,
@@ -417,7 +417,7 @@ const styles = StyleSheet.create({
   detectedLabel: {
     marginLeft: 8,
     opacity: 0.7,
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
   },
   inputContainer: {
     borderRadius: 18,
@@ -426,7 +426,7 @@ const styles = StyleSheet.create({
     minHeight: 120,
   },
   input: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     lineHeight: 22,
     padding: 0,
   },
@@ -470,7 +470,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
-    elevation: 2,
+    elevation: 0,
   },
   translateIconBubble: {
     width: 28,
@@ -483,7 +483,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
-    elevation: 2,
+    elevation: 0,
   },
   iconBubbleSmall: {
     width: 22,
@@ -496,10 +496,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
-    elevation: 2,
+    elevation: 0,
   },
   detectText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontFamily: Fonts.bold,
   },
   actionRow: {
@@ -516,7 +516,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   translateButtonText: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
   },
@@ -547,7 +547,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   guestDropdownTitle: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
   },
   guestDropdownCloseButton: {
@@ -573,7 +573,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   guestSubLabel: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.medium,
   },
 });

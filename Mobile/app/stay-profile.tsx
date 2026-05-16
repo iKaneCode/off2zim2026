@@ -13,7 +13,6 @@ import {
   Switch,
   Linking,
   Platform,
-  Alert,
 } from 'react-native';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ThemedView } from '@/components/ThemedView';
@@ -21,6 +20,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { CustomHeader } from '@/components/CustomHeader';
 import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useAppAlert } from '@/context/AppAlertContext';
 import { FontAwesome6, Ionicons } from '@expo/vector-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
@@ -41,7 +41,7 @@ import {
   WebSlideTransition,
 } from '@/components';
 import { WallpaperPattern } from '@/components/WallpaperPattern';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import { getAmenityIcon } from '@/utils/amenityUtils';
 import { staysService } from '@/services/database';
 import { useAuth } from '@/context/AuthContext';
@@ -84,6 +84,7 @@ export default function StayProfileScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const { isGuest } = useAuth();
+  const { showAlert } = useAppAlert();
 
   const cardBackground = isDark ? '#1C1C1E' : '#FFFFFF';
   const cardBorderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
@@ -423,18 +424,18 @@ export default function StayProfileScreen() {
 
   const handleCallStay = useCallback(() => {
     if (!stay?.phone) {
-      Alert.alert('No Phone Number', 'Phone number is not available for this property.');
+      showAlert({ title: 'No Phone Number', message: 'Phone number is not available for this property.', buttons: [{ text: 'OK' }] });
       return;
     }
     const phoneNumber = Platform.OS === 'ios' ? `telprompt:${stay.phone}` : `tel:${stay.phone}`;
     Linking.openURL(phoneNumber).catch(() => {
-      Alert.alert('Error', 'Unable to make phone call');
+      showAlert({ title: 'Error', message: 'Unable to make phone call', buttons: [{ text: 'OK' }] });
     });
   }, [stay?.phone]);
 
   const handleDirections = useCallback(() => {
     if (!stay?.fullLocation) {
-      Alert.alert('No Location', 'Location details are not available for this property.');
+      showAlert({ title: 'No Location', message: 'Location details are not available for this property.', buttons: [{ text: 'OK' }] });
       return;
     }
     const address = encodeURIComponent(stay.fullLocation);
@@ -465,7 +466,7 @@ export default function StayProfileScreen() {
       }),
       isRead: true,
       avatar: displayAvatar,
-      avatarImage: stay.providerLogo,
+      avatarImage: stay.providerLogo || `https://api.dicebear.com/8.x/shapes/png?seed=${encodeURIComponent(stay.name || 'Property')}&size=128&backgroundColor=FF4757`,
       avatarBgColor: isDark ? 'rgba(255, 71, 87, 0.18)' : 'rgba(255, 71, 87, 0.08)',
       avatarBorderColor: '#FF4757',
       status: 'received' as const,
@@ -844,7 +845,7 @@ export default function StayProfileScreen() {
                 }}
               >
                 {/* Wallpaper Pattern Background */}
-                <View style={[StyleSheet.absoluteFillObject, { height: 2000 }]}>
+                <View style={[StyleSheet.absoluteFillObject, { height: 2000, borderTopLeftRadius: 32, borderTopRightRadius: 32, overflow: 'hidden' }]}>
                   <WallpaperPattern offsetTop={0} unlimited={true} height={2000} />
                 </View>
                 {/* Title and rating - standalone section */}
@@ -897,7 +898,7 @@ export default function StayProfileScreen() {
                       shadowOffset: { width: 0, height: 2 },
                       shadowOpacity: 0.1,
                       shadowRadius: 8,
-                      elevation: 4,
+                      elevation: 0,
                       overflow: 'hidden',
                     },
                   ]}
@@ -961,7 +962,7 @@ export default function StayProfileScreen() {
                         shadowOffset: { width: 0, height: 2 },
                         shadowOpacity: 0.1,
                         shadowRadius: 8,
-                        elevation: 4,
+                        elevation: 0,
                         overflow: 'hidden',
                       },
                     ]}
@@ -1110,7 +1111,7 @@ export default function StayProfileScreen() {
                               shadowOffset: { width: 0, height: 1 },
                               shadowOpacity: 0.1,
                               shadowRadius: 2,
-                              elevation: 2,
+                              elevation: 0,
                               marginRight: 8,
                             }}
                           >
@@ -1149,7 +1150,7 @@ export default function StayProfileScreen() {
                               shadowOffset: { width: 0, height: 1 },
                               shadowOpacity: 0.1,
                               shadowRadius: 2,
-                              elevation: 2,
+                              elevation: 0,
                               marginRight: 8,
                             }}
                           >
@@ -1193,7 +1194,7 @@ export default function StayProfileScreen() {
                             shadowOffset: { width: 0, height: 1 },
                             shadowOpacity: 0.1,
                             shadowRadius: 2,
-                            elevation: 2,
+                            elevation: 0,
                             marginRight: 8,
                           }}
                         >
@@ -1485,7 +1486,7 @@ export default function StayProfileScreen() {
                           shadowOffset: { width: 0, height: 1 },
                           shadowOpacity: 0.1,
                           shadowRadius: 2,
-                          elevation: 2,
+                          elevation: 0,
                           marginRight: 8,
                         }}
                       >
@@ -1603,7 +1604,7 @@ export default function StayProfileScreen() {
                                         <ThemedText
                                           style={[
                                             styles.guestSubLabel,
-                                            { fontSize: 14, opacity: 0.7, marginBottom: 8 },
+                                            { fontSize: responsiveFontSize(14), opacity: 0.7, marginBottom: 8 },
                                           ]}
                                         >
                                           {roomType.description}
@@ -2393,7 +2394,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   contactActionText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '600',
   },
   heroActionButtons: {
@@ -2422,7 +2423,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: -2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 0,
   },
   titleCard: {
     borderRadius: 28,
@@ -2433,7 +2434,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 16 },
     shadowOpacity: 0.16,
     shadowRadius: 26,
-    elevation: 10,
+    elevation: 0,
   },
   titleActionBar: {
     flexDirection: 'row',
@@ -2448,7 +2449,7 @@ const styles = StyleSheet.create({
     gap: 18,
   },
   stayTitle: {
-    fontSize: 22,
+    fontSize: responsiveFontSize(22),
     fontFamily: Fonts.bold,
     lineHeight: 28,
   },
@@ -2457,7 +2458,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   titleSubtitle: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     fontFamily: Fonts.medium,
     letterSpacing: 0.3,
   },
@@ -2472,7 +2473,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   profileInitial: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontFamily: Fonts.bold,
     color: '#FFFFFF',
   },
@@ -2502,7 +2503,7 @@ const styles = StyleSheet.create({
   },
   contactPillText: {
     fontFamily: Fonts.bold,
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     lineHeight: 20,
     letterSpacing: 0.2,
   },
@@ -2517,7 +2518,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   locationPillText: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     fontFamily: Fonts.medium,
     flexShrink: 1,
     letterSpacing: 0.2,
@@ -2531,7 +2532,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   directionsPillText: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     lineHeight: 20,
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
@@ -2546,7 +2547,7 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
   },
   ratingPillText: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     lineHeight: 20,
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
@@ -2579,7 +2580,7 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   titleAmenityText: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     fontWeight: '500',
   },
   divider: {
@@ -2650,7 +2651,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   galleryOverlayText: {
-    fontSize: 28,
+    fontSize: responsiveFontSize(28),
     lineHeight: 34,
     fontWeight: '700',
     color: '#FFFFFF',
@@ -2660,7 +2661,7 @@ const styles = StyleSheet.create({
     paddingTop: 2,
   },
   locationText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     opacity: 0.7,
   },
   ratingRow: {
@@ -2669,11 +2670,11 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   ratingText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '600',
   },
   reviewsText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     opacity: 0.7,
   },
   detailsSection: {
@@ -2689,7 +2690,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   detailText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontWeight: '500',
   },
   descriptionSection: {
@@ -2697,7 +2698,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
   },
   sectionTitle: {
-    fontSize: 22,
+    fontSize: responsiveFontSize(22),
     lineHeight: 28,
     fontFamily: Fonts.bold,
     marginBottom: 12,
@@ -2706,12 +2707,12 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   description: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     lineHeight: 24,
     opacity: 0.8,
   },
   showMoreText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.bold,
     color: '#007AFF',
     marginTop: 8,
@@ -2729,7 +2730,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   amenityText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     flex: 1,
   },
   hostSection: {
@@ -2750,12 +2751,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   hostName: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
     marginBottom: 4,
   },
   hostDetails: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     opacity: 0.7,
     marginBottom: 8,
   },
@@ -2763,7 +2764,7 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   hostStat: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     opacity: 0.8,
   },
   bottomSpacing: {
@@ -2797,22 +2798,22 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   fromText: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     fontWeight: '400',
     opacity: 0.6,
     marginBottom: 1,
   },
   priceText: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontFamily: Fonts.bold,
   },
   priceCurrency: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     fontWeight: '600',
     marginRight: 2,
   },
   priceUnit: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontWeight: '400',
     opacity: 0.7,
     marginLeft: 2,
@@ -2844,12 +2845,12 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   sameAsLabel: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontFamily: Fonts.medium,
     letterSpacing: 0.2,
   },
   sameAsHelperText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     lineHeight: 20,
     fontFamily: Fonts.regular,
   },
@@ -2868,7 +2869,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 8,
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.regular,
   },
   labelErrorContainer: {
@@ -2878,7 +2879,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   inputRequired: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     fontFamily: Fonts.bold,
     color: '#FF3B30',
   },
@@ -2890,7 +2891,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   dateOutsideLabel: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
     marginBottom: 6,
@@ -2903,13 +2904,13 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   dateLabel: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     fontWeight: '600',
     opacity: 0.7,
     marginBottom: 4,
   },
   dateValue: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '600',
   },
   guestContainer: {
@@ -2927,13 +2928,13 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   guestLabel: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
     marginBottom: 6,
   },
   guestValue: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '600',
   },
   guestDropdown: {
@@ -3005,7 +3006,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 0,
     gap: 12,
     width: '100%',
     maxWidth: 400,
@@ -3023,11 +3024,11 @@ const styles = StyleSheet.create({
     paddingVertical: 0,
   },
   dropdownLabel: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '600',
   },
   dropdownSubLabel: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     opacity: 0.6,
     marginTop: 2,
   },
@@ -3046,7 +3047,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#4CAF50',
   },
   availabilityText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontWeight: '700',
     color: '#4CAF50',
   },
@@ -3060,7 +3061,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   benefitText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     flex: 1,
   },
   totalContainer: {
@@ -3090,7 +3091,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   paymentButtonText: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
@@ -3104,11 +3105,11 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   totalLabel: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.bold,
   },
   totalAmount: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     fontFamily: Fonts.bold,
     letterSpacing: 0.5,
     lineHeight: 30,
@@ -3120,11 +3121,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   breakdownLabel: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     color: '#666',
   },
   breakdownAmount: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '500',
   },
   totalSeparator: {
@@ -3160,7 +3161,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   totalMainLabel: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
     letterSpacing: 0.5,
     flex: 1,
@@ -3168,7 +3169,7 @@ const styles = StyleSheet.create({
     lineHeight: 22,
   },
   totalSubLabel: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     color: 'rgba(255, 255, 255, 0.8)',
     marginTop: 2,
     fontWeight: '500',
@@ -3181,11 +3182,11 @@ const styles = StyleSheet.create({
   },
   totalNote: {
     marginTop: 4,
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     fontFamily: Fonts.regular,
   },
   totalCurrency: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     color: '#666666',
     fontWeight: '600',
     letterSpacing: 1,
@@ -3205,15 +3206,15 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(0,0,0,0.1)',
   },
   modalTitle: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
   },
   modalCancelText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     color: '#FF3B30',
   },
   modalDoneText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '600',
     color: '#FF3B30',
   },
@@ -3225,7 +3226,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   monthTitle: {
-    fontSize: 26,
+    fontSize: responsiveFontSize(26),
     fontFamily: Fonts.bold,
     marginBottom: 20,
     lineHeight: 32,
@@ -3248,7 +3249,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FF3B30',
   },
   dateButtonText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '500',
   },
   selectedDateButtonText: {
@@ -3304,7 +3305,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   guestDropdownTitle: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontFamily: Fonts.bold,
   },
   guestDropdownCloseButton: {
@@ -3321,7 +3322,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
-    elevation: 5,
+    elevation: 0,
     // Removed padding that was causing centering issues
   },
   guestControls: {
@@ -3342,11 +3343,11 @@ const styles = StyleSheet.create({
   },
   guestButtonText: {
     color: '#FFFFFF',
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontWeight: '600',
   },
   guestCount: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontWeight: '600',
     minWidth: 24,
     textAlign: 'center',
@@ -3368,7 +3369,7 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   guestSubLabel: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '600',
   },
   // Additional calendar styles
@@ -3384,7 +3385,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   weekHeaderText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontWeight: '600',
     width: (width - 40) / 7,
     textAlign: 'center',
@@ -3402,11 +3403,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   selectedDateLabel: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '500',
   },
   selectedDateValue: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '600',
   },
   // Room Picker Styles
@@ -3431,12 +3432,12 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   roomName: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '600',
     flex: 1,
   },
   roomDescription: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     opacity: 0.7,
     marginBottom: 12,
   },
@@ -3465,17 +3466,17 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 1.5,
-    elevation: 1,
+    elevation: 0,
   },
   infoPillText: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     lineHeight: 18,
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
     flexShrink: 1,
   },
   roomCapacity: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     opacity: 0.6,
   },
   roomPriceContainer: {
@@ -3484,22 +3485,22 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   roomPrice: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '600',
   },
   roomsNeeded: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     fontWeight: '400',
     opacity: 0.8,
   },
   roomsNeededText: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     fontWeight: '600',
     opacity: 0.7,
     marginTop: 8,
   },
   totalRoomPrice: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontWeight: '700',
     color: '#FF3B30',
     marginTop: 2,
@@ -3509,7 +3510,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   noRoomsText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     textAlign: 'center',
     opacity: 0.7,
   },
@@ -3535,7 +3536,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   itineraryMonthTitle: {
-    fontSize: 22,
+    fontSize: responsiveFontSize(22),
     fontWeight: '600',
   },
   itineraryWeekDaysHeader: {
@@ -3550,7 +3551,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   itineraryWeekDayText: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     fontWeight: '600',
     opacity: 0.5,
     textTransform: 'uppercase',
@@ -3613,25 +3614,25 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   itineraryDayText: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontWeight: '400',
   },
   itinerarySelectedDayText: {
     fontWeight: '600',
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
   },
   itineraryTodayDayText: {
     fontWeight: '600',
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     color: '#FFFFFF',
   },
   itineraryBetweenDayText: {
     fontWeight: '500',
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
   },
   itineraryPastDayText: {
     opacity: 0.3,
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
   },
   providerLocationPill: {
     flexDirection: 'row',
@@ -3643,7 +3644,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   providerLocationPillText: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     lineHeight: 20,
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,

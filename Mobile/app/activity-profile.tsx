@@ -31,7 +31,7 @@ import {
   WebSlideTransition,
 } from '@/components';
 import { WallpaperPattern } from '@/components/WallpaperPattern';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 
 const { width } = Dimensions.get('window');
 const HEADER_HEIGHT = 340;
@@ -347,6 +347,7 @@ export default function ActivityProfileScreen() {
       }),
       isRead: true,
       avatar: activity.name.charAt(0).toUpperCase(),
+      avatarImage: `https://api.dicebear.com/8.x/shapes/png?seed=${encodeURIComponent(activity.name)}&size=128&backgroundColor=FF4757`,
       avatarBgColor: isDark ? 'rgba(255, 71, 87, 0.18)' : 'rgba(255, 71, 87, 0.08)',
       avatarBorderColor: '#FF4757',
       status: 'received' as const,
@@ -606,7 +607,7 @@ export default function ActivityProfileScreen() {
                 }}
               >
                 {/* Wallpaper Pattern Background */}
-                <View style={[StyleSheet.absoluteFillObject, { height: 4000 }]}>
+                <View style={[StyleSheet.absoluteFillObject, { height: 4000, borderTopLeftRadius: 32, borderTopRightRadius: 32, overflow: 'hidden' }]}>
                   <WallpaperPattern offsetTop={0} unlimited={true} height={4000} />
                 </View>
 
@@ -664,7 +665,7 @@ export default function ActivityProfileScreen() {
                       shadowOffset: { width: 0, height: 2 },
                       shadowOpacity: 0.1,
                       shadowRadius: 8,
-                      elevation: 4,
+                      elevation: 0,
                       overflow: 'hidden',
                     },
                   ]}
@@ -727,7 +728,7 @@ export default function ActivityProfileScreen() {
                         shadowOffset: { width: 0, height: 2 },
                         shadowOpacity: 0.1,
                         shadowRadius: 8,
-                        elevation: 4,
+                        elevation: 0,
                         overflow: 'hidden',
                       },
                     ]}
@@ -827,7 +828,7 @@ export default function ActivityProfileScreen() {
                       shadowOffset: { width: 0, height: 2 },
                       shadowOpacity: 0.1,
                       shadowRadius: 8,
-                      elevation: 4,
+                      elevation: 0,
                       overflow: 'hidden',
                     },
                   ]}
@@ -852,7 +853,7 @@ export default function ActivityProfileScreen() {
                       shadowOffset: { width: 0, height: 2 },
                       shadowOpacity: 0.1,
                       shadowRadius: 8,
-                      elevation: 4,
+                      elevation: 0,
                       overflow: 'hidden',
                     },
                   ]}
@@ -916,7 +917,7 @@ export default function ActivityProfileScreen() {
                         shadowOffset: { width: 0, height: 2 },
                         shadowOpacity: 0.1,
                         shadowRadius: 8,
-                        elevation: 4,
+                        elevation: 0,
                         overflow: 'hidden',
                       },
                     ]}
@@ -1734,7 +1735,7 @@ export default function ActivityProfileScreen() {
                               <ThemedText
                                 style={[
                                   styles.guestSubLabel,
-                                  { fontSize: 14, opacity: 0.7, marginTop: 2 },
+                                  { fontSize: responsiveFontSize(14), opacity: 0.7, marginTop: 2 },
                                 ]}
                               >
                                 {pkg.description}
@@ -1742,7 +1743,7 @@ export default function ActivityProfileScreen() {
                               <ThemedText
                                 style={[
                                   styles.guestSubLabel,
-                                  { fontSize: 12, opacity: 0.6, marginTop: 2 },
+                                  { fontSize: responsiveFontSize(12), opacity: 0.6, marginTop: 2 },
                                 ]}
                               >
                                 {pkg.available} available • ${pkg.price}/person
@@ -1801,7 +1802,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 16 },
     shadowOpacity: 0.16,
     shadowRadius: 26,
-    elevation: 10,
+    elevation: 0,
   },
   titleActionBar: {
     flexDirection: 'row',
@@ -1838,7 +1839,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   profileInitial: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontFamily: Fonts.bold,
     color: '#FFFFFF',
   },
@@ -1847,7 +1848,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   stayTitle: {
-    fontSize: 22,
+    fontSize: responsiveFontSize(22),
     fontFamily: Fonts.bold,
     lineHeight: 28,
   },
@@ -1862,7 +1863,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   locationPillText: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     fontFamily: Fonts.medium,
     flexShrink: 1,
     letterSpacing: 0.2,
@@ -1876,7 +1877,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   statusPillText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
   },
@@ -1899,7 +1900,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   directionsPillText: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
   },
@@ -1914,11 +1915,11 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
   },
   ratingPillText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontFamily: Fonts.bold,
   },
   reviewsText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     opacity: 0.7,
   },
   titleCardFooter: {
@@ -1937,7 +1938,7 @@ const styles = StyleSheet.create({
   },
   contactPillText: {
     fontFamily: Fonts.bold,
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     letterSpacing: 0.3,
   },
   section: {
@@ -1969,7 +1970,7 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   titleAmenityText: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     fontWeight: '500',
   },
   sectionHeader: {
@@ -2018,7 +2019,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   galleryOverlayText: {
-    fontSize: 28,
+    fontSize: responsiveFontSize(28),
     lineHeight: 34,
     fontWeight: '700',
     color: '#FFFFFF',
@@ -2031,13 +2032,13 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   sectionTitle: {
-    fontSize: 22,
+    fontSize: responsiveFontSize(22),
     lineHeight: 28,
     fontFamily: Fonts.bold,
     marginBottom: 12,
   },
   description: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     lineHeight: 24,
     opacity: 0.8,
   },
@@ -2054,7 +2055,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   detailLabel: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     lineHeight: 20,
     fontFamily: Fonts.medium,
     opacity: 0.7,
@@ -2079,10 +2080,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
-    elevation: 2,
+    elevation: 0,
   },
   detailPillText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     lineHeight: 18,
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
@@ -2108,7 +2109,7 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   accessibilityPillText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     lineHeight: 18,
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
@@ -2128,24 +2129,24 @@ const styles = StyleSheet.create({
     borderRadius: 30,
   },
   hostInitial: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     fontFamily: Fonts.bold,
   },
   hostInfo: {
     flex: 1,
   },
   hostDetails: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     opacity: 0.7,
     marginBottom: 8,
   },
   hostName: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
     marginBottom: 4,
   },
   hostContact: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     opacity: 0.7,
   },
   bookingSection: {
@@ -2169,22 +2170,22 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   fromText: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     fontWeight: '400',
     opacity: 0.6,
     marginBottom: 1,
   },
   priceText: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontFamily: Fonts.bold,
   },
   priceCurrency: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     fontWeight: '600',
     marginRight: 2,
   },
   priceUnit: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontWeight: '400',
     opacity: 0.7,
     marginLeft: 2,
@@ -2193,7 +2194,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   dateOutsideLabel: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
     textAlign: 'left',
@@ -2205,7 +2206,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   inputRequired: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     fontFamily: Fonts.bold,
     color: '#FF3B30',
   },
@@ -2228,7 +2229,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   guestValue: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '600',
   },
   guestSection: {
@@ -2244,7 +2245,7 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   guestSubLabel: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '600',
   },
   guestContainer: {
@@ -2252,13 +2253,13 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   guestLabel: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
     marginBottom: 6,
   },
   guestCount: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
     minWidth: 24,
     textAlign: 'center',
@@ -2294,7 +2295,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#4CAF50',
   },
   availabilityText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontWeight: '500',
     color: '#4CAF50',
   },
@@ -2310,11 +2311,11 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   breakdownLabel: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     color: '#666',
   },
   breakdownAmount: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '500',
   },
   totalSeparator: {
@@ -2349,7 +2350,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   totalMainLabel: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
     letterSpacing: 0.5,
     flex: 1,
@@ -2363,14 +2364,14 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   totalAmount: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     fontFamily: Fonts.bold,
     letterSpacing: 0.5,
     lineHeight: 30,
   },
   totalNote: {
     marginTop: 4,
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     fontFamily: Fonts.regular,
   },
   paymentButtonContainer: {
@@ -2387,7 +2388,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   paymentButtonText: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
@@ -2397,7 +2398,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   dateValue: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '600',
   },
   timeSlotGrid: {
@@ -2418,7 +2419,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   timeSlotText: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     fontWeight: '600',
   },
   timeSlotTextSelected: {
@@ -2452,7 +2453,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 0,
     gap: 12,
     width: '100%',
     maxWidth: 400,
@@ -2466,7 +2467,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   guestDropdownTitle: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontFamily: Fonts.bold,
   },
   guestDropdownCloseButton: {
@@ -2483,7 +2484,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
-    elevation: 5,
+    elevation: 0,
     // Removed padding that was causing centering issues
   },
   // Itinerary Calendar Styles (matching stay-profile exactly)
@@ -2503,7 +2504,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   itineraryMonthTitle: {
-    fontSize: 22,
+    fontSize: responsiveFontSize(22),
     fontWeight: '600',
   },
   itineraryWeekDaysHeader: {
@@ -2518,7 +2519,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   itineraryWeekDayText: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     fontWeight: '600',
     opacity: 0.5,
     textTransform: 'uppercase',
@@ -2574,20 +2575,20 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   itineraryDayText: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontWeight: '400',
   },
   itinerarySelectedDayText: {
     fontWeight: '600',
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
   },
   itineraryTodayDayText: {
     fontWeight: '600',
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     color: '#FFFFFF',
   },
   itineraryPastDayText: {
     opacity: 0.3,
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
   },
 });

@@ -1,4 +1,5 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+﻿import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { responsiveFontSize } from '@/constants/Fonts';
 import {
   View,
   StyleSheet,
@@ -338,7 +339,7 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   searchFilterContainer: { paddingHorizontal: 0, paddingTop: 8, marginTop: 4, overflow: 'hidden' },
   titleSection: { paddingHorizontal: 20, paddingVertical: 8, borderBottomWidth: 0 },
-  pageTitle: { fontSize: 24, textAlign: 'left' },
+  pageTitle: { fontSize: responsiveFontSize(24), textAlign: 'left' },
   content: { flex: 1 },
   contentContainer: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 20, paddingBottom: 100 },
   listContent: { paddingHorizontal: 16, paddingBottom: 100 },
@@ -347,9 +348,9 @@ const styles = StyleSheet.create({
   destinationContent: { flex: 1, justifyContent: 'center', gap: 8 },
   destinationHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
   destinationTitleSection: { flex: 1, marginRight: 12 },
-  destinationName: { fontSize: 18, fontWeight: '700' },
+  destinationName: { fontSize: responsiveFontSize(18), fontWeight: '700' },
   countsRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
   countPill: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
   pillIcon: { marginRight: 4 },
-  pillText: { fontSize: 12, fontWeight: '700' },
+  pillText: { fontSize: responsiveFontSize(12), fontWeight: '700' },
 });

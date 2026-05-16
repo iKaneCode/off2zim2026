@@ -1,4 +1,5 @@
-import { useEffect } from 'react';
+﻿import { useEffect } from 'react';
+import { responsiveFontSize } from '@/constants/Fonts';
 import { StyleSheet } from 'react-native';
 import Animated, {
   useAnimatedStyle,
@@ -26,14 +27,14 @@ export function HelloWave() {
 
   return (
     <Animated.View style={animatedStyle}>
-      <ThemedText style={styles.text}>👋</ThemedText>
+      <ThemedText style={styles.text}>ðŸ‘‹</ThemedText>
     </Animated.View>
   );
 }
 
 const styles = StyleSheet.create({
   text: {
-    fontSize: 28,
+    fontSize: responsiveFontSize(28),
     lineHeight: 32,
     marginTop: -6,
   },

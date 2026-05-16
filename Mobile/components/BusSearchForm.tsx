@@ -10,7 +10,7 @@ import {
 import { Ionicons, FontAwesome6 } from '@expo/vector-icons';
 
 import { ThemedText } from './ThemedText';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 
 type TripType = 'oneWay' | 'return';
 
@@ -402,11 +402,11 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   label: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontFamily: Fonts.bold,
   },
   errorText: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     fontFamily: Fonts.bold,
     color: '#FF3B30',
   },
@@ -437,10 +437,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
-    elevation: 2,
+    elevation: 0,
   },
   valueText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.medium,
   },
   sectionHeaderLabel: {
@@ -465,11 +465,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.18,
     shadowRadius: 10,
-    elevation: 3,
+    elevation: 0,
   },
   tabText: {
     fontFamily: Fonts.medium,
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     letterSpacing: 0.2,
   },
   tabTextActive: {
@@ -498,7 +498,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   guestCount: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
     minWidth: 24,
     textAlign: 'center',
@@ -513,7 +513,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   searchButtonText: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
     letterSpacing: 0.8,
     textTransform: 'uppercase',

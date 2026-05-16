@@ -17,7 +17,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import * as Haptics from 'expo-haptics';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import { WallpaperPattern } from '@/components/WallpaperPattern';
 import { getCardSurfaceColors } from '@/constants/CardStyles';
 import { busOperatorsData } from '@/constants/FeaturedData';
@@ -139,7 +139,7 @@ export default function BusSearchScreen() {
             shadowOffset: { width: 0, height: 1 },
             shadowOpacity: 0.1,
             shadowRadius: 2,
-            elevation: 2,
+            elevation: 0,
             marginRight: 6,
           }}
         >
@@ -175,7 +175,7 @@ export default function BusSearchScreen() {
             shadowOffset: { width: 0, height: 1 },
             shadowOpacity: 0.1,
             shadowRadius: 2,
-            elevation: 2,
+            elevation: 0,
             marginRight: 6,
           }}
         >
@@ -658,7 +658,7 @@ export default function BusSearchScreen() {
                           shadowOffset: { width: 0, height: 1 },
                           shadowOpacity: 0.1,
                           shadowRadius: 2,
-                          elevation: 2,
+                          elevation: 0,
                           marginRight: 6,
                         }}
                       >
@@ -709,7 +709,7 @@ export default function BusSearchScreen() {
                           shadowOffset: { width: 0, height: 1 },
                           shadowOpacity: 0.1,
                           shadowRadius: 2,
-                          elevation: 2,
+                          elevation: 0,
                           marginRight: 6,
                         }}
                       >
@@ -760,7 +760,7 @@ export default function BusSearchScreen() {
                           shadowOffset: { width: 0, height: 1 },
                           shadowOpacity: 0.1,
                           shadowRadius: 2,
-                          elevation: 2,
+                          elevation: 0,
                           marginRight: 6,
                         }}
                       >
@@ -817,7 +817,7 @@ export default function BusSearchScreen() {
                             shadowOffset: { width: 0, height: 1 },
                             shadowOpacity: 0.1,
                             shadowRadius: 2,
-                            elevation: 2,
+                            elevation: 0,
                             marginRight: 6,
                           }}
                         >
@@ -878,7 +878,7 @@ export default function BusSearchScreen() {
                           shadowOffset: { width: 0, height: 1 },
                           shadowOpacity: 0.1,
                           shadowRadius: 2,
-                          elevation: 2,
+                          elevation: 0,
                           marginRight: 6,
                         }}
                       >
@@ -1020,7 +1020,7 @@ export default function BusSearchScreen() {
                               shadowOffset: { width: 0, height: 1 },
                               shadowOpacity: 0.1,
                               shadowRadius: 2,
-                              elevation: 2,
+                              elevation: 0,
                               marginRight: 6,
                             }}
                           >
@@ -1171,7 +1171,7 @@ export default function BusSearchScreen() {
                                 shadowOffset: { width: 0, height: 1 },
                                 shadowOpacity: 0.1,
                                 shadowRadius: 2,
-                                elevation: 2,
+                                elevation: 0,
                                 marginRight: 6,
                               }}
                             >
@@ -2154,7 +2154,7 @@ export default function BusSearchScreen() {
                               shadowOffset: { width: 0, height: 1 },
                               shadowOpacity: 0.1,
                               shadowRadius: 2,
-                              elevation: 2,
+                              elevation: 0,
                             }}
                           >
                             <FontAwesome6 name="bus" size={14} color="#8E8E93" />
@@ -2218,7 +2218,7 @@ export default function BusSearchScreen() {
                                 shadowOffset: { width: 0, height: 1 },
                                 shadowOpacity: 0.1,
                                 shadowRadius: 2,
-                                elevation: 2,
+                                elevation: 0,
                               }}
                             >
                               <FontAwesome6 name="bus" size={14} color="#8E8E93" />
@@ -2270,7 +2270,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   pageTitle: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     fontFamily: Fonts.bold,
   },
   providerPill: {
@@ -2283,7 +2283,7 @@ const styles = StyleSheet.create({
     maxWidth: 220,
   },
   providerPillText: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
     flexShrink: 1,
@@ -2309,10 +2309,10 @@ const styles = StyleSheet.create({
   },
   providerTitle: {
     fontFamily: Fonts.bold,
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
   },
   providerSubtitle: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     lineHeight: 20,
     fontFamily: Fonts.medium,
     opacity: 0.7,
@@ -2326,7 +2326,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   journeyTypeLabel: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.medium,
     opacity: 0.7,
   },
@@ -2349,11 +2349,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 0,
   },
   tabText: {
     fontFamily: Fonts.medium,
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     letterSpacing: 0.2,
   },
   tabTextActive: {
@@ -2368,7 +2368,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   summaryLabel: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     lineHeight: 20,
     fontFamily: Fonts.medium,
   },
@@ -2383,7 +2383,7 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   summaryPillText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     lineHeight: 18,
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
@@ -2399,7 +2399,7 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   searchButtonText: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
     letterSpacing: 0.5,
   },
@@ -2410,7 +2410,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   loadingText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontFamily: Fonts.medium,
     opacity: 0.6,
   },
@@ -2429,24 +2429,24 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   tripSectionTitle: {
-    fontSize: 22,
+    fontSize: responsiveFontSize(22),
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
     flex: 1,
   },
   tripSectionSubtitle: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     fontFamily: Fonts.medium,
     opacity: 0.6,
     marginLeft: 'auto',
   },
   inputRequired: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     fontFamily: Fonts.bold,
     color: '#FF3B30',
   },
   errorText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontFamily: Fonts.medium,
     marginTop: -4,
     marginBottom: 12,
@@ -2487,7 +2487,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
   },
   locationPillText: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     fontFamily: Fonts.bold,
     letterSpacing: 0.1,
   },
@@ -2516,7 +2516,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   operatorBadgeText: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     fontFamily: Fonts.medium,
     letterSpacing: 0.2,
   },
@@ -2531,11 +2531,11 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   busName: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontFamily: Fonts.bold,
   },
   busOperator: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     fontFamily: Fonts.medium,
     opacity: 0.7,
   },
@@ -2546,7 +2546,7 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   busType: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     fontFamily: Fonts.bold,
     color: '#FF3B30',
     letterSpacing: 0.3,
@@ -2563,11 +2563,11 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   time: {
-    fontSize: 17,
+    fontSize: responsiveFontSize(17),
     fontFamily: Fonts.bold,
   },
   timeLabel: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     fontFamily: Fonts.medium,
     opacity: 0.6,
   },
@@ -2579,7 +2579,7 @@ const styles = StyleSheet.create({
     borderRadius: 999,
   },
   duration: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontFamily: Fonts.medium,
   },
   amenitiesContainer: {
@@ -2595,11 +2595,11 @@ const styles = StyleSheet.create({
     borderRadius: 10,
   },
   amenityText: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     fontFamily: Fonts.medium,
   },
   moreAmenities: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     fontFamily: Fonts.medium,
     opacity: 0.6,
   },
@@ -2615,7 +2615,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   seatsText: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     fontFamily: Fonts.medium,
   },
   priceContainer: {
@@ -2625,12 +2625,12 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   priceLabel: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     fontFamily: Fonts.medium,
     opacity: 0.6,
   },
   price: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     fontFamily: Fonts.bold,
     color: '#34C759',
     letterSpacing: 0.3,
@@ -2647,7 +2647,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   continueButtonText: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
     letterSpacing: 0.5,
   },
@@ -2675,7 +2675,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 0,
     gap: 12,
     width: '100%',
     maxWidth: 400,
@@ -2688,7 +2688,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   guestDropdownTitle: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontFamily: Fonts.bold,
   },
   guestDropdownCloseButton: {},
@@ -2703,7 +2703,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
-    elevation: 5,
+    elevation: 0,
   },
   guestSection: {
     marginBottom: 20,
@@ -2718,11 +2718,11 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   guestSubLabel: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '600',
   },
   guestCount: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
     minWidth: 24,
     textAlign: 'center',
@@ -2756,7 +2756,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 0,
     gap: 12,
     width: '100%',
     maxWidth: 400,
@@ -2769,7 +2769,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   calendarModalTitle: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontFamily: Fonts.bold,
   },
   calendarModalCloseButton: {},
@@ -2789,7 +2789,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   monthTitle: {
-    fontSize: 22,
+    fontSize: responsiveFontSize(22),
     fontWeight: '600',
   },
   weekDaysHeader: {
@@ -2804,7 +2804,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   weekDayText: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     fontWeight: '600',
     opacity: 0.5,
     textTransform: 'uppercase',
@@ -2854,21 +2854,21 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   calendarDayText: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontWeight: '400',
   },
   calendarDayTextSelected: {
     fontWeight: '600',
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     color: '#FFFFFF',
   },
   calendarDayTextPast: {
     opacity: 0.3,
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
   },
   calendarDayTextToday: {
     fontWeight: '600',
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     color: '#FFFFFF',
   },
 });

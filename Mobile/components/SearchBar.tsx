@@ -4,7 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
 import { ThemedText } from '@/components/ThemedText';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 
 interface SearchBarProps {
   value: string;
@@ -64,7 +64,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   titleText: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     fontFamily: Fonts.bold,
     marginBottom: 8,
   },
@@ -83,7 +83,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     height: 40,
   },
 });

@@ -1,17 +1,37 @@
 import React, { useRef } from 'react';
-import { View, TouchableOpacity, StyleSheet, Animated, Platform } from 'react-native';
+import { View, TouchableOpacity, StyleSheet, Animated, Platform, Dimensions, Image } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { ThemedText } from '@/components/ThemedText';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SwipeActions, SwipeAction } from './SwipeActions';
 import * as Haptics from 'expo-haptics';
-import { FontSizes, LineHeights, Fonts } from '@/constants/Fonts';
+import { Fonts, responsiveFontSize, responsiveLineHeight } from '@/constants/Fonts';
+
+const { width: screenWidth } = Dimensions.get('window');
+const BASE_SCREEN_WIDTH = 390;
+const layoutScale = screenWidth / BASE_SCREEN_WIDTH;
+const responsiveSize = (size: number, min = size * 0.86, max = size * 1.18) =>
+  Math.round(Math.min(max, Math.max(min, size * layoutScale)));
+
+const MESSAGE_VERTICAL_PADDING = responsiveSize(12, 10, 15);
+const MESSAGE_HORIZONTAL_PADDING = responsiveSize(16, 14, 20);
+const MESSAGE_BOTTOM_GAP = responsiveSize(2, 1, 4);
+const AVATAR_SIZE = responsiveSize(54, 48, 62);
+const AVATAR_MARGIN = responsiveSize(12, 10, 16);
+const ROW_GAP = responsiveSize(4, 3, 6);
+const PREVIEW_RIGHT_GAP = responsiveSize(8, 6, 10);
+const BADGE_SIZE = responsiveSize(22, 20, 26);
+const BADGE_HORIZONTAL_PADDING = responsiveSize(5, 4, 7);
+const STATUS_ICON_SIZE = responsiveSize(16, 14, 18);
+const SWIPE_ACTION_WIDTH = responsiveSize(120, 104, 142);
+const SWIPE_OPEN_THRESHOLD = responsiveSize(40, 34, 48);
 
 export interface MessageData {
   id: string;
   name: string;
   message: string;
   time: string;
+  timestamp?: number; // epoch ms — used for sorting most-recent-first
   isRead: boolean;
   unreadCount?: number;
   avatar: string;
@@ -63,13 +83,13 @@ export function MessageItem({
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'sent':
-        return <Ionicons name="checkmark" size={16} color="#8E8E93" />;
+        return <Ionicons name="checkmark" size={STATUS_ICON_SIZE} color="#8E8E93" />;
       case 'delivered':
-        return <Ionicons name="checkmark-done" size={16} color="#8E8E93" />;
+        return <Ionicons name="checkmark-done" size={STATUS_ICON_SIZE} color="#8E8E93" />;
       case 'read':
-        return <Ionicons name="checkmark-done" size={16} color="#34B7F1" />;
+        return <Ionicons name="checkmark-done" size={STATUS_ICON_SIZE} color="#34B7F1" />;
       case 'received':
-        return <Ionicons name="arrow-down" size={16} color="#FF9500" />;
+        return <Ionicons name="arrow-down" size={STATUS_ICON_SIZE} color="#FF9500" />;
       default:
         return null;
     }
@@ -84,7 +104,13 @@ export function MessageItem({
 
   const renderRightActions = (progress: Animated.AnimatedInterpolation<string | number>) => {
     if (swipeActions.length === 0) return null;
-    return <SwipeActions actions={swipeActions} progress={progress} containerWidth={120} />;
+    return (
+      <SwipeActions
+        actions={swipeActions}
+        progress={progress}
+        containerWidth={SWIPE_ACTION_WIDTH}
+      />
+    );
   };
 
   return (
@@ -97,7 +123,7 @@ export function MessageItem({
       <Swipeable
         ref={swipeableRef}
         friction={1.2}
-        rightThreshold={40}
+        rightThreshold={SWIPE_OPEN_THRESHOLD}
         overshootRight={false}
         onSwipeableWillOpen={handleSwipeStart}
         onSwipeableOpen={onSwipeOpen}
@@ -111,11 +137,22 @@ export function MessageItem({
           delayLongPress={500}
         >
           <View
-            style={[styles.avatarContainer, { backgroundColor: avatarColorFunction(item.avatar) }]}
+            style={[
+              styles.avatarContainer,
+              { backgroundColor: item.avatarImage ? 'transparent' : avatarColorFunction(item.avatar) },
+            ]}
           >
-            <ThemedText type="bodyBold" style={styles.avatarText}>
-              {item.avatar}
-            </ThemedText>
+            {item.avatarImage ? (
+              <Image
+                source={{ uri: item.avatarImage }}
+                style={styles.avatarImg}
+                resizeMode="cover"
+              />
+            ) : (
+              <ThemedText type="bodyBold" style={styles.avatarText}>
+                {item.avatar}
+              </ThemedText>
+            )}
           </View>
 
           <View style={styles.messageContentContainer}>
@@ -124,15 +161,6 @@ export function MessageItem({
                 <ThemedText type="title2" style={styles.messageName}>
                   {item.name}
                 </ThemedText>
-                {(item.name === 'Victoria Falls Hotel' ||
-                  item.name === 'Shearwater Adventures') && (
-                  <Ionicons
-                    name="checkmark-circle"
-                    size={16}
-                    color="#007AFF"
-                    style={{ marginLeft: 4 }}
-                  />
-                )}
               </View>
               <ThemedText type="caption" style={styles.messageTime}>
                 {item.time}
@@ -175,26 +203,32 @@ export function MessageItem({
 const styles = StyleSheet.create({
   messageItem: {
     flexDirection: 'row',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: MESSAGE_VERTICAL_PADDING,
+    paddingHorizontal: MESSAGE_HORIZONTAL_PADDING,
     alignItems: 'center',
-    marginBottom: 2,
+    marginBottom: MESSAGE_BOTTOM_GAP,
   },
   avatarContainer: {
-    width: 54,
-    height: 54,
-    borderRadius: 27,
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
+    marginRight: AVATAR_MARGIN,
+    overflow: 'hidden',
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+  },
+  avatarImg: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
   },
   avatarText: {
     color: 'white',
+    fontSize: responsiveFontSize(16),
+    lineHeight: responsiveLineHeight(16),
   },
   messageContentContainer: {
     flex: 1,
@@ -204,7 +238,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 4,
+    marginBottom: ROW_GAP,
   },
   messageBottomRow: {
     flexDirection: 'row',
@@ -214,23 +248,23 @@ const styles = StyleSheet.create({
   messagePreviewContainer: {
     flexDirection: 'row',
     flex: 1,
-    marginRight: 8,
+    marginRight: PREVIEW_RIGHT_GAP,
     alignItems: 'center',
   },
   statusIconContainer: {
-    marginRight: 4,
+    marginRight: ROW_GAP,
     alignItems: 'center',
     justifyContent: 'center',
   },
   messageName: {
     flexShrink: 1,
-    fontSize: 20,
-    lineHeight: 26,
+    fontSize: responsiveFontSize(20),
+    lineHeight: responsiveLineHeight(20),
   },
   messagePreview: {
     flex: 1,
-    fontSize: FontSizes.lg,
-    lineHeight: LineHeights.lg,
+    fontSize: responsiveFontSize(17),
+    lineHeight: responsiveLineHeight(17),
   },
   readPreview: {
     fontFamily: Fonts.regular,
@@ -242,24 +276,25 @@ const styles = StyleSheet.create({
   },
   messageTime: {
     color: '#8E8E93',
-    marginLeft: 4,
+    marginLeft: ROW_GAP,
+    fontSize: responsiveFontSize(12),
+    lineHeight: responsiveLineHeight(12),
   },
   unreadIndicator: {
-    minWidth: 22,
-    height: 22,
-    borderRadius: 11,
+    minWidth: BADGE_SIZE,
+    height: BADGE_SIZE,
+    borderRadius: BADGE_SIZE / 2,
     backgroundColor: '#FF3B30',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 0.5 },
-    shadowOpacity: 0.1,
-    shadowRadius: 0.5,
-    elevation: 1,
+    paddingHorizontal: BADGE_HORIZONTAL_PADDING,
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
   },
   unreadCountText: {
     color: '#FFFFFF',
-    fontSize: FontSizes.xs,
+    fontSize: responsiveFontSize(12),
+    lineHeight: responsiveLineHeight(12),
   },
 });

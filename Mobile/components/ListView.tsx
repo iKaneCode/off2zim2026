@@ -5,7 +5,7 @@ import { ItineraryItem, type ItineraryData } from '@/components';
 import { SwipeAction } from '@/components/SwipeActions';
 import { Swipeable } from 'react-native-gesture-handler';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 
 interface ListViewProps {
   filteredItinerary: ItineraryData[];
@@ -192,7 +192,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 0,
   },
   emptyContainer: {
     flex: 1,
@@ -203,13 +203,13 @@ const styles = StyleSheet.create({
     height: '70%',
   },
   emptyTitle: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
     marginTop: 12,
     textAlign: 'center',
   },
   emptyDescription: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     textAlign: 'center',
     marginTop: 6,
     color: '#8E8E93',

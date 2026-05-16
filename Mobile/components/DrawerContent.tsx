@@ -16,7 +16,7 @@ import {
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import { Logo } from './Logo';
 
 // Custom DrawerLabel component to ensure bold text
@@ -76,7 +76,7 @@ const ProfileImage = ({ imageUrl }: { imageUrl: string }) => {
             },
           ]}
         >
-          <Text style={{ color: '#FFFFFF', fontSize: 16 }}>Safari</Text>
+          <Text style={{ color: '#FFFFFF', fontSize: responsiveFontSize(16) }}>Safari</Text>
         </View>
       )}
     </View>
@@ -135,7 +135,7 @@ export const CircleIcon = ({
           shadowOpacity: 0.12,
           shadowRadius: 2,
         }
-      : { elevation: 2 };
+      : { elevation: 0 };
 
   const lightModeShadow =
     Platform.OS === 'ios'
@@ -145,7 +145,7 @@ export const CircleIcon = ({
           shadowOpacity: 0.15,
           shadowRadius: 2,
         }
-      : { elevation: 2 };
+      : { elevation: 0 };
   return (
     <View
       style={[
@@ -184,7 +184,7 @@ const CenteredLogOutButton = ({ onPress, isDark }: { onPress: () => void; isDark
               shadowRadius: 2,
             },
             android: {
-              elevation: 2,
+              elevation: 0,
             },
           }),
         },
@@ -195,7 +195,7 @@ const CenteredLogOutButton = ({ onPress, isDark }: { onPress: () => void; isDark
         <Text
           style={{
             fontFamily: Fonts.bold,
-            fontSize: 18,
+            fontSize: responsiveFontSize(18),
             color: '#FF3B30',
             marginLeft: 8,
           }}
@@ -356,7 +356,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   userName: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     marginBottom: 6,
   },
   ratingContainer: {
@@ -365,12 +365,12 @@ const styles = StyleSheet.create({
     marginBottom: 0, // Removed bottom margin since it's now in the right column
   },
   ratingBold: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontFamily: Fonts.bold,
     // Color is applied dynamically based on theme
   },
   ratingCount: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontFamily: Fonts.regular,
     // Color is applied dynamically based on theme
   },
@@ -382,7 +382,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   menuItemLabel: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.regular,
   },
   separator: {

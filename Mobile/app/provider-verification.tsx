@@ -1,6 +1,8 @@
-import React, { useState } from 'react';
-import { View, Text, ScrollView, TouchableOpacity, Alert, StyleSheet } from 'react-native';
+﻿import React, { useState } from 'react';
+import { responsiveFontSize } from '@/constants/Fonts';
+import { View, Text, ScrollView, TouchableOpacity, StyleSheet } from 'react-native';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useAppAlert } from '@/context/AppAlertContext';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
@@ -9,6 +11,7 @@ import * as DocumentPicker from 'expo-document-picker';
 
 export default function ProviderVerification() {
   const colorScheme = useColorScheme();
+  const { showAlert } = useAppAlert();
   const [loading, setLoading] = useState(false);
   const [uploadedDocs, setUploadedDocs] = useState<string[]>([]);
   const [docUrls, setDocUrls] = useState<string[]>([]);
@@ -64,19 +67,19 @@ export default function ProviderVerification() {
         );
 
         if (error) {
-          Alert.alert('Error', 'Failed to upload document');
+        showAlert({ title: 'Error', message: 'Failed to upload document', buttons: [{ text: 'OK' }] });
           return;
         }
 
         if (data) {
           setUploadedDocs(prev => [...prev, docType]);
           setDocUrls(prev => [...prev, data.url]);
-          Alert.alert('Success', 'Document uploaded successfully');
+          showAlert({ title: 'Success', message: 'Document uploaded successfully', buttons: [{ text: 'OK' }] });
         }
       }
     } catch (error) {
       console.error('Document picker error:', error);
-      Alert.alert('Error', 'Failed to pick document');
+      showAlert({ title: 'Error', message: 'Failed to pick document', buttons: [{ text: 'OK' }] });
     } finally {
       setLoading(false);
     }
@@ -88,7 +91,7 @@ export default function ProviderVerification() {
       .every(doc => uploadedDocs.includes(doc.id));
 
     if (!requiredUploaded) {
-      Alert.alert('Missing Documents', 'Please upload all required documents before submitting.');
+      showAlert({ title: 'Missing Documents', message: 'Please upload all required documents before submitting.', buttons: [{ text: 'OK' }] });
       return;
     }
 
@@ -100,18 +103,19 @@ export default function ProviderVerification() {
       );
 
       if (error) {
-        Alert.alert('Error', 'Failed to submit for verification');
+        showAlert({ title: 'Error', message: 'Failed to submit for verification', buttons: [{ text: 'OK' }] });
         return;
       }
 
-      Alert.alert(
-        'Submitted Successfully!',
-        'Your documents have been submitted for verification. We will review them within 2-3 business days and notify you of the outcome.',
-        [{ text: 'OK' }]
-      );
+      showAlert({
+        title: 'Submitted Successfully!',
+        message:
+          'Your documents have been submitted for verification. We will review them within 2-3 business days and notify you of the outcome.',
+        buttons: [{ text: 'OK' }],
+      });
     } catch (error) {
       console.error('Verification submission error:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      showAlert({ title: 'Error', message: 'An unexpected error occurred', buttons: [{ text: 'OK' }] });
     } finally {
       setLoading(false);
     }
@@ -130,10 +134,10 @@ export default function ProviderVerification() {
 
       <ThemedView style={styles.content}>
         <ThemedView style={styles.infoCard}>
-          <ThemedText style={styles.infoTitle}>📋 What you need:</ThemedText>
+          <ThemedText style={styles.infoTitle}>ðŸ“‹ What you need:</ThemedText>
           <ThemedText style={styles.infoText}>
-            • Valid business registration documents{'\n'}• Tax clearance certificate{'\n'}•
-            Insurance documents (recommended){'\n'}• Tourism license (if applicable)
+            â€¢ Valid business registration documents{'\n'}â€¢ Tax clearance certificate{'\n'}â€¢
+            Insurance documents (recommended){'\n'}â€¢ Tourism license (if applicable)
           </ThemedText>
         </ThemedView>
 
@@ -165,7 +169,7 @@ export default function ProviderVerification() {
                 <View style={styles.documentStatus}>
                   {uploadedDocs.includes(doc.id) ? (
                     <View style={styles.uploadedBadge}>
-                      <Text style={styles.uploadedText}>✓ Uploaded</Text>
+                      <Text style={styles.uploadedText}>âœ“ Uploaded</Text>
                     </View>
                   ) : (
                     <TouchableOpacity
@@ -190,10 +194,10 @@ export default function ProviderVerification() {
         </ThemedView>
 
         <ThemedView style={styles.helpSection}>
-          <ThemedText style={styles.helpTitle}>💡 Tips for faster approval:</ThemedText>
+          <ThemedText style={styles.helpTitle}>ðŸ’¡ Tips for faster approval:</ThemedText>
           <ThemedText style={styles.helpText}>
-            • Ensure documents are clear and readable{'\n'}• Upload files in PDF or high-quality
-            image format{'\n'}• Make sure all information is current and valid{'\n'}• Include all
+            â€¢ Ensure documents are clear and readable{'\n'}â€¢ Upload files in PDF or high-quality
+            image format{'\n'}â€¢ Make sure all information is current and valid{'\n'}â€¢ Include all
             required fields and signatures
           </ThemedText>
         </ThemedView>
@@ -242,12 +246,12 @@ const styles = StyleSheet.create({
     paddingBottom: 0,
   },
   title: {
-    fontSize: 28,
+    fontSize: responsiveFontSize(28),
     fontWeight: 'bold',
     marginBottom: 8,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     opacity: 0.7,
     lineHeight: 22,
   },
@@ -261,13 +265,13 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   infoTitle: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '600',
     marginBottom: 8,
     color: '#1E40AF',
   },
   infoText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     lineHeight: 20,
     color: '#1E40AF',
   },
@@ -275,7 +279,7 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   sectionTitle: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontWeight: '600',
     marginBottom: 16,
   },
@@ -295,7 +299,7 @@ const styles = StyleSheet.create({
     marginRight: 12,
   },
   documentTitle: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '600',
     marginBottom: 4,
   },
@@ -303,7 +307,7 @@ const styles = StyleSheet.create({
     color: '#EF4444',
   },
   documentDescription: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     opacity: 0.7,
   },
   documentStatus: {
@@ -317,7 +321,7 @@ const styles = StyleSheet.create({
   },
   uploadedText: {
     color: '#16A34A',
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     fontWeight: '600',
   },
   uploadButton: {
@@ -327,7 +331,7 @@ const styles = StyleSheet.create({
   },
   uploadButtonText: {
     color: '#FFFFFF',
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontWeight: '600',
   },
   helpSection: {
@@ -337,13 +341,13 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
   helpTitle: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '600',
     marginBottom: 8,
     color: '#92400E',
   },
   helpText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     lineHeight: 20,
     color: '#92400E',
   },
@@ -355,7 +359,7 @@ const styles = StyleSheet.create({
   },
   submitButtonText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '600',
   },
   disclaimer: {
@@ -364,7 +368,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   disclaimerText: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     opacity: 0.7,
     textAlign: 'center',
     lineHeight: 16,

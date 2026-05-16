@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { View, StyleSheet, ScrollView, TouchableOpacity, Alert, Image } from 'react-native';
+import { View, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { CustomHeader } from '@/components/CustomHeader';
@@ -9,8 +9,9 @@ import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
 import { WallpaperPattern } from '@/components/WallpaperPattern';
 import { useThemeColor } from '@/hooks/useThemeColor';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useAppAlert } from '@/context/AppAlertContext';
 import { Colors } from '@/constants/Colors';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { getCardSurfaceColors } from '@/constants/CardStyles';
 
@@ -18,6 +19,7 @@ export default function EmergencyScreen() {
   const backgroundColor = useThemeColor({}, 'background');
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
+  const { showAlert } = useAppAlert();
 
   const handleGoBack = () => {
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -37,11 +39,11 @@ export default function EmergencyScreen() {
   );
 
   const handleCall = () => {
-    Alert.alert('Call', 'Phone number not configured yet.');
+    showAlert({ title: 'Call', message: 'Phone number not configured yet.', buttons: [{ text: 'OK' }] });
   };
 
   const handleMessage = () => {
-    Alert.alert('Message', 'Messaging number not configured yet.');
+    showAlert({ title: 'Message', message: 'Messaging number not configured yet.', buttons: [{ text: 'OK' }] });
   };
 
   return (
@@ -121,7 +123,7 @@ export default function EmergencyScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   titleSection: { paddingHorizontal: 20, paddingVertical: 8, borderBottomWidth: 0 },
-  pageTitle: { fontSize: 24, textAlign: 'left' },
+  pageTitle: { fontSize: responsiveFontSize(24), textAlign: 'left' },
   content: { flex: 1 },
   card: {
     marginHorizontal: 16,
@@ -132,7 +134,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 0,
   },
   row: { flexDirection: 'row', alignItems: 'center', gap: 12 },
   iconCircle: {
@@ -145,7 +147,7 @@ const styles = StyleSheet.create({
     marginRight: 8,
     overflow: 'hidden',
   },
-  title: { fontSize: 20, lineHeight: 28, fontFamily: Fonts.bold, marginBottom: 10 },
+  title: { fontSize: responsiveFontSize(20), lineHeight: 28, fontFamily: Fonts.bold, marginBottom: 10 },
   pillsRow: { flexDirection: 'row', gap: 12 },
   contactPill: {
     flexDirection: 'row',
@@ -167,7 +169,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
-    elevation: 2,
+    elevation: 0,
   },
-  pillText: { fontSize: 15, lineHeight: 20, fontFamily: Fonts.bold, letterSpacing: 0.2 },
+  pillText: { fontSize: responsiveFontSize(15), lineHeight: 20, fontFamily: Fonts.bold, letterSpacing: 0.2 },
 });

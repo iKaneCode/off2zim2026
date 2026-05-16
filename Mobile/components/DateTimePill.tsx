@@ -3,7 +3,7 @@ import { View, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from './ThemedText';
-import { Fonts } from '@/constants/Fonts';
+import { Fonts, responsiveFontSize, responsiveLineHeight } from '@/constants/Fonts';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
 export type IoniconName = keyof typeof Ionicons.glyphMap;
@@ -77,11 +77,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 1.5,
-    elevation: 1,
+    elevation: 0,
   },
   text: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: responsiveFontSize(13),
+    lineHeight: responsiveLineHeight(13),
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
     flexShrink: 1,

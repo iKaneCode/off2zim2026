@@ -1,88 +1,23 @@
-import React, { useEffect, useRef } from 'react';
-import { View, Animated, StyleSheet, Dimensions } from 'react-native';
-import { useColorScheme } from '@/hooks/useColorScheme';
+import React from 'react';
+import { View, StyleSheet, Dimensions } from 'react-native';
+import { ShimmerPlaceholder } from './ShimmerPlaceholder';
 
 const { width: screenWidth } = Dimensions.get('window');
 
-interface ShimmerPlaceholderProps {
-  width?: number;
-  height?: number;
-  borderRadius?: number;
-  style?: any;
-}
-
-const ShimmerPlaceholder: React.FC<ShimmerPlaceholderProps> = ({
-  width = 100,
-  height = 20,
-  borderRadius = 4,
-  style,
-}) => {
-  const colorScheme = useColorScheme();
-  const animatedValue = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const shimmerAnimation = Animated.loop(
-      Animated.sequence([
-        Animated.timing(animatedValue, {
-          toValue: 1,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-        Animated.timing(animatedValue, {
-          toValue: 0,
-          duration: 1000,
-          useNativeDriver: true,
-        }),
-      ])
-    );
-
-    shimmerAnimation.start();
-
-    return () => {
-      shimmerAnimation.stop();
-    };
-  }, [animatedValue]);
-
-  const opacity = animatedValue.interpolate({
-    inputRange: [0, 1],
-    outputRange: [0.3, 0.7],
-  });
-
-  const backgroundColor = colorScheme === 'dark' ? '#333333' : '#E0E0E0';
-
-  return (
-    <Animated.View
-      style={[
-        {
-          width,
-          height,
-          backgroundColor,
-          borderRadius,
-          opacity,
-        },
-        style,
-      ]}
-    />
-  );
-};
-
 export const CarouselShimmer: React.FC = () => {
   return (
-    <View style={[styles.shimmerCarousel, { width: screenWidth }]}>
-      <View style={styles.shimmerImageContainer}>
-        {/* Main image placeholder */}
-        <ShimmerPlaceholder
-          width={screenWidth - 32}
-          height={200}
-          borderRadius={16}
-          style={styles.shimmerImage}
-        />
+    <View style={[styles.container, { width: screenWidth }]}>
+      <View style={styles.card}>
+        <ShimmerPlaceholder width="100%" height="100%" borderRadius={16} />
 
-        {/* Location pill placeholder */}
-        <View style={styles.shimmerTextContainer}>
-          <View style={styles.shimmerLocationPill}>
-            <ShimmerPlaceholder width={80} height={22} borderRadius={999} />
-          </View>
+        <View style={styles.heartPlaceholder}>
+          <ShimmerPlaceholder width={18} height={18} borderRadius={9} />
+        </View>
+
+        <View style={styles.overlay}>
+          <ShimmerPlaceholder width={92} height={24} borderRadius={999} style={styles.pill} />
+          <ShimmerPlaceholder width="62%" height={20} borderRadius={10} style={styles.title} />
+          <ShimmerPlaceholder width="44%" height={14} borderRadius={7} />
         </View>
       </View>
     </View>
@@ -90,37 +25,40 @@ export const CarouselShimmer: React.FC = () => {
 };
 
 const styles = StyleSheet.create({
-  shimmerCarousel: {
-    height: 200, // Match carouselItem height
-    position: 'relative',
+  container: {
+    height: 200,
     paddingHorizontal: 16,
   },
-  shimmerImageContainer: {
+  card: {
     flex: 1,
-    position: 'relative',
-    backgroundColor: '#F2F2F7',
     borderRadius: 16,
     overflow: 'hidden',
+    position: 'relative',
+    backgroundColor: '#EEF1F4',
   },
-  shimmerImage: {
+  heartPlaceholder: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-  },
-  shimmerTextContainer: {
-    position: 'absolute',
-    bottom: 12,
-    left: 20,
-    right: 20,
+    top: 12,
+    right: 12,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255,255,255,0.42)',
+    justifyContent: 'center',
     alignItems: 'center',
-    alignSelf: 'center',
-    maxWidth: screenWidth - 40,
   },
-  shimmerLocationPill: {
-    alignSelf: 'flex-start',
-    marginLeft: 6,
-    marginTop: -2,
+  overlay: {
+    position: 'absolute',
+    left: 18,
+    right: 18,
+    bottom: 14,
+    alignItems: 'flex-start',
+    paddingTop: 14,
+  },
+  pill: {
+    marginBottom: 9,
+  },
+  title: {
+    marginBottom: 7,
   },
 });

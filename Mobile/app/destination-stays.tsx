@@ -27,7 +27,7 @@ import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import type { Stay } from '@/types/Stay';
 import { cloneStay, getStaysByLocation } from '@/constants/StayData';
 import { goBackToDestination, navigateToStayProfile } from '@/utils/navigationUtils';
@@ -360,14 +360,14 @@ const styles = StyleSheet.create({
     minWidth: 100,
   },
   pillTextOverlay: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
     marginLeft: 6,
     flexShrink: 1,
   },
   pageTitle: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     fontFamily: Fonts.bold,
     flex: 1,
     textAlign: 'left',
@@ -409,7 +409,7 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   emptyStateText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     marginTop: 16,
     textAlign: 'center',
     opacity: 0.7,

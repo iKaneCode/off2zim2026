@@ -15,48 +15,57 @@ const NOTIFICATION_PROVIDERS = [
     name: 'Emirates',
     avatar: 'EM',
     color: '#C8102E',
+    // TODO(db): replace avatarImage with service_providers.logo_url from DB
+    avatarImage: `https://api.dicebear.com/8.x/shapes/png?seed=${encodeURIComponent('Emirates')}&size=128&backgroundColor=FF4757`,
     types: ['travel', 'reminder', 'check-in'],
   },
   {
     name: 'Hwange Safari Lodge',
     avatar: 'HS',
     color: '#228B22',
+    avatarImage: `https://api.dicebear.com/8.x/shapes/png?seed=${encodeURIComponent('Hwange Safari Lodge')}&size=128&backgroundColor=FF4757`,
     types: ['payment', 'booking', 'safari'],
   },
   {
     name: 'Victoria Falls Activities',
     avatar: 'VF',
     color: '#007AFF',
+    avatarImage: `https://api.dicebear.com/8.x/shapes/png?seed=${encodeURIComponent('Victoria Falls Activities')}&size=128&backgroundColor=FF4757`,
     types: ['promotion', 'booking', 'activities'],
   },
   {
     name: 'Victoria Falls Hotel',
     avatar: 'VH',
     color: '#8B4513',
+    avatarImage: `https://api.dicebear.com/8.x/shapes/png?seed=${encodeURIComponent('Victoria Falls Hotel')}&size=128&backgroundColor=FF4757`,
     types: ['feedback', 'booking', 'service'],
   },
   {
     name: 'Intercape Bus',
     avatar: 'IB',
     color: '#FF6B35',
+    avatarImage: `https://api.dicebear.com/8.x/shapes/png?seed=${encodeURIComponent('Intercape Bus')}&size=128&backgroundColor=FF4757`,
     types: ['travel', 'booking', 'schedule'],
   },
   {
     name: 'Zambezi Helicopter Tours',
     avatar: 'ZH',
     color: '#4682B4',
+    avatarImage: `https://api.dicebear.com/8.x/shapes/png?seed=${encodeURIComponent('Zambezi Helicopter Tours')}&size=128&backgroundColor=FF4757`,
     types: ['travel', 'weather', 'booking'],
   },
   {
     name: 'Zimbabwe Tourism Authority',
     avatar: 'ZT',
     color: '#2E8B57',
+    avatarImage: `https://api.dicebear.com/8.x/shapes/png?seed=${encodeURIComponent('Zimbabwe Tourism Authority')}&size=128&backgroundColor=FF4757`,
     types: ['promotion', 'information', 'events'],
   },
   {
     name: 'Air Zimbabwe',
     avatar: 'AZ',
     color: '#DC143C',
+    avatarImage: `https://api.dicebear.com/8.x/shapes/png?seed=${encodeURIComponent('Air Zimbabwe')}&size=128&backgroundColor=FF4757`,
     types: ['travel', 'delay', 'check-in'],
   },
 ] as const;
@@ -164,9 +173,33 @@ const generateTimeStamp = () => {
   return timeOptions[Math.floor(Math.random() * timeOptions.length)];
 };
 
+// Convert a millisecond offset to a human-readable display string
+const offsetToDisplayTime = (offsetMs: number): string => {
+  const hours = offsetMs / (60 * 60 * 1000);
+  if (hours < 2) return 'Just now';
+  if (hours < 24) return `${Math.round(hours)} hours ago`;
+  const days = Math.floor(hours / 24);
+  if (days === 1) return 'Yesterday';
+  if (days < 7) return `${days} days ago`;
+  if (days < 14) return '1 week ago';
+  return '2 weeks ago';
+};
+
 // Generate initial notifications with dynamic content
 export const generateInitialNotifications = (): NotificationData[] => {
   const notifications: NotificationData[] = [];
+  const now = Date.now();
+  // Timestamps spread over the past 2 weeks, most recent first
+  const offsets = [
+    1 * 60 * 60 * 1000,         // 1 hour ago
+    6 * 60 * 60 * 1000,         // 6 hours ago
+    24 * 60 * 60 * 1000,        // 1 day ago
+    2 * 24 * 60 * 60 * 1000,    // 2 days ago
+    3 * 24 * 60 * 60 * 1000,    // 3 days ago
+    5 * 24 * 60 * 60 * 1000,    // 5 days ago
+    7 * 24 * 60 * 60 * 1000,    // 1 week ago
+    14 * 24 * 60 * 60 * 1000,   // 2 weeks ago
+  ];
 
   for (let i = 0; i < 8; i++) {
     const provider = NOTIFICATION_PROVIDERS[i % NOTIFICATION_PROVIDERS.length];
@@ -177,10 +210,12 @@ export const generateInitialNotifications = (): NotificationData[] => {
       id: `${i + 1}`,
       name: provider.name,
       message: generateNotificationContent(provider, type),
-      time: generateTimeStamp(),
+      time: offsetToDisplayTime(offsets[i]),
+      timestamp: now - offsets[i],
       isRead,
       unreadCount: 0,
       avatar: provider.avatar,
+      avatarImage: provider.avatarImage,
       status: 'received',
       type,
     });
@@ -200,9 +235,11 @@ export const generateNewNotification = (): NotificationData => {
     name: provider.name,
     message: generateNotificationContent(provider, type),
     time: 'Just now',
+    timestamp: Date.now(),
     isRead: false,
     unreadCount: 0,
     avatar: provider.avatar,
+    avatarImage: provider.avatarImage,
     status: 'received',
     type,
   };

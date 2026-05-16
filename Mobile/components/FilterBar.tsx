@@ -12,7 +12,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import * as Haptics from 'expo-haptics';
 import { FontAwesome6 } from '@expo/vector-icons';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 
 interface FilterOption {
   key: string;
@@ -245,12 +245,12 @@ const styles = StyleSheet.create({
         shadowRadius: 1,
       },
       android: {
-        elevation: 1,
+        elevation: 0,
       },
     }),
   },
   filterText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontFamily: Fonts.regular,
     color: '#AAAAAA',
   },

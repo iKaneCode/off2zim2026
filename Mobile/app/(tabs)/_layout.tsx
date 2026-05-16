@@ -7,9 +7,11 @@ import { HomeTabButton } from '../../components/HomeTabButton';
 import TabBarBackground from '@/components/ui/TabBarBackground';
 import { TabBarIcon } from '@/components/TabBarIcon';
 import { Colors } from '@/constants/Colors';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts, TabFontSizes } from '@/constants/Fonts';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { getMobilePostAuthRoute, mobileAppVariant } from '@/config/appVariant';
+import { useNotificationsContext } from '@/context/NotificationsContext';
+import { useMessagesContext } from '@/context/MessagesContext';
 
 function AnimatedTabLabel({
   focused,
@@ -43,12 +45,15 @@ function AnimatedTabLabel({
     <Animated.Text
       style={{
         fontFamily: Fonts.bold,
-        fontSize: 12,
+        fontSize: focused ? TabFontSizes.labelFocused : TabFontSizes.label,
         letterSpacing: 0.4,
         color,
         transform: [{ scale: scaleAnim }],
         opacity: opacityAnim,
       }}
+      numberOfLines={1}
+      adjustsFontSizeToFit
+      minimumFontScale={0.82}
     >
       {children}
     </Animated.Text>
@@ -57,6 +62,8 @@ function AnimatedTabLabel({
 
 export default function TabLayout() {
   const colorScheme = useColorScheme();
+  const { unreadCount } = useNotificationsContext();
+  const { unreadCount: unreadMessages } = useMessagesContext();
 
   if (mobileAppVariant !== 'explorer') {
     return <Redirect href={getMobilePostAuthRoute()} />;
@@ -76,7 +83,7 @@ export default function TabLayout() {
         tabBarBackground: TabBarBackground,
         tabBarLabelStyle: {
           fontFamily: Fonts.bold,
-          fontSize: 12,
+          fontSize: TabFontSizes.label,
           letterSpacing: 0.4,
         },
         tabBarStyle: Platform.select({
@@ -110,6 +117,15 @@ export default function TabLayout() {
         options={{
           title: 'Notifications',
           headerShown: false, // Use custom header instead of the default tab header
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
+          tabBarBadgeStyle: {
+            fontSize: responsiveFontSize(9),
+            lineHeight: 14,
+            minWidth: 16,
+            height: 16,
+            borderRadius: 8,
+            paddingHorizontal: 3,
+          },
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon name="notifications" focused={focused} color={color} size={24} />
           ),
@@ -155,6 +171,15 @@ export default function TabLayout() {
         options={{
           title: 'Messages',
           headerShown: false, // Use custom header instead of the default tab header
+          tabBarBadge: unreadMessages > 0 ? unreadMessages : undefined,
+          tabBarBadgeStyle: {
+            fontSize: responsiveFontSize(9),
+            lineHeight: 14,
+            minWidth: 16,
+            height: 16,
+            borderRadius: 8,
+            paddingHorizontal: 3,
+          },
           tabBarIcon: ({ color, focused }) => (
             <TabBarIcon name="chatbubbles" focused={focused} color={color} size={24} />
           ),

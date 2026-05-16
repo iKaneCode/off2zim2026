@@ -26,7 +26,7 @@ import {
 import { faHeart as regularHeart } from '@fortawesome/free-regular-svg-icons';
 import * as Haptics from 'expo-haptics';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import { WallpaperPattern } from '@/components/WallpaperPattern';
 import {
   isFavorited as isFavoritedUtil,
@@ -180,6 +180,7 @@ export default function FlightProfile() {
       }),
       isRead: true,
       avatar: flight.name.charAt(0).toUpperCase(),
+      avatarImage: `https://api.dicebear.com/8.x/shapes/png?seed=${encodeURIComponent(flight.name)}&size=128&backgroundColor=FF4757`,
       avatarBgColor: isDark ? 'rgba(255, 71, 87, 0.18)' : 'rgba(255, 71, 87, 0.08)',
       avatarBorderColor: '#FF4757',
       status: 'received' as const,
@@ -548,7 +549,7 @@ export default function FlightProfile() {
                 }}
               >
                 {/* Wallpaper Pattern Background */}
-                <View style={[StyleSheet.absoluteFillObject, { height: 2000 }]}>
+                <View style={[StyleSheet.absoluteFillObject, { height: 2000, borderTopLeftRadius: 32, borderTopRightRadius: 32, overflow: 'hidden' }]}>
                   <WallpaperPattern offsetTop={0} unlimited={true} height={2000} />
                 </View>
 
@@ -572,7 +573,6 @@ export default function FlightProfile() {
                 >
                   <ProviderHeroCard
                     title={flight.name}
-                    location={flight.route}
                     rating={flight.rating}
                     reviewsText="• 287 reviews"
                     onFavoritePress={toggleFavorite}
@@ -580,8 +580,6 @@ export default function FlightProfile() {
                     isFavorited={isFavorited}
                     onCallPress={handleCallAirline}
                     onMessagePress={handleMessageAirline}
-                    locationIconName="airplane"
-                    locationIconColor="#FF3B30"
                     ratingAlign="right"
                   />
                 </View>
@@ -599,9 +597,9 @@ export default function FlightProfile() {
                       backgroundColor: cardBackground,
                       shadowColor: '#000',
                       shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.1,
+                      shadowOpacity: 0.08,
                       shadowRadius: 8,
-                      elevation: 4,
+                      elevation: 0,
                       overflow: 'hidden',
                     },
                   ]}
@@ -634,9 +632,9 @@ export default function FlightProfile() {
                         backgroundColor: cardBackground,
                         shadowColor: '#000',
                         shadowOffset: { width: 0, height: 2 },
-                        shadowOpacity: 0.1,
+                        shadowOpacity: 0.08,
                         shadowRadius: 8,
-                        elevation: 4,
+                        elevation: 0,
                         overflow: 'hidden',
                       },
                     ]}
@@ -734,9 +732,9 @@ export default function FlightProfile() {
                       backgroundColor: cardBackground,
                       shadowColor: '#000',
                       shadowOffset: { width: 0, height: 2 },
-                      shadowOpacity: 0.1,
+                      shadowOpacity: 0.08,
                       shadowRadius: 8,
-                      elevation: 4,
+                      elevation: 0,
                       overflow: 'hidden',
                     },
                   ]}
@@ -1606,9 +1604,9 @@ const styles = StyleSheet.create({
     marginTop: -20,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: -2 },
-    shadowOpacity: 0.1,
+    shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 0,
   },
   titleCard: {
     borderRadius: 28,
@@ -1616,10 +1614,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingVertical: 26,
     gap: 18,
-    shadowOffset: { width: 0, height: 16 },
-    shadowOpacity: 0.16,
-    shadowRadius: 26,
-    elevation: 10,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 0,
   },
   titleActionBar: {
     flexDirection: 'row',
@@ -1655,7 +1653,7 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   profileInitial: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontFamily: Fonts.bold,
     color: '#FFFFFF',
   },
@@ -1664,7 +1662,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   stayTitle: {
-    fontSize: 22,
+    fontSize: responsiveFontSize(22),
     fontFamily: Fonts.bold,
     lineHeight: 28,
   },
@@ -1679,7 +1677,7 @@ const styles = StyleSheet.create({
     flexShrink: 1,
   },
   locationPillText: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     fontFamily: Fonts.medium,
     flexShrink: 1,
     letterSpacing: 0.2,
@@ -1695,7 +1693,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   ratingValue: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
     letterSpacing: 0.5,
   },
@@ -1709,7 +1707,7 @@ const styles = StyleSheet.create({
     paddingBottom: 16,
   },
   sectionTitle: {
-    fontSize: 22,
+    fontSize: responsiveFontSize(22),
     lineHeight: 28,
     fontFamily: Fonts.bold,
     marginBottom: 12,
@@ -1734,7 +1732,7 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   titleAmenityText: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     fontWeight: '500',
   },
   sectionHeader: {
@@ -1783,7 +1781,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   galleryOverlayText: {
-    fontSize: 28,
+    fontSize: responsiveFontSize(28),
     lineHeight: 34,
     fontWeight: '700',
     color: '#FFFFFF',
@@ -1797,7 +1795,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0.5,
   },
   description: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     lineHeight: 24,
     opacity: 0.8,
   },
@@ -1823,7 +1821,7 @@ const styles = StyleSheet.create({
     marginRight: 2,
   },
   accessibilityPillText: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     fontFamily: Fonts.medium,
     letterSpacing: 0.2,
   },
@@ -1851,13 +1849,13 @@ const styles = StyleSheet.create({
   activeTab: {
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
+    shadowOpacity: 0.08,
     shadowRadius: 10,
-    elevation: 3,
+    elevation: 0,
   },
   tabText: {
     fontFamily: Fonts.medium,
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     letterSpacing: 0.2,
   },
   tabTextActive: {
@@ -1877,21 +1875,21 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   fromText: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     opacity: 0.7,
     fontFamily: Fonts.medium,
     marginBottom: 4,
   },
   priceText: {
-    fontSize: 28,
+    fontSize: responsiveFontSize(28),
     fontFamily: Fonts.bold,
   },
   priceCurrency: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     opacity: 0.8,
   },
   priceUnit: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     opacity: 0.7,
   },
   dateContainer: {
@@ -1904,12 +1902,12 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   dateOutsideLabel: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontFamily: Fonts.bold,
     marginBottom: 0,
   },
   inputRequired: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     fontFamily: Fonts.bold,
     color: '#FF3B30',
   },
@@ -1919,7 +1917,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   dateValue: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.medium,
   },
   guestsSection: {
@@ -1941,7 +1939,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   guestCount: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
     minWidth: 24,
     textAlign: 'center',
@@ -1973,7 +1971,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   totalMainLabel: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
     letterSpacing: 0.5,
     flex: 1,
@@ -1983,7 +1981,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   totalPrice: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     fontFamily: Fonts.bold,
     letterSpacing: 0.5,
   },
@@ -2001,7 +1999,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   paymentButtonText: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
     letterSpacing: 0.8,
     textTransform: 'uppercase',
@@ -2032,10 +2030,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 0,
     gap: 12,
     width: '100%',
     maxWidth: 400,
@@ -2048,7 +2046,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   guestDropdownTitle: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontFamily: Fonts.bold,
   },
   guestDropdownCloseButton: {},
@@ -2061,9 +2059,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 59, 48, 0.15)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.08,
     shadowRadius: 2,
-    elevation: 5,
+    elevation: 0,
   },
   guestSection: {
     marginBottom: 20,
@@ -2078,7 +2076,7 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   guestSubLabel: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '600',
   },
   // Title Meta Row Styles (from stay-profile)
@@ -2098,7 +2096,7 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
   directionsPillText: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
   },
@@ -2113,11 +2111,11 @@ const styles = StyleSheet.create({
     marginLeft: 'auto',
   },
   ratingPillText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontFamily: Fonts.bold,
   },
   reviewsText: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     fontFamily: Fonts.medium,
   },
   pillIcon: {
@@ -2140,7 +2138,7 @@ const styles = StyleSheet.create({
   },
   contactPillText: {
     fontFamily: Fonts.bold,
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     letterSpacing: 0.3,
   },
   // Calendar styles
@@ -2160,7 +2158,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   itineraryMonthTitle: {
-    fontSize: 22,
+    fontSize: responsiveFontSize(22),
     fontWeight: '600',
   },
   itineraryWeekDaysHeader: {
@@ -2175,7 +2173,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   itineraryWeekDayText: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     fontWeight: '600',
     opacity: 0.5,
     textTransform: 'uppercase',
@@ -2231,20 +2229,20 @@ const styles = StyleSheet.create({
     opacity: 0.3,
   },
   itineraryDayText: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontWeight: '400',
   },
   itinerarySelectedDayText: {
     fontWeight: '600',
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
   },
   itineraryTodayDayText: {
     fontWeight: '600',
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     color: '#FFFFFF',
   },
   itineraryPastDayText: {
     opacity: 0.3,
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
   },
 });

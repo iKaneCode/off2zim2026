@@ -1,4 +1,5 @@
-import React from 'react';
+﻿import React from 'react';
+import { responsiveFontSize } from '@/constants/Fonts';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -50,7 +51,7 @@ export default function EVisaScreen() {
 const styles = StyleSheet.create({
   container: { flex: 1 },
   titleSection: { paddingHorizontal: 20, paddingVertical: 8, borderBottomWidth: 0 },
-  pageTitle: { fontSize: 24, textAlign: 'left' },
+  pageTitle: { fontSize: responsiveFontSize(24), textAlign: 'left' },
   content: { flex: 1 },
   contentContainer: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 20, paddingBottom: 100 },
 });

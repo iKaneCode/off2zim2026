@@ -13,7 +13,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { StatusPill } from '@/components/StatusPill';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import type { IoniconName } from '@/components/DateTimePill';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 
 export type StatusConfig = {
   label: string;
@@ -149,7 +149,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   title: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontFamily: Fonts.bold,
   },
   statusPill: {
@@ -168,26 +168,26 @@ const styles = StyleSheet.create({
     borderBottomColor: 'rgba(130,130,130,0.15)',
   },
   detailLabel: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     textTransform: 'uppercase',
     letterSpacing: 0.6,
     fontFamily: Fonts.bold,
     marginBottom: 4,
   },
   detailValue: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.medium,
   },
   messageBlock: {
     marginTop: 16,
   },
   messageTitle: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     fontFamily: Fonts.bold,
     marginBottom: 6,
   },
   messageBody: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     lineHeight: 20,
     fontFamily: Fonts.regular,
   },

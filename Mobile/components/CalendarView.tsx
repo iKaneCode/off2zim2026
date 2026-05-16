@@ -15,7 +15,7 @@ import * as Haptics from 'expo-haptics';
 import { renderEventIcon } from '@/components/EventIcon';
 import { LocationPill } from '@/components/LocationPill';
 import { StatusPill } from '@/components/StatusPill';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import {
   formatDate,
   getSpecificTypeIcon,
@@ -666,7 +666,7 @@ const styles = {
     justifyContent: 'center',
   },
   monthTitle: {
-    fontSize: 22,
+    fontSize: responsiveFontSize(22),
     fontFamily: Fonts.medium,
   },
   weekDaysHeader: {
@@ -681,7 +681,7 @@ const styles = {
     paddingVertical: 8,
   },
   weekDayText: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     fontFamily: Fonts.medium,
     opacity: 0.5,
     textTransform: 'uppercase',
@@ -744,29 +744,29 @@ const styles = {
     marginBottom: 16,
   },
   dayText: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontFamily: Fonts.regular,
   },
   selectedDayText: {
     fontFamily: Fonts.medium,
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
   },
   todayDayText: {
     fontFamily: Fonts.bold,
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
   },
   dayWithEventsText: {
     color: '#FF3B30',
     fontFamily: Fonts.medium,
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
   },
   otherMonthDayText: {
     opacity: 0.3,
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
   },
   pastDayText: {
     opacity: 0.3,
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
   },
   eventIndicators: {
     flexDirection: 'row',
@@ -782,7 +782,7 @@ const styles = {
     marginHorizontal: 1,
   },
   moreEventsText: {
-    fontSize: 8,
+    fontSize: responsiveFontSize(8),
     fontFamily: Fonts.medium,
     color: '#8E8E93',
     textAlign: 'center',
@@ -800,7 +800,7 @@ const styles = {
     },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 0,
     position: 'relative',
   },
   closeButton: {
@@ -815,7 +815,7 @@ const styles = {
     zIndex: 1,
   },
   inlineCardTitle: {
-    fontSize: 17,
+    fontSize: responsiveFontSize(17),
     fontFamily: Fonts.medium,
     padding: 16,
     paddingBottom: 16,
@@ -831,7 +831,7 @@ const styles = {
     paddingHorizontal: 16,
   },
   inlineNoEventsText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     opacity: 0.6,
     marginTop: 6,
   },
@@ -860,13 +860,13 @@ const styles = {
     marginBottom: 4,
   },
   calendarEventTitle: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     fontFamily: Fonts.bold,
     flex: 1,
     marginRight: 8,
   },
   calendarEventTime: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     fontFamily: Fonts.medium,
   },
   calendarEventMeta: {

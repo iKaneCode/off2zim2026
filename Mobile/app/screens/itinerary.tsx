@@ -1,5 +1,6 @@
-import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
-import { StyleSheet, View, Platform, Animated, UIManager, Alert } from 'react-native';
+﻿import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
+import { responsiveFontSize } from '@/constants/Fonts';
+import { StyleSheet, View, Platform, Animated, UIManager } from 'react-native';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -40,6 +41,7 @@ import {
 } from '@/constants/ItineraryConstants';
 import { staysBookingsService } from '@/services/database';
 import { useAuth } from '@/context/AuthContext';
+import { useAppAlert } from '@/context/AppAlertContext';
 
 // Animation setup for Android
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -49,6 +51,7 @@ if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental
 export default function ItineraryScreen() {
   const colorScheme = useColorScheme();
   const { user, isGuest } = useAuth();
+  const { showAlert } = useAppAlert();
   const [itinerary, setItinerary] = useState<ItineraryData[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState<ItineraryFilter>(DEFAULT_FILTER);
@@ -496,7 +499,11 @@ export default function ItineraryScreen() {
         await fetchItinerary();
       } catch (error) {
         console.error('Failed to delete itinerary item', error);
-        Alert.alert('Delete failed', 'We could not delete this item. Please try again.');
+        showAlert({
+          title: 'Delete failed',
+          message: 'We could not delete this item. Please try again.',
+          buttons: [{ text: 'OK' }],
+        });
         await fetchItinerary();
       }
     },
@@ -628,7 +635,7 @@ const styles = StyleSheet.create({
     paddingBottom: 8,
   },
   pageTitle: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     textAlign: 'left',
   },
 });

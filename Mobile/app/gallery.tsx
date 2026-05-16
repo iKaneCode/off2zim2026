@@ -21,7 +21,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { CustomHeader } from '@/components/CustomHeader';
 import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import { FontAwesome6, Ionicons } from '@expo/vector-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faHeart as solidHeart } from '@fortawesome/free-solid-svg-icons';
@@ -492,7 +492,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   headerTitle: {
-    fontSize: 17,
+    fontSize: responsiveFontSize(17),
     fontFamily: Fonts.medium,
   },
   // Header container styles
@@ -532,7 +532,7 @@ const styles = StyleSheet.create({
     minWidth: 100, // Minimum width for very short location names
   },
   pillTextOverlay: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontWeight: '700',
     fontFamily: Fonts.bold,
     marginLeft: 6,
@@ -551,7 +551,7 @@ const styles = StyleSheet.create({
     height: 50,
   },
   galleryTitle: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     fontFamily: Fonts.bold,
     flex: 1, // Take available space on the left side
     textAlign: 'left',
@@ -572,7 +572,7 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   galleryCount: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     opacity: 0.7,
   },
   thumbnailContainer: {
@@ -644,7 +644,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
-    elevation: 3,
+    elevation: 0,
   },
   prevButton: {
     position: 'absolute',
@@ -673,7 +673,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
-    elevation: 3,
+    elevation: 0,
   },
   modalFooter: {
     position: 'absolute',
@@ -697,11 +697,11 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
-    elevation: 3,
+    elevation: 0,
   },
   imageCounterText: {
     color: '#FFFFFF',
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
   },
   shareButton: {
     width: 40,
@@ -743,7 +743,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
-    elevation: 3,
+    elevation: 0,
   },
   fullImage: {
     width: '100%',

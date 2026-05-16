@@ -19,7 +19,7 @@ import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
 import { WallpaperPattern } from '@/components/WallpaperPattern';
 import { BusSearchForm } from '@/components/BusSearchForm';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 
 export type OperatorItem = { id: string; name: string; route?: string; rating?: number };
 
@@ -406,10 +406,10 @@ export function TransportSearch({
                 borderColor: cardBorderColor,
                 borderWidth: 1,
                 shadowColor: isDark ? 'rgba(0,0,0,0.85)' : 'rgba(28,28,30,0.12)',
-                shadowOffset: { width: 0, height: 16 },
-                shadowOpacity: 0.16,
-                shadowRadius: 26,
-                elevation: 10,
+                shadowOffset: { width: 0, height: 4 },
+                shadowOpacity: 0.1,
+                shadowRadius: 12,
+                elevation: 0,
               },
             ]}
           >
@@ -533,9 +533,9 @@ export function TransportSearch({
                               alignItems: 'center',
                               shadowColor: '#000',
                               shadowOffset: { width: 0, height: 1 },
-                              shadowOpacity: 0.1,
+                              shadowOpacity: 0.08,
                               shadowRadius: 2,
-                              elevation: 2,
+                              elevation: 0,
                             }}
                           >
                             <FontAwesome6 name={operatorIconName} size={14} color="#8E8E93" />
@@ -590,9 +590,9 @@ export function TransportSearch({
                                 alignItems: 'center',
                                 shadowColor: '#000',
                                 shadowOffset: { width: 0, height: 1 },
-                                shadowOpacity: 0.1,
+                                shadowOpacity: 0.08,
                                 shadowRadius: 2,
-                                elevation: 2,
+                                elevation: 0,
                               }}
                             >
                               <FontAwesome6 name={operatorIconName} size={14} color="#8E8E93" />
@@ -711,9 +711,9 @@ export function TransportSearch({
                                 alignItems: 'center',
                                 shadowColor: '#000',
                                 shadowOffset: { width: 0, height: 1 },
-                                shadowOpacity: 0.1,
+                                shadowOpacity: 0.08,
                                 shadowRadius: 2,
-                                elevation: 2,
+                                elevation: 0,
                               }}
                             >
                               <Ionicons name="location" size={14} color="#FF3B30" />
@@ -834,9 +834,9 @@ export function TransportSearch({
                                   alignItems: 'center',
                                   shadowColor: '#000',
                                   shadowOffset: { width: 0, height: 1 },
-                                  shadowOpacity: 0.1,
+                                  shadowOpacity: 0.08,
                                   shadowRadius: 2,
-                                  elevation: 2,
+                                  elevation: 0,
                                 }}
                               >
                                 <Ionicons name="location" size={14} color="#FF3B30" />
@@ -1187,10 +1187,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 0,
     gap: 12,
     width: '100%',
     maxWidth: 400,
@@ -1203,7 +1203,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   guestDropdownTitle: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontFamily: Fonts.bold,
   },
   guestDropdownCloseButton: {},
@@ -1216,9 +1216,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 59, 48, 0.15)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.08,
     shadowRadius: 2,
-    elevation: 5,
+    elevation: 0,
   },
   guestSection: { marginBottom: 20 },
   guestRow: {
@@ -1230,7 +1230,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     marginTop: 0,
   },
-  guestSubLabel: { fontSize: 16, fontWeight: '600' },
+  guestSubLabel: { fontSize: responsiveFontSize(16), fontWeight: '600' },
   itineraryCalendarHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1246,7 +1246,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  itineraryMonthTitle: { fontSize: 22, fontWeight: '600' },
+  itineraryMonthTitle: { fontSize: responsiveFontSize(22), fontWeight: '600' },
   itineraryWeekDaysHeader: {
     flexDirection: 'row',
     paddingHorizontal: 20,
@@ -1254,7 +1254,7 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   itineraryWeekDayItem: { flex: 1, alignItems: 'center', paddingVertical: 8 },
-  itineraryWeekDayText: { fontSize: 12, fontWeight: '600', opacity: 0.5, textTransform: 'uppercase' },
+  itineraryWeekDayText: { fontSize: responsiveFontSize(12), fontWeight: '600', opacity: 0.5, textTransform: 'uppercase' },
   itineraryCalendarGrid: { paddingHorizontal: 16, paddingBottom: 8 },
   itineraryWeekRow: { flexDirection: 'row' },
   itineraryCalendarDayContainer: { flex: 1, alignItems: 'center', paddingVertical: 2, paddingHorizontal: 2 },
@@ -1274,10 +1274,10 @@ const styles = StyleSheet.create({
   itinerarySelectedDay: { overflow: 'hidden', width: 36, height: 36, borderRadius: 18, marginBottom: 0 },
   itineraryTodayDay: { backgroundColor: '#FF3B30', overflow: 'hidden', width: 36, height: 36, borderRadius: 18, marginBottom: 0 },
   itineraryPastDay: { opacity: 0.3 },
-  itineraryDayText: { fontSize: 20, fontWeight: '400' },
-  itinerarySelectedDayText: { fontWeight: '600', fontSize: 20 },
-  itineraryTodayDayText: { fontWeight: '600', fontSize: 20, color: '#FFFFFF' },
-  itineraryPastDayText: { opacity: 0.3, fontSize: 20 },
+  itineraryDayText: { fontSize: responsiveFontSize(20), fontWeight: '400' },
+  itinerarySelectedDayText: { fontWeight: '600', fontSize: responsiveFontSize(20) },
+  itineraryTodayDayText: { fontWeight: '600', fontSize: responsiveFontSize(20), color: '#FFFFFF' },
+  itineraryPastDayText: { opacity: 0.3, fontSize: responsiveFontSize(20) },
 });
 
 export default TransportSearch;

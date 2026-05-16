@@ -15,6 +15,7 @@ export { WebSlideTransition } from './WebSlideTransition';
 export { WallpaperPattern } from './WallpaperPattern';
 export { DestinationCardShimmer } from './DestinationCardShimmer';
 export { CarouselShimmer } from './CarouselShimmer';
+export { ShimmerPlaceholder } from './ShimmerPlaceholder';
 export { default as StayCardShimmer } from './StayCardShimmer';
 export { useCollapsibleSearchSection } from './CollapsibleSearchSection';
 export type {
@@ -37,6 +38,7 @@ export { ListImageCard } from './ListImageCard';
 export { StatusPill } from './StatusPill';
 export { ProviderHeroCard } from './ProviderHeroCard';
 export { BusSearchForm } from './BusSearchForm';
+export { GlassPanel } from './GlassPanel';
 export type { Stay } from '@/types/Stay';
 
 // Export types from EmptyState

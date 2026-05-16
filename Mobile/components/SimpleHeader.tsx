@@ -188,7 +188,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     ...Platform.select({
       android: {
-        elevation: 2,
+        elevation: 0,
       },
     }),
   },

@@ -10,7 +10,6 @@ import {
   StatusBar,
   Easing,
   TouchableWithoutFeedback,
-  Alert,
   Image,
   Modal,
   TextInput,
@@ -22,12 +21,13 @@ import {
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme, useThemePreference, setThemePreference } from '@/hooks/useColorScheme';
+import { useAppAlert } from '@/context/AppAlertContext';
 import { CircleIcon } from '@/components/DrawerContent';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faHeart as regularHeart } from '@fortawesome/free-regular-svg-icons/faHeart';
 import { faHeart as solidHeart } from '@fortawesome/free-solid-svg-icons/faHeart';
 import { router } from 'expo-router';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, responsiveSize, responsiveLineHeight, Fonts } from '@/constants/Fonts';
 import { useAuth } from '@/context/AuthContext';
 import { Logo } from '@/components';
 import { Ionicons } from '@expo/vector-icons';
@@ -76,6 +76,7 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
   const insets = useSafeAreaInsets();
   const { signOut, signIn, signUp, user, isGuest, setGuestMode, setNeedsBusinessOnboarding } =
     useAuth();
+  const { showAlert } = useAppAlert();
   const isAuthenticated = !!user && !isGuest;
   const colors = Colors[colorScheme ?? 'light'];
 
@@ -479,7 +480,7 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
       style?: 'default' | 'cancel' | 'destructive';
     }[]
   ) => {
-    Alert.alert(title, message, buttons);
+    showAlert({ title, message, buttons });
   };
 
   const panHandlers = panResponder.panHandlers;
@@ -504,9 +505,7 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
             // Let the _layout.tsx handle navigation
           } catch (logoutError) {
             console.error('Error logging out:', logoutError);
-            Alert.alert('Error', 'Failed to logout. Please try again.', [
-              { text: 'OK', style: 'default' },
-            ]);
+            showAlert({ title: 'Error', message: 'Failed to logout. Please try again.', buttons: [{ text: 'OK', style: 'default' }] });
           }
         },
       },
@@ -515,7 +514,7 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      showAlert({ title: 'Error', message: 'Please fill in all fields', buttons: [{ text: 'OK' }] });
       return;
     }
 
@@ -524,7 +523,7 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
       const result = await signIn(email, password);
 
       if (result.error) {
-        Alert.alert('Error', result.error.message || 'Login failed');
+        showAlert({ title: 'Error', message: result.error.message || 'Login failed', buttons: [{ text: 'OK' }] });
       } else {
         // Exit guest mode and reset form
         if (setGuestMode) {
@@ -536,7 +535,7 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
         onClose();
       }
     } catch (error: any) {
-      Alert.alert('Error', error.message || 'An unexpected error occurred');
+      showAlert({ title: 'Error', message: error.message || 'An unexpected error occurred', buttons: [{ text: 'OK' }] });
     } finally {
       setLoading(false);
     }
@@ -599,7 +598,7 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
     }
 
     if (trimmedPassword !== trimmedConfirmPassword) {
-      Alert.alert('Error', 'Passwords do not match');
+      showAlert({ title: 'Error', message: 'Passwords do not match', buttons: [{ text: 'OK' }] });
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error).catch(() => {});
       return;
     }
@@ -630,14 +629,11 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
         const lower = message.toLowerCase();
 
         if (lower.includes('already registered') || lower.includes('already exists')) {
-          Alert.alert(
-            'Account exists',
-            'It looks like this email already has an account. Try signing in instead.'
-          );
+          showAlert({ title: 'Account exists', message: 'It looks like this email already has an account. Try signing in instead.', buttons: [{ text: 'OK' }] });
         } else if (lower.includes('network')) {
-          Alert.alert('Network issue', 'Please check your internet connection and try again.');
+          showAlert({ title: 'Network issue', message: 'Please check your internet connection and try again.', buttons: [{ text: 'OK' }] });
         } else {
-          Alert.alert('Sign up failed', message);
+          showAlert({ title: 'Sign up failed', message, buttons: [{ text: 'OK' }] });
         }
         return;
       }
@@ -660,7 +656,7 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
       );
     } catch (error: any) {
       const message = error?.message ?? 'Something went wrong. Please try again.';
-      Alert.alert('Authentication error', message);
+      showAlert({ title: 'Authentication error', message, buttons: [{ text: 'OK' }] });
     } finally {
       setSignUpLoading(false);
     }
@@ -668,13 +664,11 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
 
   const handleForgotPassword = () => {
     if (!email) {
-      Alert.alert('Error', 'Please enter your email address first');
+      showAlert({ title: 'Error', message: 'Please enter your email address first', buttons: [{ text: 'OK' }] });
       return;
     }
 
-    Alert.alert('Reset Password', 'Password reset functionality will be implemented soon.', [
-      { text: 'OK' },
-    ]);
+    showAlert({ title: 'Reset Password', message: 'Password reset functionality will be implemented soon.', buttons: [{ text: 'OK' }] });
   };
 
   const showModal = () => {
@@ -827,7 +821,7 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
                           shadowOffset: { width: 0, height: 1 },
                           shadowOpacity: 0.1,
                           shadowRadius: 2,
-                          elevation: 2,
+                          elevation: 0,
                         }),
                   }}
                 >
@@ -866,7 +860,7 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
                           shadowOffset: { width: 0, height: 1 },
                           shadowOpacity: 0.1,
                           shadowRadius: 2,
-                          elevation: 2,
+                          elevation: 0,
                         }),
                   }}
                 >
@@ -916,7 +910,7 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
                               shadowOffset: { width: 0, height: 1 },
                               shadowOpacity: 0.1,
                               shadowRadius: 2,
-                              elevation: 2,
+                              elevation: 0,
                             }),
                       }}
                     >
@@ -954,7 +948,7 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
                               shadowOffset: { width: 0, height: 1 },
                               shadowOpacity: 0.1,
                               shadowRadius: 2,
-                              elevation: 2,
+                              elevation: 0,
                             }),
                       }}
                     >
@@ -992,7 +986,7 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
                               shadowOffset: { width: 0, height: 1 },
                               shadowOpacity: 0.1,
                               shadowRadius: 2,
-                              elevation: 2,
+                              elevation: 0,
                             }),
                       }}
                     >
@@ -1030,7 +1024,7 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
                               shadowOffset: { width: 0, height: 1 },
                               shadowOpacity: 0.1,
                               shadowRadius: 2,
-                              elevation: 2,
+                              elevation: 0,
                             }),
                       }}
                     >
@@ -1070,7 +1064,7 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
                               shadowOffset: { width: 0, height: 1 },
                               shadowOpacity: 0.1,
                               shadowRadius: 2,
-                              elevation: 2,
+                              elevation: 0,
                             }),
                       }}
                     >
@@ -1121,21 +1115,17 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
                 </Text>
               </TouchableOpacity>
             ) : (
-              <>
+              <View style={styles.guestButtonRow}>
                 <TouchableOpacity
                   style={[
                     styles.drawerLoginButton,
                     { backgroundColor: isDark ? '#FFFFFF' : '#000000' },
                   ]}
                   onPress={showModal}
+                  activeOpacity={0.68}
                 >
-                  <Text
-                    style={[
-                      styles.drawerLoginButtonText,
-                      { color: isDark ? '#000000' : '#FFFFFF' },
-                    ]}
-                  >
-                    LOGIN
+                  <Text style={[styles.drawerLoginButtonText, { color: isDark ? '#000000' : '#FFFFFF' }]}>
+                    Login
                   </Text>
                 </TouchableOpacity>
 
@@ -1152,17 +1142,13 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
                     onClose();
                     router.push('/sign-up');
                   }}
+                  activeOpacity={0.68}
                 >
-                  <Text
-                    style={[
-                      styles.drawerSignUpButtonText,
-                      { color: isDark ? '#FFFFFF' : '#000000' },
-                    ]}
-                  >
-                    SIGN UP
+                  <Text style={[styles.drawerSignUpButtonText, { color: isDark ? '#FFFFFF' : '#000000' }]}>
+                    Sign Up
                   </Text>
                 </TouchableOpacity>
-              </>
+              </View>
             )}
           </View>
         </View>
@@ -2293,7 +2279,7 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
                     }}
                   >
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-                      <Text style={{ fontSize: 24 }}>{country.flag}</Text>
+                      <Text style={{ fontSize: responsiveFontSize(24) }}>{country.flag}</Text>
                       <Text style={[styles.pickerModalOptionText, { color: themeTextColor }]}>
                         {country.name}
                       </Text>
@@ -2410,7 +2396,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 0,
   },
   menuContainer: {
     marginHorizontal: 20,
@@ -2425,7 +2411,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 0,
   },
   menuItem: {
     paddingVertical: 16,
@@ -2479,21 +2465,21 @@ const styles = StyleSheet.create({
   },
   userName: {
     fontFamily: Fonts.bold,
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     marginBottom: 2,
   },
   userStatus: {
     fontFamily: Fonts.regular,
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     opacity: 0.7,
   },
   guestText: {
     fontFamily: Fonts.bold,
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
   },
   userEmail: {
     fontFamily: Fonts.regular,
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     opacity: 0.8,
     marginBottom: 4,
   },
@@ -2506,13 +2492,13 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     fontFamily: Fonts.regular,
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     marginLeft: 4,
     opacity: 0.8,
   },
   drawerTitle: {
     fontFamily: Fonts.bold,
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
   },
   drawerContent: {
     flex: 1,
@@ -2528,7 +2514,7 @@ const styles = StyleSheet.create({
   },
   drawerItemText: {
     fontFamily: Fonts.bold,
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
   },
   divider: {
     height: 1,
@@ -2542,31 +2528,42 @@ const styles = StyleSheet.create({
   logoutItem: {
     marginTop: 10,
   },
-  drawerLoginButton: {
+  guestButtonRow: {
+    flexDirection: 'row',
     marginHorizontal: 20,
-    marginTop: 16,
-    marginBottom: 8,
-    height: 50,
-    borderRadius: 8,
-    alignItems: 'center',
+    marginTop: 12,
+    marginBottom: 16,
+    gap: responsiveSize(9, 8, 11),
+  },
+  drawerLoginButton: {
+    flex: 1,
+    height: responsiveSize(44, 42, 48),
     justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 100,
+    paddingHorizontal: responsiveSize(10, 8, 13),
   },
   drawerLoginButtonText: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(17),
+    lineHeight: responsiveLineHeight(17),
     fontFamily: Fonts.bold,
+    textAlign: 'center',
+    letterSpacing: -0.3,
   },
   drawerSignUpButton: {
-    marginHorizontal: 20,
-    marginTop: 8,
-    marginBottom: 16,
-    height: 50,
-    borderRadius: 8,
-    alignItems: 'center',
+    flex: 1,
+    height: responsiveSize(44, 42, 48),
     justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 100,
+    paddingHorizontal: responsiveSize(10, 8, 13),
   },
   drawerSignUpButtonText: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(17),
+    lineHeight: responsiveLineHeight(17),
     fontFamily: Fonts.bold,
+    textAlign: 'center',
+    letterSpacing: -0.3,
   },
   drawerLogoutButton: {
     marginHorizontal: 20,
@@ -2580,10 +2577,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
-    elevation: 2,
+    elevation: 0,
   },
   drawerLogoutButtonText: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
   },
   scrim: {
@@ -2635,11 +2632,11 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.15,
     shadowRadius: 12,
-    elevation: 8,
+    elevation: 0,
     zIndex: 10,
   },
   modalFormTitle: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     fontFamily: Fonts.bold,
     textAlign: 'center',
     marginBottom: 24,
@@ -2648,13 +2645,13 @@ const styles = StyleSheet.create({
     gap: 20,
   },
   modalTitle: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     fontFamily: Fonts.bold,
     textAlign: 'center',
     marginBottom: 4,
   },
   modalSubtitle: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     fontFamily: Fonts.regular,
     textAlign: 'center',
     marginBottom: 12,
@@ -2663,13 +2660,13 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   modalLabel: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.medium,
   },
   modalInput: {
     height: 50,
     paddingHorizontal: 16,
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.regular,
     borderRadius: 8,
   },
@@ -2682,7 +2679,7 @@ const styles = StyleSheet.create({
   modalPasswordInput: {
     flex: 1,
     paddingHorizontal: 16,
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.regular,
   },
   modalEyeIcon: {
@@ -2690,7 +2687,7 @@ const styles = StyleSheet.create({
   },
   modalForgotPassword: {
     textAlign: 'right',
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontFamily: Fonts.medium,
     marginTop: -8,
   },
@@ -2705,7 +2702,7 @@ const styles = StyleSheet.create({
     opacity: 0.7,
   },
   modalLoginButtonText: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
   },
   modalCancelButton: {
@@ -2718,7 +2715,7 @@ const styles = StyleSheet.create({
     marginTop: 8,
   },
   modalCancelButtonText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.medium,
   },
   signUpModalContainer: {
@@ -2741,7 +2738,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.15,
     shadowRadius: 12,
-    elevation: 8,
+    elevation: 0,
     overflow: 'hidden',
   },
   signUpScrollView: {
@@ -2765,7 +2762,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   userTypeButtonText: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     fontFamily: Fonts.medium,
   },
   pickerField: {
@@ -2778,7 +2775,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   pickerValue: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.regular,
   },
   pickerValueRow: {
@@ -2787,7 +2784,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   pickerFlag: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
   },
   labelErrorContainer: {
     flexDirection: 'row',
@@ -2795,7 +2792,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   inputRequired: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     fontFamily: Fonts.medium,
     color: '#FF3B30',
   },
@@ -2815,7 +2812,7 @@ const styles = StyleSheet.create({
     maxHeight: '80%',
   },
   pickerModalTitle: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontFamily: Fonts.bold,
     marginBottom: 16,
     textAlign: 'center',
@@ -2830,7 +2827,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   pickerModalOptionText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.regular,
   },
 });

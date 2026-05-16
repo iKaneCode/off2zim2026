@@ -15,7 +15,7 @@ import { MaterialTopTabBarProps } from '@react-navigation/material-top-tabs';
 import { TabBarBackground } from '@/components/ui/BlurBackground';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { Fonts } from '@/constants/Fonts';
+import { Fonts, TabFontSizes } from '@/constants/Fonts';
 
 interface TabMeasurement {
   x: number;
@@ -178,8 +178,12 @@ const SlidingTabBar: FC<CustomSlidingTabBarProps> = props => {
                     {
                       color,
                       fontFamily: focused ? Fonts.bold : Fonts.medium,
+                      fontSize: focused ? TabFontSizes.labelFocused : TabFontSizes.label,
                     },
                   ]}
+                  numberOfLines={1}
+                  adjustsFontSizeToFit
+                  minimumFontScale={0.82}
                 >
                   {descriptors[route.key]?.options.title ?? route.name}
                 </ThemedText>
@@ -211,7 +215,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     zIndex: 10,
     backgroundColor: 'transparent',
-    elevation: 5,
+    elevation: 0,
   },
   tabBarBackground: {
     position: 'absolute',
@@ -230,7 +234,7 @@ const styles = StyleSheet.create({
     height: 48,
   },
   tabLabel: {
-    fontSize: 16,
+    fontSize: TabFontSizes.label,
     color: '#687076',
     fontFamily: Fonts.medium,
     opacity: 1,

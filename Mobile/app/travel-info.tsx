@@ -1,4 +1,5 @@
-import React from 'react';
+﻿import React from 'react';
+import { responsiveFontSize } from '@/constants/Fonts';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
@@ -57,7 +58,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   pageTitle: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     textAlign: 'left',
   },
   content: {

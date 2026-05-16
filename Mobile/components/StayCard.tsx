@@ -20,7 +20,7 @@ import * as Haptics from 'expo-haptics';
 
 import { ThemedText } from './ThemedText';
 import { CarouselIndicators } from './CarouselIndicators';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import { Stay } from '@/types/Stay';
 import { isFavorited, toggleFavorite, subscribeFavorites } from '@/utils/favoritesUtils';
 import { getAmenityIcon as defaultGetAmenityIcon, type IoniconName } from '@/utils/amenityUtils';
@@ -275,17 +275,11 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     borderRadius: 16,
     overflow: 'hidden',
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.1,
-        shadowRadius: 8,
-      },
-      android: {
-        elevation: 3,
-      },
-    }),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 0,
   },
   card: {
     width: CARD_WIDTH,
@@ -294,17 +288,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     position: 'relative',
     height: 220,
-    ...Platform.select({
-      ios: {
-        shadowColor: '#000',
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.12,
-        shadowRadius: 10,
-      },
-      android: {
-        elevation: 4,
-      },
-    }),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 10,
+    elevation: 0,
   },
   imageContainer: {
     position: 'relative',
@@ -356,7 +344,7 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   stayName: {
-    fontSize: 19,
+    fontSize: responsiveFontSize(19),
     fontFamily: Fonts.bold,
     flex: 1,
     marginBottom: 0,
@@ -399,7 +387,7 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   amenityText: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     fontFamily: Fonts.medium,
   },
   priceRow2: {
@@ -410,22 +398,22 @@ const styles = StyleSheet.create({
     marginRight: 8,
   },
   fromText: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     fontFamily: Fonts.regular,
     opacity: 0.6,
     marginBottom: -2,
   },
   priceText: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontFamily: Fonts.bold,
   },
   priceCurrency: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     fontFamily: Fonts.medium,
     marginRight: 2,
   },
   priceUnit: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontFamily: Fonts.regular,
     opacity: 0.7,
     marginLeft: 2,
@@ -438,15 +426,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 2, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
     shadowRadius: 3,
-    elevation: 4,
+    elevation: 0,
   },
   bookButtonText: {
     color: '#FFFFFF',
     fontFamily: Fonts.bold,
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     letterSpacing: 0.5,
   },
 });

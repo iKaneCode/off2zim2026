@@ -3,7 +3,7 @@ import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Colors } from '@/constants/Colors';
-import { Fonts } from '@/constants/Fonts';
+import { Fonts, TabFontSizes } from '@/constants/Fonts';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
 export default function ProviderTabLayout() {
@@ -25,7 +25,7 @@ export default function ProviderTabLayout() {
         },
         tabBarLabelStyle: {
           fontFamily: Fonts.bold,
-          fontSize: 11,
+          fontSize: TabFontSizes.compactLabel,
           letterSpacing: 0.3,
         },
       }}

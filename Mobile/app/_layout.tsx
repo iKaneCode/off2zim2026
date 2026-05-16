@@ -1,4 +1,4 @@
-import { cloneElement, useEffect, useState } from 'react';
+import { cloneElement, useEffect, useMemo, useState } from 'react';
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack, usePathname, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -20,12 +20,15 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { preloadLogoImages } from '@/utils/imageCache';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import { Colors } from '@/constants/Colors';
 import { OverlayDrawerProvider, useOverlayDrawer } from '@/context/OverlayDrawerContext';
 import { AuthProvider, useAuth } from '@/context/AuthContext';
 import { DestinationsProvider } from '@/context/DestinationsContext';
 import { FeaturedDataProvider } from '@/context/FeaturedDataContext';
+import { NotificationsProvider } from '@/context/NotificationsContext';
+import { MessagesProvider } from '@/context/MessagesContext';
+import { AppAlertProvider } from '@/context/AppAlertContext';
 import { PushDrawer } from '@/components/PushDrawer';
 import { getMobilePostAuthRoute, mobileAppVariant } from '@/config/appVariant';
 
@@ -63,7 +66,7 @@ const AuthHeader = () => {
         style={{
           marginTop: 12,
           fontFamily: Fonts.bold,
-          fontSize: 28,
+          fontSize: responsiveFontSize(28),
           color: palette.text,
           textAlign: 'left',
         }}
@@ -174,6 +177,8 @@ function AppWithDrawer() {
   const { loading, session, isGuest } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
+  const appColorScheme = useColorScheme();
+  const theme = Colors[appColorScheme ?? 'light'];
 
   // Use a ref to track the previous auth state to avoid unnecessary redirects
   useEffect(() => {
@@ -234,19 +239,19 @@ function AppWithDrawer() {
   }
 
   const showAuthScreen = !session && !isGuest;
-
   const stack = (
-    <View style={{ flex: 1 }}>
+    <View style={{ flex: 1, backgroundColor: theme.appBackground }}>
       <Stack
         initialRouteName="auth"
         screenOptions={{
           headerShown: false,
-          animation: 'slide_from_right',
+          animation: Platform.OS === 'android' ? 'ios_from_right' : 'slide_from_right',
           animationTypeForReplace: 'push',
           presentation: 'card',
           gestureEnabled: true,
           gestureDirection: 'horizontal',
           fullScreenGestureEnabled: Platform.OS === 'ios',
+          contentStyle: { backgroundColor: theme.appBackground },
         }}
       >
         <Stack.Screen
@@ -265,6 +270,15 @@ function AppWithDrawer() {
         <Stack.Screen name="gallery" options={{ headerShown: false }} />
         <Stack.Screen name="destination-stays" options={{ headerShown: false }} />
         <Stack.Screen name="stay-profile" options={{ headerShown: false }} />
+        <Stack.Screen name="activity-profile" options={{ headerShown: false }} />
+        <Stack.Screen name="bus-profile" options={{ headerShown: false }} />
+        <Stack.Screen name="event-profile" options={{ headerShown: false }} />
+        <Stack.Screen name="flight-profile" options={{ headerShown: false }} />
+        <Stack.Screen name="bus-search" options={{ headerShown: false }} />
+        <Stack.Screen name="flight-search" options={{ headerShown: false }} />
+        <Stack.Screen name="passenger-details" options={{ headerShown: false }} />
+        <Stack.Screen name="flight-passenger-details" options={{ headerShown: false }} />
+        <Stack.Screen name="payment" options={{ headerShown: false }} />
       </Stack>
     </View>
   );
@@ -282,6 +296,19 @@ function AppWithDrawer() {
 
 export default function RootLayout() {
   const colorScheme = useColorScheme();
+  const rootTheme = Colors[colorScheme ?? 'light'];
+  const navigationTheme = useMemo(() => {
+    const baseTheme = colorScheme === 'dark' ? DarkTheme : DefaultTheme;
+
+    return {
+      ...baseTheme,
+      colors: {
+        ...baseTheme.colors,
+        background: rootTheme.appBackground,
+        card: rootTheme.appBackground,
+      },
+    };
+  }, [colorScheme, rootTheme.appBackground]);
   const [appIsReady, setAppIsReady] = useState(false);
   const [fontsLoaded, fontsError] = useFonts({
     [Fonts.light]: require('../assets/fonts/BrandonGrotesque/brandon-grotesque-light.otf'),
@@ -294,11 +321,7 @@ export default function RootLayout() {
   useEffect(() => {
     async function prepare() {
       try {
-        // Preload logo images and wait for completion
         await preloadLogoImages();
-
-        // Add a small delay to ensure images are fully cached
-        await new Promise(resolve => setTimeout(resolve, 100));
       } catch (e) {
         console.warn('Failed to preload images:', e);
       } finally {
@@ -342,12 +365,7 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (appIsReady && fontsReady) {
-      // Hide the splash screen after a short delay to ensure smooth transition
-      const timer = setTimeout(() => {
-        SplashScreen.hideAsync();
-      }, 100);
-
-      return () => clearTimeout(timer);
+      SplashScreen.hideAsync();
     }
   }, [appIsReady, fontsReady]);
 
@@ -356,18 +374,24 @@ export default function RootLayout() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+    <GestureHandlerRootView style={{ flex: 1, backgroundColor: rootTheme.appBackground }}>
+      <ThemeProvider value={navigationTheme}>
         <AuthProvider>
           <DestinationsProvider>
             <FeaturedDataProvider>
-              <OverlayDrawerProvider>
-                <AppWithDrawer />
-              </OverlayDrawerProvider>
+              <NotificationsProvider>
+                <MessagesProvider>
+                  <AppAlertProvider>
+                    <OverlayDrawerProvider>
+                      <AppWithDrawer />
+                    </OverlayDrawerProvider>
+                  </AppAlertProvider>
+                </MessagesProvider>
+              </NotificationsProvider>
             </FeaturedDataProvider>
           </DestinationsProvider>
         </AuthProvider>
-        <StatusBar style="auto" />
+        <StatusBar style="auto" backgroundColor={rootTheme.appBackground} />
       </ThemeProvider>
     </GestureHandlerRootView>
   );

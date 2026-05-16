@@ -1,5 +1,6 @@
-import React, { useState, useMemo, useRef, useCallback } from 'react';
-import { Modal, Platform, StyleSheet, View, LayoutAnimation, UIManager, Alert } from 'react-native';
+﻿import React, { useState, useMemo, useRef, useCallback } from 'react';
+import { responsiveFontSize, responsiveLineHeight, responsiveSize, Fonts } from '@/constants/Fonts';
+import { Modal, Platform, StyleSheet, View, LayoutAnimation, UIManager } from 'react-native';
 import { OrderSheet } from '@/components/OrderSheet';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
@@ -18,16 +19,22 @@ import type { OrderData } from '@/utils/orderData';
 import { messageAnimations } from '@/utils/messageAnimations';
 import { getOrderAvatarColor, categorizeOrders, filterOrdersBySearch } from '@/utils/orderUtils';
 import type { ItineraryData } from '@/components/ItineraryItem';
+import { useAppAlert } from '@/context/AppAlertContext';
 import { staysBookingsService } from '@/services/database';
-import { useAuth } from '@/context/AuthContext';
 
-// Enable LayoutAnimation on Android
+import { useAuth } from '@/context/AuthContext';
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
+const SCREEN_HORIZONTAL_PADDING = responsiveSize(16, 14, 20);
+const TITLE_BOTTOM_PADDING = responsiveSize(8, 6, 10);
+const SEARCH_TOP_PADDING = responsiveSize(8, 6, 10);
+const SEARCH_TOP_MARGIN = responsiveSize(4, 3, 6);
+
 export default function OrdersScreen() {
   const { user, isGuest } = useAuth();
+  const { showAlert } = useAppAlert();
   const [activeOrderSheet, setActiveOrderSheet] = useState<{
     order: ItineraryData;
     instanceId: number;
@@ -160,7 +167,9 @@ export default function OrdersScreen() {
           price: totalAmount,
           currency: 'USD',
           notes: `Status: ${booking.status}`,
-          providerLogo: booking.stays?.service_providers?.logo_url,
+          // TODO(db): logo_url comes from service_providers table; DiceBear is placeholder
+          providerLogo: booking.stays?.service_providers?.logo_url ||
+            `https://api.dicebear.com/8.x/shapes/png?seed=${encodeURIComponent(resolvedName)}&size=128&backgroundColor=FF4757`,
           checkInTime: booking.stays?.check_in_time,
           checkOutTime: booking.stays?.check_out_time,
         } satisfies OrderData;
@@ -252,14 +261,11 @@ export default function OrdersScreen() {
   }, []);
 
   const clearAllOrders = () => {
-    Alert.alert(
-      'Delete All Orders',
-      'Are you sure you want to delete all orders? This action cannot be undone.',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
+    showAlert({
+      title: 'Delete All Orders',
+      message: 'Are you sure you want to delete all orders? This action cannot be undone.',
+      buttons: [
+        { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete All',
           style: 'destructive',
@@ -271,8 +277,8 @@ export default function OrdersScreen() {
             setOrders([]);
           },
         },
-      ]
-    );
+      ],
+    });
   };
 
   useFocusEffect(
@@ -309,7 +315,11 @@ export default function OrdersScreen() {
         await fetchOrders();
       } catch (error) {
         console.error('Failed to delete order', error);
-        Alert.alert('Delete failed', 'We could not delete this order. Please try again.');
+        showAlert({
+          title: 'Delete failed',
+          message: 'We could not delete this order. Please try again.',
+          buttons: [{ text: 'OK' }],
+        });
         await fetchOrders();
       }
     },
@@ -332,10 +342,10 @@ export default function OrdersScreen() {
 
   // Convert OrderData to ItineraryData format for ListView compatibility
   const PAYMENT_METHOD_OPTIONS = [
-    'Visa •••• 0921',
-    'Mastercard •••• 4432',
+    'Visa â€¢â€¢â€¢â€¢ 0921',
+    'Mastercard â€¢â€¢â€¢â€¢ 4432',
     'Paynow Wallet',
-    'Amex •••• 3012',
+    'Amex â€¢â€¢â€¢â€¢ 3012',
   ] as const;
 
   const convertOrdersToItineraryFormat = (orders: OrderData[]) => {
@@ -398,7 +408,8 @@ export default function OrdersScreen() {
         checkOutDate: order.checkOutDate,
         checkInTime: order.checkInTime,
         checkOutTime: order.checkOutTime,
-        providerLogo: order.providerLogo,
+        providerLogo: order.providerLogo ||
+          `https://api.dicebear.com/8.x/shapes/png?seed=${encodeURIComponent(order.name)}&size=128&backgroundColor=FF4757`,
       };
     });
   };
@@ -504,18 +515,20 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   titleSection: {
-    paddingHorizontal: 16,
+    paddingHorizontal: SCREEN_HORIZONTAL_PADDING,
     paddingTop: 0,
-    paddingBottom: 8,
+    paddingBottom: TITLE_BOTTOM_PADDING,
   },
   pageTitle: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
+    lineHeight: responsiveLineHeight(24),
+    fontFamily: Fonts.bold,
     textAlign: 'left',
   },
   searchFilterContainer: {
     paddingHorizontal: 0,
-    paddingTop: 8,
-    marginTop: 4,
+    paddingTop: SEARCH_TOP_PADDING,
+    marginTop: SEARCH_TOP_MARGIN,
     overflow: 'hidden',
   },
 });

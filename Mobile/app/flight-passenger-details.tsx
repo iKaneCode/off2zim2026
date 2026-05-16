@@ -24,7 +24,7 @@ import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import * as Haptics from 'expo-haptics';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { getCardSurfaceColors } from '@/constants/CardStyles';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import { WallpaperPattern } from '@/components/WallpaperPattern';
 import { countries } from '@/countries-fixed';
 import { useAuth, getProfile } from '@/context/AuthContext';
@@ -498,7 +498,7 @@ export default function FlightPassengerDetails() {
                               : isDark
                                 ? 'rgba(235,235,245,0.5)'
                                 : 'rgba(60,60,67,0.6)',
-                          fontSize: 16,
+                          fontSize: responsiveFontSize(16),
                           fontFamily: Fonts.regular,
                         }}
                       >
@@ -611,7 +611,7 @@ export default function FlightPassengerDetails() {
                               : isDark
                                 ? 'rgba(235,235,245,0.5)'
                                 : 'rgba(60,60,67,0.6)',
-                          fontSize: 16,
+                          fontSize: responsiveFontSize(16),
                           fontFamily: Fonts.regular,
                         }}
                       >
@@ -671,7 +671,7 @@ export default function FlightPassengerDetails() {
                               : isDark
                                 ? 'rgba(235,235,245,0.5)'
                                 : 'rgba(60,60,67,0.6)',
-                          fontSize: 16,
+                          fontSize: responsiveFontSize(16),
                           fontFamily: Fonts.regular,
                         }}
                       >
@@ -771,7 +771,7 @@ export default function FlightPassengerDetails() {
                               : isDark
                                 ? 'rgba(235,235,245,0.5)'
                                 : 'rgba(60,60,67,0.6)',
-                          fontSize: 16,
+                          fontSize: responsiveFontSize(16),
                           fontFamily: Fonts.regular,
                         }}
                       >
@@ -823,7 +823,7 @@ export default function FlightPassengerDetails() {
                           <View style={{ height: 24, justifyContent: 'center' }}>
                             <ThemedText
                               style={{
-                                fontSize: 20,
+                                fontSize: responsiveFontSize(20),
                                 lineHeight: 24,
                                 includeFontPadding: false,
                               }}
@@ -845,7 +845,7 @@ export default function FlightPassengerDetails() {
                                 : isDark
                                   ? 'rgba(235,235,245,0.5)'
                                   : 'rgba(60,60,67,0.6)',
-                            fontSize: 16,
+                            fontSize: responsiveFontSize(16),
                             fontFamily: Fonts.regular,
                           }}
                         >
@@ -1378,7 +1378,7 @@ export default function FlightPassengerDetails() {
                         }
                         style={{
                           flex: 1,
-                          fontSize: 16,
+                          fontSize: responsiveFontSize(16),
                           fontFamily: Fonts.regular,
                           color: isDark ? '#FFFFFF' : '#1C1C1E',
                           padding: 0,
@@ -1437,7 +1437,7 @@ export default function FlightPassengerDetails() {
                           >
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                               <ThemedText
-                                style={{ fontSize: 28, lineHeight: 34, includeFontPadding: false }}
+                                style={{ fontSize: responsiveFontSize(28), lineHeight: 34, includeFontPadding: false }}
                               >
                                 {zimbabwe.flag}
                               </ThemedText>
@@ -1513,7 +1513,7 @@ export default function FlightPassengerDetails() {
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                                 <ThemedText
                                   style={{
-                                    fontSize: 28,
+                                    fontSize: responsiveFontSize(28),
                                     lineHeight: 34,
                                     includeFontPadding: false,
                                   }}
@@ -2076,7 +2076,7 @@ const styles = StyleSheet.create({
     paddingTop: 8,
   },
   pageTitle: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     fontFamily: Fonts.bold,
   },
   providerPill: {
@@ -2090,7 +2090,7 @@ const styles = StyleSheet.create({
     minWidth: 100,
   },
   providerPillText: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
     flexShrink: 1,
@@ -2114,7 +2114,7 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   sectionTitle: {
-    fontSize: 22,
+    fontSize: responsiveFontSize(22),
     fontFamily: Fonts.bold,
     marginBottom: 12,
   },
@@ -2125,7 +2125,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   sameAsLabel: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontFamily: Fonts.medium,
     letterSpacing: 0.2,
   },
@@ -2143,11 +2143,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   inputLabel: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     fontFamily: Fonts.medium,
   },
   inputRequired: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     fontFamily: Fonts.bold,
     color: '#FF3B30',
   },
@@ -2155,7 +2155,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 8,
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.regular,
   },
   errorBorder: {
@@ -2198,7 +2198,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 0,
     gap: 12,
     width: '100%',
     maxWidth: 400,
@@ -2211,7 +2211,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   guestDropdownTitle: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontFamily: Fonts.bold,
   },
   guestDropdownCloseButton: {},
@@ -2226,7 +2226,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
-    elevation: 5,
+    elevation: 0,
   },
   guestSection: {
     marginBottom: 20,
@@ -2241,7 +2241,7 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   guestSubLabel: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '600',
   },
   calendarModalContainer: {
@@ -2262,7 +2262,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 0,
     gap: 12,
     width: '100%',
     maxWidth: 400,
@@ -2275,7 +2275,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   calendarModalTitle: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontFamily: Fonts.bold,
   },
   calendarModalCloseButton: {},
@@ -2300,7 +2300,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   monthTitle: {
-    fontSize: 22,
+    fontSize: responsiveFontSize(22),
     fontWeight: '600',
   },
   weekDaysHeader: {
@@ -2315,7 +2315,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   weekDayText: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     fontWeight: '600',
     opacity: 0.5,
     textTransform: 'uppercase',
@@ -2354,16 +2354,16 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   calendarDayText: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontWeight: '400',
   },
   calendarDayTextSelected: {
     fontWeight: '600',
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     color: '#FFFFFF',
   },
   placeholderText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     opacity: 0.6,
     textAlign: 'center',
     paddingVertical: 40,
@@ -2379,7 +2379,7 @@ const styles = StyleSheet.create({
     marginTop: 20,
   },
   continueButtonText: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
     letterSpacing: 0.5,
   },

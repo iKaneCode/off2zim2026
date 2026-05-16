@@ -3,7 +3,7 @@ import { View, StyleSheet, TouchableOpacity } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 
 export interface EmptyStateAction {
   label: string;
@@ -91,12 +91,12 @@ const styles = StyleSheet.create({
     height: '70%',
   },
   emptyText: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
     marginTop: 12,
   },
   emptySubText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     textAlign: 'center',
     marginTop: 6,
     color: '#8E8E93',
@@ -130,7 +130,7 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   actionText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.medium,
   },
   primaryButtonText: {

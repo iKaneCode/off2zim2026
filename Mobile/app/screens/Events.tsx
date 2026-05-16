@@ -7,7 +7,7 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
 import { useCollapsibleSearchSection } from '@/components/CollapsibleSearchSection';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import { eventsService } from '@/services/database';
 import type { Event } from '@/types/Event';
 import { LocationPill } from '@/components/LocationPill';
@@ -421,7 +421,7 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   emptyStateText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     marginTop: 16,
     textAlign: 'center',
     opacity: 0.7,
@@ -431,7 +431,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   priceLabel: {
-    fontSize: 11,
+    fontSize: responsiveFontSize(11),
     letterSpacing: 0.2,
     fontFamily: Fonts.medium,
     textTransform: 'lowercase',
@@ -446,16 +446,16 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   priceValue: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
   },
   priceCurrency: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     fontFamily: Fonts.medium,
   },
   priceUnit: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     fontFamily: Fonts.medium,
     marginLeft: 4,
   },

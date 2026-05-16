@@ -6,7 +6,7 @@ import { CustomHeader } from '@/components/CustomHeader';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { Colors } from '@/constants/Colors';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { providerContentService } from '@/services/serviceProvider';
 
@@ -133,8 +133,8 @@ const styles = StyleSheet.create({
   content: { paddingHorizontal: 20, paddingBottom: 40, gap: 22 },
   section: { gap: 12 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
-  sectionTitle: { fontFamily: Fonts.bold, fontSize: 22 },
-  sectionCount: { fontFamily: Fonts.medium, fontSize: 14 },
+  sectionTitle: { fontFamily: Fonts.bold, fontSize: responsiveFontSize(22) },
+  sectionCount: { fontFamily: Fonts.medium, fontSize: responsiveFontSize(14) },
   itemRow: {
     borderWidth: 1,
     borderRadius: 22,
@@ -145,10 +145,10 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   itemText: { flex: 1, gap: 4 },
-  itemTitle: { fontFamily: Fonts.bold, fontSize: 16 },
-  itemMeta: { fontFamily: Fonts.regular, fontSize: 13 },
-  itemStatus: { fontFamily: Fonts.bold, fontSize: 13 },
+  itemTitle: { fontFamily: Fonts.bold, fontSize: responsiveFontSize(16) },
+  itemMeta: { fontFamily: Fonts.regular, fontSize: responsiveFontSize(13) },
+  itemStatus: { fontFamily: Fonts.bold, fontSize: responsiveFontSize(13) },
   emptyState: { borderWidth: 1, borderRadius: 22, paddingHorizontal: 18, paddingVertical: 20 },
-  emptyText: { fontFamily: Fonts.medium, fontSize: 14 },
+  emptyText: { fontFamily: Fonts.medium, fontSize: responsiveFontSize(14) },
 });
 

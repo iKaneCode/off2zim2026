@@ -34,7 +34,7 @@ import { faHeart as regularHeart, faShareFromSquare } from '@fortawesome/free-re
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { staysData, upcomingEventsData, thingsToDoData } from '@/constants/FeaturedData';
 import { cloneStay, getStayById } from '@/constants/StayData';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import { getActivityStatus, activityStatusColor } from '@/utils/timeStatus';
 import type { Stay } from '@/types/Stay';
 import * as Haptics from 'expo-haptics';
@@ -666,7 +666,7 @@ export default function DestinationDetail() {
                         shadowOffset: { width: 0, height: 2 },
                         shadowOpacity: 0.1,
                         shadowRadius: 8, // Restored original shadow radius
-                        elevation: 4, // Restored original elevation
+                        elevation: 0, // Restored original elevation
                         overflow: 'hidden',
                       },
                     ]}
@@ -769,7 +769,7 @@ export default function DestinationDetail() {
                         shadowOffset: { width: 0, height: 2 },
                         shadowOpacity: 0.1,
                         shadowRadius: 8,
-                        elevation: 4,
+                        elevation: 0,
                         overflow: 'hidden',
                       },
                     ]}
@@ -916,7 +916,7 @@ export default function DestinationDetail() {
                         shadowOffset: { width: 0, height: 2 },
                         shadowOpacity: 0.1,
                         shadowRadius: 8,
-                        elevation: 4,
+                        elevation: 0,
                         overflow: 'hidden',
                       },
                     ]}
@@ -1059,7 +1059,7 @@ export default function DestinationDetail() {
                         shadowOffset: { width: 0, height: 2 },
                         shadowOpacity: 0.1,
                         shadowRadius: 8,
-                        elevation: 4,
+                        elevation: 0,
                         overflow: 'hidden',
                       },
                     ]}
@@ -1209,7 +1209,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     zIndex: 9,
   },
-  headerTitleText: { fontSize: 18, fontWeight: '700', textAlign: 'left' },
+  headerTitleText: { fontSize: responsiveFontSize(18), fontWeight: '700', textAlign: 'left' },
   titleSection: {
     paddingHorizontal: 16,
     justifyContent: 'center',
@@ -1217,7 +1217,7 @@ const styles = StyleSheet.create({
     position: 'relative',
     overflow: 'hidden',
   },
-  titleSectionText: { fontSize: 18, fontWeight: '700', textAlign: 'left' },
+  titleSectionText: { fontSize: responsiveFontSize(18), fontWeight: '700', textAlign: 'left' },
   titleButtons: {},
   titleButton: {
     width: 36,
@@ -1284,10 +1284,10 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  destinationTitle: { fontSize: 28, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 8 },
+  destinationTitle: { fontSize: responsiveFontSize(28), fontWeight: 'bold', color: '#FFFFFF', marginBottom: 8 },
   pillIcon: { marginRight: 4 },
   weatherContainer: { alignSelf: 'flex-start' },
-  weatherText: { fontSize: 16, color: '#FFFFFF', opacity: 0.9 },
+  weatherText: { fontSize: responsiveFontSize(16), color: '#FFFFFF', opacity: 0.9 },
   weatherPill: {
     flex: 1,
     alignItems: 'center',
@@ -1296,13 +1296,13 @@ const styles = StyleSheet.create({
     borderRadius: 16,
   },
   pillDayText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontFamily: Fonts.bold,
     opacity: 0.9,
     letterSpacing: 0.3,
   },
   pillWeatherIcon: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     marginVertical: 2,
   },
   pillTempRow: {
@@ -1311,11 +1311,11 @@ const styles = StyleSheet.create({
     gap: 4,
   },
   pillHighText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.bold,
   },
   pillLowText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     fontFamily: Fonts.medium,
     opacity: 0.7,
   },
@@ -1333,7 +1333,7 @@ const styles = StyleSheet.create({
         shadowRadius: 12,
       },
       android: {
-        elevation: 8,
+        elevation: 0,
       },
     }),
   },
@@ -1354,7 +1354,7 @@ const styles = StyleSheet.create({
     paddingVertical: 2,
   },
   currentWeatherText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.bold,
     letterSpacing: 0.3,
   },
@@ -1381,7 +1381,7 @@ const styles = StyleSheet.create({
   sectionTitle: { marginBottom: 0 },
   highlightItem: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
   highlightIcon: { marginRight: 8 },
-  highlightText: { fontSize: 16, opacity: 0.8 },
+  highlightText: { fontSize: responsiveFontSize(16), opacity: 0.8 },
   // Horizontal lists and cards (match Featured)
   hList: { paddingRight: 8 },
   stayCard: {
@@ -1393,7 +1393,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 0,
     position: 'relative',
   },
   eventCard: {
@@ -1405,7 +1405,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 0,
     position: 'relative',
   },
   thingsCard: {
@@ -1448,7 +1448,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
   galleryOverlayText: {
-    fontSize: 28,
+    fontSize: responsiveFontSize(28),
     lineHeight: 34,
     fontWeight: '700',
     color: '#FFFFFF',
@@ -1489,14 +1489,14 @@ const styles = StyleSheet.create({
     paddingRight: 10,
   },
   destinationName: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
     textAlign: 'left',
     color: '#FFFFFF',
     letterSpacing: 0.3,
   },
   destinationWeather: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     textAlign: 'left',
     color: '#E0E0E0',
     marginTop: 2,

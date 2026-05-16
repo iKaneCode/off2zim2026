@@ -14,7 +14,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/Colors';
 import { cardSurfaceBaseStyle, getCardSurfaceColors } from '@/constants/CardStyles';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { WallpaperPattern } from '@/components';
 
@@ -601,7 +601,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.18,
     shadowRadius: 10,
-    elevation: 5,
+    elevation: 0,
   },
   content: {
     width: '100%',
@@ -615,14 +615,14 @@ const styles = StyleSheet.create({
   },
   title: {
     fontFamily: Fonts.bold,
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     lineHeight: 30,
     textAlign: 'center',
     letterSpacing: 0.3,
   },
   message: {
     fontFamily: Fonts.medium,
-    fontSize: 17,
+    fontSize: responsiveFontSize(17),
     lineHeight: 24,
     textAlign: 'center',
     opacity: 0.92,
@@ -642,7 +642,7 @@ const styles = StyleSheet.create({
   },
   actionButtonText: {
     fontFamily: Fonts.bold,
-    fontSize: 17,
+    fontSize: responsiveFontSize(17),
     lineHeight: 22,
   },
   loadingContainer: {
@@ -658,7 +658,7 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontFamily: Fonts.medium,
-    fontSize: 17,
+    fontSize: responsiveFontSize(17),
     lineHeight: 24,
     textAlign: 'center',
     letterSpacing: 0.2,
@@ -671,7 +671,7 @@ const styles = StyleSheet.create({
   },
   simpleLoadingText: {
     fontFamily: Fonts.medium,
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     lineHeight: 22,
     textAlign: 'center',
     opacity: 0.9,
@@ -689,7 +689,7 @@ const styles = StyleSheet.create({
   detailText: {
     flex: 1,
     fontFamily: Fonts.bold,
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     lineHeight: 24,
     letterSpacing: 0.1,
   },

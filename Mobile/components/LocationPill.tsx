@@ -3,7 +3,7 @@ import { View, StyleSheet, type StyleProp, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 import { ThemedText } from './ThemedText';
-import { Fonts } from '@/constants/Fonts';
+import { Fonts, responsiveFontSize, responsiveLineHeight } from '@/constants/Fonts';
 import type { IoniconName } from '@/utils/amenityUtils';
 import { useColorScheme } from '@/hooks/useColorScheme';
 
@@ -95,7 +95,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
-    elevation: 2,
+    elevation: 0,
   },
   iconWrapperCompact: {
     width: 20,
@@ -104,14 +104,14 @@ const styles = StyleSheet.create({
     marginRight: 4,
   },
   text: {
-    fontSize: 15,
-    lineHeight: 20,
+    fontSize: responsiveFontSize(15),
+    lineHeight: responsiveLineHeight(15),
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
     flexShrink: 1,
   },
   textCompact: {
-    fontSize: 13,
-    lineHeight: 18,
+    fontSize: responsiveFontSize(13),
+    lineHeight: responsiveLineHeight(13),
   },
 });

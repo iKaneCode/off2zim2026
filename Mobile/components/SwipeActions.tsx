@@ -1,8 +1,9 @@
 import React from 'react';
-import { Animated, Platform, Alert } from 'react-native';
+import { Animated, Platform } from 'react-native';
 import { RectButton } from 'react-native-gesture-handler';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useColorScheme } from '@/hooks/useColorScheme';
+import { useAppAlert } from '@/context/AppAlertContext';
 import * as Haptics from 'expo-haptics';
 
 export interface SwipeAction {
@@ -33,6 +34,7 @@ export function SwipeActions({
 }: SwipeActionsProps) {
   const colorScheme = useColorScheme();
   const isDarkMode = colorScheme === 'dark';
+  const { showAlert } = useAppAlert();
 
   const translateBase = [
     containerWidth + 10,
@@ -69,14 +71,11 @@ export function SwipeActions({
 
   const handleActionPress = (action: SwipeAction) => {
     if (action.confirmTitle && action.confirmMessage) {
-      Alert.alert(
-        action.confirmTitle,
-        action.confirmMessage,
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
+      showAlert({
+        title: action.confirmTitle,
+        message: action.confirmMessage,
+        buttons: [
+          { text: 'Cancel', style: 'cancel' },
           {
             text: action.confirmButtonText || 'Confirm',
             style: action.isDestructive ? 'destructive' : 'default',
@@ -92,8 +91,7 @@ export function SwipeActions({
             },
           },
         ],
-        { cancelable: true }
-      );
+      });
     } else {
       if (Platform.OS === 'ios') {
         Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
@@ -156,7 +154,7 @@ export function SwipeActions({
                 shadowOffset: { width: 0, height: 1 },
                 shadowOpacity: 0.08,
                 shadowRadius: 1,
-                elevation: 1,
+                elevation: 0,
               };
 
         return (

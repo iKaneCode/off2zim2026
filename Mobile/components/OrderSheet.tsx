@@ -1,10 +1,10 @@
-ï»¿import React, { useCallback, useEffect, useMemo, useRef } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef } from 'react';
 import { Animated, Image, Pressable, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Colors } from '@/constants/Colors';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import { getCardSurfaceColors } from '@/constants/CardStyles';
 import type { ItineraryData } from '@/components/ItineraryItem';
 import { ThemedText } from '@/components/ThemedText';
@@ -273,7 +273,7 @@ export function OrderSheet({ order, onClose, instanceId, title, showStatus = tru
     }
 
     if (statusConfig?.label === 'Completed') {
-      return 'Visa â€¢â€¢â€¢â€¢ 0921';
+      return 'Visa •••• 0921';
     }
 
     return undefined;
@@ -309,13 +309,13 @@ export function OrderSheet({ order, onClose, instanceId, title, showStatus = tru
           label: 'Guests & rooms',
           value: `${(order.adultsCount || 0) + (order.childrenCount || 0)} guest${
             (order.adultsCount || 0) + (order.childrenCount || 0) === 1 ? '' : 's'
-          } Â· ${order.roomsCount || 0} room${order.roomsCount === 1 ? '' : 's'}`,
+          } · ${order.roomsCount || 0} room${order.roomsCount === 1 ? '' : 's'}`,
         },
         {
           label: 'Room type',
           value: order.roomType
             ? order.roomTypeRate
-              ? `${order.roomType} Â· $${order.roomTypeRate}/night`
+              ? `${order.roomType} · $${order.roomTypeRate}/night`
               : order.roomType
             : 'Not specified',
         },
@@ -490,7 +490,7 @@ export function OrderSheet({ order, onClose, instanceId, title, showStatus = tru
                             shadowOffset: { width: 0, height: 1 },
                             shadowOpacity: 0.1,
                             shadowRadius: 2,
-                            elevation: 2,
+                            elevation: 0,
                             marginRight: 6,
                           }}
                         >
@@ -630,7 +630,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.18,
     shadowRadius: 28,
-    elevation: 12,
+    elevation: 0,
   },
   header: {
     flexDirection: 'row',
@@ -639,7 +639,7 @@ const styles = StyleSheet.create({
     marginBottom: 18,
   },
   title: {
-    fontSize: 22,
+    fontSize: responsiveFontSize(22),
     fontFamily: Fonts.bold,
   },
   closeButtonCircle: {
@@ -653,7 +653,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.2,
     shadowRadius: 2,
-    elevation: 5,
+    elevation: 0,
   },
   scrollContent: {
     gap: 20,
@@ -668,7 +668,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   summaryTitle: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
   },
   summaryStayRow: {
@@ -690,18 +690,18 @@ const styles = StyleSheet.create({
     borderRadius: 22,
   },
   providerLogoText: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
     color: '#FFFFFF',
   },
   summaryStayName: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontFamily: Fonts.bold,
     flex: 1,
     flexWrap: 'wrap',
   },
   summarySubtitle: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     color: '#8E8E93',
   },
   detailsGrid: {
@@ -714,7 +714,7 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   summaryLabel: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     lineHeight: 20,
     fontFamily: Fonts.medium,
   },
@@ -737,10 +737,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 2,
-    elevation: 2,
+    elevation: 0,
   },
   summaryPillText: {
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     lineHeight: 18,
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
@@ -751,17 +751,17 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(142,142,147,0.08)',
   },
   sectionTitle: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.medium,
     marginBottom: 8,
   },
   noteCopy: {
-    fontSize: 15,
+    fontSize: responsiveFontSize(15),
     lineHeight: 22,
     color: '#8E8E93',
   },
   messageCopy: {
-    fontSize: 17,
+    fontSize: responsiveFontSize(17),
     lineHeight: 22,
     fontFamily: Fonts.bold,
   },
@@ -781,7 +781,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   primaryButtonText: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
   },
   secondaryButton: {
@@ -793,7 +793,7 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   secondaryButtonText: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
   },
 });

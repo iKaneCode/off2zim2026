@@ -1,4 +1,5 @@
-import React from 'react';
+﻿import React from 'react';
+import { responsiveFontSize } from '@/constants/Fonts';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -65,7 +66,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   pageTitle: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     textAlign: 'left',
   },
   scrollView: {

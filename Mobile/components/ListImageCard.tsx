@@ -13,7 +13,7 @@ import { faHeart as solidHeart } from '@fortawesome/free-solid-svg-icons/faHeart
 import { faHeart as regularHeart } from '@fortawesome/free-regular-svg-icons/faHeart';
 
 import { ThemedText } from './ThemedText';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, responsiveLineHeight, Fonts } from '@/constants/Fonts';
 
 export interface ListImageCardProps {
   title: string;
@@ -106,7 +106,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
-    elevation: 4,
+    elevation: 0,
   },
   imageWrapper: {
     position: 'relative',
@@ -133,7 +133,8 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   title: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
+    lineHeight: responsiveLineHeight(18),
     fontFamily: Fonts.bold,
     letterSpacing: 0.3,
   },

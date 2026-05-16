@@ -6,7 +6,6 @@ import {
   ScrollView,
   TouchableOpacity,
   TextInput,
-  Alert,
   Image,
   ActivityIndicator,
   Modal,
@@ -18,10 +17,11 @@ import { Ionicons } from '@expo/vector-icons';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '@/constants/Colors';
-import { Fonts } from '@/constants/Fonts';
+import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import { cardSurfaceBaseStyle, getCardSurfaceColors } from '@/constants/CardStyles';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { getProfile, updateProfile, useAuth } from '@/context/AuthContext';
+import { useAppAlert } from '@/context/AppAlertContext';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { WallpaperPattern } from '@/components/WallpaperPattern';
@@ -76,6 +76,7 @@ export default function Profile() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const { resetPassword, signOut, user } = useAuth();
+  const { showAlert } = useAppAlert();
 
   const [saving, setSaving] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
@@ -367,34 +368,40 @@ export default function Profile() {
   };
 
   const handlePasswordChange = () => {
-    Alert.alert('Change Password', 'A password reset link will be sent to your email address.', [
-      { text: 'Cancel', style: 'cancel' },
-      {
-        text: 'Send Reset Link',
-        onPress: async () => {
-          try {
-            const { data, error } = await resetPassword(email || user?.email || '');
-            if (error) throw error;
+    showAlert({
+      title: 'Change Password',
+      message: 'A password reset link will be sent to your email address.',
+      buttons: [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Send Reset Link',
+          onPress: async () => {
+            try {
+              const { data, error } = await resetPassword(email || user?.email || '');
+              if (error) throw error;
 
-            Alert.alert(
-              'Password Reset Sent',
-              data?.resetUrl
-                ? 'Email delivery is not configured yet. Use the reset link surfaced in the sign-in flow, or configure email delivery to send the reset email automatically.'
-                : 'Check your email for a password reset link.'
-            );
-          } catch (error: any) {
-            Alert.alert('Error', 'Failed to send password reset: ' + error.message);
-          }
+              showAlert({
+                title: 'Password Reset Sent',
+                message: data?.resetUrl
+                  ? 'Email delivery is not configured yet. Use the reset link surfaced in the sign-in flow, or configure email delivery to send the reset email automatically.'
+                  : 'Check your email for a password reset link.',
+                buttons: [{ text: 'OK' }],
+              });
+            } catch (error: any) {
+              showAlert({ title: 'Error', message: 'Failed to send password reset: ' + error.message, buttons: [{ text: 'OK' }] });
+            }
+          },
         },
-      },
-    ]);
+      ],
+    });
   };
 
   const handleDeleteAccount = () => {
-    Alert.alert(
-      'Delete Account',
-      'This will permanently remove your account, bookings, favorites, and provider data. This action cannot be undone.',
-      [
+    showAlert({
+      title: 'Delete Account',
+      message:
+        'This will permanently remove your account, bookings, favorites, and provider data. This action cannot be undone.',
+      buttons: [
         { text: 'Cancel', style: 'cancel' },
         {
           text: 'Delete',
@@ -423,14 +430,14 @@ export default function Profile() {
             } catch (error: any) {
               console.error('Error deleting account:', error);
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-              Alert.alert('Error', 'Failed to delete account: ' + error.message);
+              showAlert({ title: 'Error', message: 'Failed to delete account: ' + error.message, buttons: [{ text: 'OK' }] });
             } finally {
               setDeletingAccount(false);
             }
           },
         },
-      ]
-    );
+      ],
+    });
   };
 
   const bgColor = isDark ? Colors.dark.background : Colors.light.background;
@@ -456,27 +463,25 @@ export default function Profile() {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Please grant permission to access your photo library.');
+        showAlert({ title: 'Permission Required', message: 'Please grant permission to access your photo library.', buttons: [{ text: 'OK' }] });
         return;
       }
 
-      Alert.alert('Profile Picture', 'Choose an option', [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Take Photo', onPress: () => openCamera() },
-        { text: 'Choose from Library', onPress: () => openImageLibrary() },
-        ...(profileImage
-          ? [
-              {
-                text: 'Remove Photo',
-                onPress: () => removeProfileImage(),
-                style: 'destructive' as const,
-              },
-            ]
-          : []),
-      ]);
+      showAlert({
+        title: 'Profile Picture',
+        message: 'Choose an option',
+        buttons: [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Take Photo', onPress: () => openCamera() },
+          { text: 'Choose from Library', onPress: () => openImageLibrary() },
+          ...(profileImage
+            ? [{ text: 'Remove Photo', onPress: () => removeProfileImage(), style: 'destructive' as const }]
+            : []),
+        ],
+      });
     } catch (error) {
       console.error('Error requesting permissions:', error);
-      Alert.alert('Error', 'Failed to request permissions');
+      showAlert({ title: 'Error', message: 'Failed to request permissions', buttons: [{ text: 'OK' }] });
     }
   };
 
@@ -484,7 +489,7 @@ export default function Profile() {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission Required', 'Please grant permission to access your camera.');
+        showAlert({ title: 'Permission Required', message: 'Please grant permission to access your camera.', buttons: [{ text: 'OK' }] });
         return;
       }
 
@@ -500,7 +505,7 @@ export default function Profile() {
       }
     } catch (error) {
       console.error('Error opening camera:', error);
-      Alert.alert('Error', 'Failed to open camera');
+      showAlert({ title: 'Error', message: 'Failed to open camera', buttons: [{ text: 'OK' }] });
     }
   };
 
@@ -518,7 +523,7 @@ export default function Profile() {
       }
     } catch (error) {
       console.error('Error opening image library:', error);
-      Alert.alert('Error', 'Failed to open image library');
+      showAlert({ title: 'Error', message: 'Failed to open image library', buttons: [{ text: 'OK' }] });
     }
   };
 
@@ -528,13 +533,15 @@ export default function Profile() {
     setUploadingImage(true);
     try {
       void imageUri;
-      Alert.alert(
-        'Coming Soon',
-        'Profile photo uploads will be re-enabled once the shared backend storage flow is finalized.'
-      );
+      showAlert({
+        title: 'Coming Soon',
+        message:
+          'Profile photo uploads will be re-enabled once the shared backend storage flow is finalized.',
+        buttons: [{ text: 'OK' }],
+      });
     } catch (error: any) {
       console.error('Error uploading image:', error);
-      Alert.alert('Error', 'Failed to upload image: ' + error.message);
+      showAlert({ title: 'Error', message: 'Failed to upload image: ' + error.message, buttons: [{ text: 'OK' }] });
     } finally {
       setUploadingImage(false);
     }
@@ -550,10 +557,10 @@ export default function Profile() {
       if (error) throw error;
 
       setProfileImage(null);
-      Alert.alert('Success', 'Profile picture removed successfully');
+      showAlert({ title: 'Success', message: 'Profile picture removed successfully', buttons: [{ text: 'OK' }] });
     } catch (error: any) {
       console.error('Error removing image:', error);
-      Alert.alert('Error', 'Failed to remove image: ' + error.message);
+      showAlert({ title: 'Error', message: 'Failed to remove image: ' + error.message, buttons: [{ text: 'OK' }] });
     } finally {
       setUploadingImage(false);
     }
@@ -767,7 +774,7 @@ export default function Profile() {
                             : isDark
                               ? 'rgba(235,235,245,0.5)'
                               : 'rgba(60,60,67,0.6)',
-                          fontSize: 16,
+                          fontSize: responsiveFontSize(16),
                           fontFamily: Fonts.regular,
                         }}
                       >
@@ -865,7 +872,7 @@ export default function Profile() {
                             : isDark
                               ? 'rgba(235,235,245,0.5)'
                               : 'rgba(60,60,67,0.6)',
-                          fontSize: 16,
+                          fontSize: responsiveFontSize(16),
                           fontFamily: Fonts.regular,
                         }}
                       >
@@ -913,7 +920,7 @@ export default function Profile() {
                             : isDark
                               ? 'rgba(235,235,245,0.5)'
                               : 'rgba(60,60,67,0.6)',
-                          fontSize: 16,
+                          fontSize: responsiveFontSize(16),
                           fontFamily: Fonts.regular,
                         }}
                       >
@@ -987,7 +994,7 @@ export default function Profile() {
                             : isDark
                               ? 'rgba(235,235,245,0.5)'
                               : 'rgba(60,60,67,0.6)',
-                          fontSize: 16,
+                          fontSize: responsiveFontSize(16),
                           fontFamily: Fonts.regular,
                         }}
                       >
@@ -1032,7 +1039,7 @@ export default function Profile() {
                           <View style={{ height: 24, justifyContent: 'center' }}>
                             <Text
                               style={{
-                                fontSize: 20,
+                                fontSize: responsiveFontSize(20),
                                 lineHeight: 24,
                                 includeFontPadding: false,
                               }}
@@ -1050,7 +1057,7 @@ export default function Profile() {
                               : isDark
                                 ? 'rgba(235,235,245,0.5)'
                                 : 'rgba(60,60,67,0.6)',
-                            fontSize: 16,
+                            fontSize: responsiveFontSize(16),
                             fontFamily: Fonts.regular,
                           }}
                         >
@@ -1655,7 +1662,7 @@ export default function Profile() {
                         }
                         style={{
                           flex: 1,
-                          fontSize: 16,
+                          fontSize: responsiveFontSize(16),
                           fontFamily: Fonts.regular,
                           color: isDark ? '#FFFFFF' : '#1C1C1E',
                           padding: 0,
@@ -1711,7 +1718,7 @@ export default function Profile() {
                           >
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                               <ThemedText
-                                style={{ fontSize: 28, lineHeight: 34, includeFontPadding: false }}
+                                style={{ fontSize: responsiveFontSize(28), lineHeight: 34, includeFontPadding: false }}
                               >
                                 {zimbabwe.flag}
                               </ThemedText>
@@ -1785,7 +1792,7 @@ export default function Profile() {
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                                 <ThemedText
                                   style={{
-                                    fontSize: 28,
+                                    fontSize: responsiveFontSize(28),
                                     lineHeight: 34,
                                     includeFontPadding: false,
                                   }}
@@ -2348,7 +2355,7 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   pageTitle: {
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     textAlign: 'left',
   },
   scrollView: {
@@ -2398,25 +2405,25 @@ const styles = StyleSheet.create({
   },
   displayName: {
     fontFamily: Fonts.bold,
-    fontSize: 24,
+    fontSize: responsiveFontSize(24),
     textAlign: 'center',
     marginBottom: 8,
   },
   email: {
     fontFamily: Fonts.regular,
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     textAlign: 'center',
     marginBottom: 4,
   },
   phone: {
     fontFamily: Fonts.regular,
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     textAlign: 'center',
     marginBottom: 4,
   },
   userTypeText: {
     fontFamily: Fonts.regular,
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     textAlign: 'center',
   },
   detailList: {
@@ -2430,18 +2437,18 @@ const styles = StyleSheet.create({
   },
   detailLabel: {
     fontFamily: Fonts.medium,
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
   },
   detailValue: {
     fontFamily: Fonts.regular,
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
   },
   formGroup: {
     marginBottom: 18,
   },
   label: {
     fontFamily: Fonts.medium,
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     marginBottom: 8,
   },
   labelErrorContainer: {
@@ -2451,7 +2458,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   inputRequired: {
-    fontSize: 13,
+    fontSize: responsiveFontSize(13),
     fontFamily: Fonts.bold,
     color: '#FF3B30',
   },
@@ -2459,7 +2466,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     padding: 16,
     fontFamily: Fonts.regular,
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
   },
   toggleContainer: {
     flexDirection: 'row',
@@ -2475,7 +2482,7 @@ const styles = StyleSheet.create({
   },
   toggleText: {
     fontFamily: Fonts.medium,
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
   },
   ratingSection: {
     alignItems: 'center',
@@ -2492,7 +2499,7 @@ const styles = StyleSheet.create({
   },
   ratingText: {
     fontFamily: Fonts.regular,
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
   },
   reviewsCard: {
     borderRadius: 16,
@@ -2502,7 +2509,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontFamily: Fonts.bold,
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     marginBottom: 16,
   },
   reviewItem: {
@@ -2523,7 +2530,7 @@ const styles = StyleSheet.create({
   },
   reviewerName: {
     fontFamily: Fonts.medium,
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     marginLeft: 8,
   },
   reviewStars: {
@@ -2531,7 +2538,7 @@ const styles = StyleSheet.create({
   },
   reviewComment: {
     fontFamily: Fonts.regular,
-    fontSize: 14,
+    fontSize: responsiveFontSize(14),
     lineHeight: 20,
   },
   settingsCard: {
@@ -2551,7 +2558,7 @@ const styles = StyleSheet.create({
   },
   deleteAccountText: {
     fontFamily: Fonts.bold,
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     letterSpacing: 0.5,
     textAlign: 'center',
   },
@@ -2568,7 +2575,7 @@ const styles = StyleSheet.create({
   },
   passwordButtonText: {
     fontFamily: Fonts.bold,
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     letterSpacing: 0.5,
   },
   bottomSpacer: {
@@ -2588,7 +2595,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   profileEditButtonText: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '600',
   },
   profileSaveButton: {
@@ -2605,7 +2612,7 @@ const styles = StyleSheet.create({
     alignSelf: 'stretch',
   },
   profileSaveButtonText: {
-    fontSize: 18,
+    fontSize: responsiveFontSize(18),
     fontFamily: Fonts.bold,
     letterSpacing: 0.5,
   },
@@ -2613,7 +2620,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
     borderRadius: 8,
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontFamily: Fonts.regular,
     borderWidth: StyleSheet.hairlineWidth,
     borderColor: 'transparent',
@@ -2649,10 +2656,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 0,
     gap: 12,
     width: '100%',
     maxWidth: 400,
@@ -2665,7 +2672,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   guestDropdownTitle: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontFamily: Fonts.bold,
   },
   guestDropdownCloseButton: {},
@@ -2678,9 +2685,9 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 59, 48, 0.15)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.08,
     shadowRadius: 2,
-    elevation: 5,
+    elevation: 0,
   },
   guestSection: {
     marginBottom: 20,
@@ -2695,7 +2702,7 @@ const styles = StyleSheet.create({
     marginTop: 0,
   },
   guestSubLabel: {
-    fontSize: 16,
+    fontSize: responsiveFontSize(16),
     fontWeight: '600',
   },
   calendarModalContainer: {
@@ -2713,10 +2720,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
     shadowRadius: 8,
-    elevation: 8,
+    elevation: 0,
     gap: 12,
     width: '100%',
     maxWidth: 400,
@@ -2729,7 +2736,7 @@ const styles = StyleSheet.create({
     paddingTop: 0,
   },
   calendarModalTitle: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontFamily: Fonts.bold,
   },
   calendarModalCloseButton: {},
@@ -2754,7 +2761,7 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   monthTitle: {
-    fontSize: 22,
+    fontSize: responsiveFontSize(22),
     fontWeight: '600',
   },
   weekDaysHeader: {
@@ -2769,7 +2776,7 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
   },
   weekDayText: {
-    fontSize: 12,
+    fontSize: responsiveFontSize(12),
     fontWeight: '600',
     opacity: 0.5,
     textTransform: 'uppercase',
@@ -2808,12 +2815,12 @@ const styles = StyleSheet.create({
     marginBottom: 0,
   },
   calendarDayText: {
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     fontWeight: '400',
   },
   calendarDayTextSelected: {
     fontWeight: '600',
-    fontSize: 20,
+    fontSize: responsiveFontSize(20),
     color: '#FFFFFF',
   },
 });

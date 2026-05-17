@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useMemo, useRef, useState } from 'react';
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { responsiveFontSize, responsiveLineHeight, responsiveSize, Fonts } from '@/constants/Fonts';
 import type { ComponentProps } from 'react';
 import { StatusBar } from 'expo-status-bar';
@@ -202,76 +202,49 @@ function buildZimbabweMapHtml(spots: AtlasSpot[], activeSpotId: string, isDark: 
       .off2zim-marker {
         background: transparent;
         border: 0;
+        overflow: visible !important;
       }
-      .marker-wrap {
+      .map-marker {
         position: relative;
-        width: 104px;
-        height: 66px;
-        transform: translateX(-26px);
-        pointer-events: auto;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        cursor: pointer;
+        width: 28px;
       }
-      .creator-marker {
+      .pin-svg {
+        width: 28px;
+        height: 36px;
+        filter: drop-shadow(0 2px 4px rgba(0,0,0,0.25));
+        transition: transform 0.2s cubic-bezier(0.34,1.56,0.64,1), filter 0.2s ease;
+      }
+      .map-marker.is-active .pin-svg {
+        transform: scale(1.25);
+        filter: drop-shadow(0 4px 10px rgba(255,59,48,0.45));
+      }
+      .pin-label {
         position: absolute;
-        left: 34px;
-        top: 0;
-        width: 42px;
-        height: 42px;
-        border-radius: 21px;
-        display: grid;
-        place-items: center;
-        color: #ff3b30;
-        background: ${inactiveMarker};
-        border: 3px solid rgba(255,255,255,0.92);
-        box-shadow: 0 8px 20px rgba(0,0,0,0.28);
-        font-weight: 800;
-        font-size: 16px;
-      }
-      .creator-marker::after {
-        content: "";
-        position: absolute;
-        left: 15px;
-        bottom: -8px;
-        width: 12px;
-        height: 12px;
-        background: inherit;
-        border-right: 3px solid rgba(255,255,255,0.92);
-        border-bottom: 3px solid rgba(255,255,255,0.92);
-        transform: rotate(45deg);
-      }
-      .creator-marker.is-active {
-        color: #ffffff;
-        background: #ff3b30;
-      }
-      .creator-marker.is-active::before {
-        content: "";
-        position: absolute;
-        inset: -10px;
-        border-radius: 999px;
-        border: 2px solid rgba(255,59,48,0.42);
-        animation: pulse 1.7s ease-out infinite;
-      }
-      .marker-label {
-        position: absolute;
-        left: 0;
-        right: 0;
-        top: 47px;
-        margin: 0 auto;
-        max-width: 104px;
-        padding: 4px 8px;
+        top: 40px;
+        left: 50%;
+        transform: translateX(-50%) scale(0.75);
+        white-space: nowrap;
+        padding: 4px 10px;
         border-radius: 999px;
         color: ${panelText};
         background: ${panelBackground};
-        box-shadow: 0 6px 14px rgba(0,0,0,0.18);
-        font-size: 10px;
-        font-weight: 800;
-        text-align: center;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        font-size: 11px;
+        font-weight: 700;
+        opacity: 0;
+        pointer-events: none;
+        transition: opacity 0.18s ease, transform 0.2s cubic-bezier(0.34,1.56,0.64,1);
       }
-      .marker-label.is-active-label {
-        color: #ffffff;
-        background: rgba(255,59,48,0.92);
+      .pin-label.visible {
+        opacity: 1;
+        transform: translateX(-50%) scale(1);
+        background: #FFFFFF;
+        color: #ff3b30;
+        animation: pill-pulse 1.5s ease-out infinite;
       }
       .map-loading {
         position: absolute;
@@ -284,15 +257,9 @@ function buildZimbabweMapHtml(spots: AtlasSpot[], activeSpotId: string, isDark: 
         font-size: 13px;
         font-weight: 800;
       }
-      @keyframes pulse {
-        from {
-          opacity: 0.8;
-          transform: scale(0.8);
-        }
-        to {
-          opacity: 0;
-          transform: scale(1.45);
-        }
+      @keyframes pill-pulse {
+        0%   { box-shadow: 0 0 0 0px rgba(255,59,48,0.75); }
+        100% { box-shadow: 0 0 0 10px rgba(255,59,48,0); }
       }
     </style>
   </head>
@@ -331,29 +298,45 @@ function buildZimbabweMapHtml(spots: AtlasSpot[], activeSpotId: string, isDark: 
         map.fitBounds(zimbabweBounds, { padding: [14, 14], animate: false });
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
+        var openLabel = null;
+
         spots.forEach(function (spot) {
           var isActive = spot.id === activeSpotId;
+          var pinColor = isActive ? '#ff3b30' : '#8E8E93';
           var markerHtml =
-            '<div class="marker-wrap">' +
-              '<div class="creator-marker ' + (isActive ? 'is-active' : '') + '">' +
-                '<span>' + spot.initial + '</span>' +
-              '</div>' +
-              '<div class="marker-label ' + (isActive ? 'is-active-label' : '') + '">' +
-                spot.name +
-              '</div>' +
+            '<div class="map-marker' + (isActive ? ' is-active' : '') + '" id="mpin-' + spot.id + '">' +
+              '<svg class="pin-svg" viewBox="0 0 24 24" fill="' + pinColor + '" xmlns="http://www.w3.org/2000/svg">' +
+                '<path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z"/>' +
+              '</svg>' +
+              '<div class="pin-label' + (isActive ? ' visible' : '') + '">' + spot.name + '</div>' +
             '</div>';
 
           var marker = L.marker([spot.latitude, spot.longitude], {
             icon: L.divIcon({
               className: 'off2zim-marker',
               html: markerHtml,
-              iconSize: [104, 66],
-              iconAnchor: [52, 42]
+              iconSize: [28, 36],
+              iconAnchor: [14, 36]
             }),
             riseOnHover: true
           }).addTo(map);
 
           marker.on('click', function () {
+            var el = document.getElementById('mpin-' + spot.id);
+            var label = el ? el.querySelector('.pin-label') : null;
+            if (openLabel && openLabel !== label) {
+              openLabel.classList.remove('visible');
+            }
+            if (label) {
+              var showing = label.classList.contains('visible');
+              if (!showing) {
+                label.classList.add('visible');
+                openLabel = label;
+              } else {
+                label.classList.remove('visible');
+                openLabel = null;
+              }
+            }
             if (window.ReactNativeWebView) {
               window.ReactNativeWebView.postMessage(JSON.stringify({
                 type: 'selectSpot',
@@ -364,14 +347,6 @@ function buildZimbabweMapHtml(spots: AtlasSpot[], activeSpotId: string, isDark: 
 
           if (isActive) {
             marker.setZIndexOffset(1000);
-            L.circle([spot.latitude, spot.longitude], {
-              radius: 38000,
-              color: '#ff3b30',
-              weight: 2,
-              fillColor: '#ff3b30',
-              fillOpacity: 0.12,
-              opacity: 0.55
-            }).addTo(map);
           }
         });
 
@@ -923,7 +898,7 @@ export default function ExploreScreen() {
   );
 
   const [activeCategory, setActiveCategory] = useState('All');
-  const [activeSpotId, setActiveSpotId] = useState('binga');
+  const [activeSpotId, setActiveSpotId] = useState('');
   const [forecastBySpotId, setForecastBySpotId] = useState<Record<string, WeatherDay[]>>({});
   const [events, setEvents] = useState<EventCardItem[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
@@ -940,7 +915,7 @@ export default function ExploreScreen() {
     return atlasSpots.filter(spot => spot.name === activeCategory);
   }, [activeCategory, atlasSpots]);
 
-  const selectedSpot = filteredSpots.find(spot => spot.id === activeSpotId) ?? filteredSpots[0];
+  const selectedSpot = activeSpotId ? (atlasSpots.find(spot => spot.id === activeSpotId) ?? null) : null;
   const selectedSpotId = selectedSpot?.id;
   const selectedWeatherLocation = selectedSpot?.weatherLocation;
   const selectedForecast = selectedSpotId ? forecastBySpotId[selectedSpotId] : undefined;
@@ -950,7 +925,7 @@ export default function ExploreScreen() {
     () =>
       selectedSpot
         ? events.filter(event => eventMatchesLocation(event, selectedSpot.eventLocationAliases))
-        : [],
+        : events,
     [events, selectedSpot]
   );
   const upcomingEvents = useMemo(
@@ -966,7 +941,7 @@ export default function ExploreScreen() {
   }, []);
 
   const selectedStays = useMemo(() => {
-    if (!selectedSpot) return [];
+    if (!selectedSpot) return allStays;
     const aliases = [
       selectedSpot.name,
       ...(selectedSpot.eventLocationAliases ?? []),
@@ -980,7 +955,7 @@ export default function ExploreScreen() {
   }, [allStays, selectedSpot]);
   const featuredStays = useMemo(() => selectedStays.slice(0, 3), [selectedStays]);
   const selectedActivities = useMemo(() => {
-    if (!selectedSpot) return [];
+    if (!selectedSpot) return thingsToDoData;
     const aliases = [
       selectedSpot.name,
       ...(selectedSpot.eventLocationAliases ?? []),
@@ -1001,9 +976,43 @@ export default function ExploreScreen() {
   }, []);
   const mapHtml = useMemo(
     () =>
-      buildZimbabweMapHtml(filteredSpots, selectedSpot?.id ?? activeSpotId, colorScheme === 'dark'),
-    [activeSpotId, colorScheme, filteredSpots, selectedSpot?.id]
+      buildZimbabweMapHtml(atlasSpots, '', colorScheme === 'dark'),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [colorScheme, atlasSpots] // filteredSpots/activeSpotId intentionally omitted — active state is updated via injectJavaScript
   );
+
+  const webViewRef = useRef<InstanceType<typeof WebView>>(null);
+
+  const injectActiveMarker = useCallback((id: string) => {
+    const js = `(function(){
+      document.querySelectorAll('.map-marker').forEach(function(el){
+        el.classList.remove('is-active');
+        var svg = el.querySelector('svg');
+        if(svg) svg.setAttribute('fill','#8E8E93');
+        var lbl = el.querySelector('.pin-label');
+        if(lbl) lbl.classList.remove('visible');
+      });
+      var el = document.getElementById('mpin-${id}');
+      if(el){
+        el.classList.add('is-active');
+        var svg = el.querySelector('svg');
+        if(svg) svg.setAttribute('fill','#ff3b30');
+        var lbl = el.querySelector('.pin-label');
+        if(lbl) lbl.classList.add('visible');
+      }
+      true;
+    })();`;
+    webViewRef.current?.injectJavaScript(js);
+  }, []);
+
+  useEffect(() => {
+    injectActiveMarker(selectedSpot?.id ?? '');
+  }, [selectedSpot?.id, injectActiveMarker]);
+
+  const handleMapLoad = useCallback(() => {
+    injectActiveMarker(selectedSpot?.id ?? '');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [injectActiveMarker, selectedSpot?.id]);
 
   const cardBackground = useMemo(
     () => ({
@@ -1137,10 +1146,12 @@ export default function ExploreScreen() {
   const handleCategoryPress = useCallback(
     (category: string) => {
       setActiveCategory(category);
-      const nextSpot =
-        category === 'All' ? atlasSpots[0] : atlasSpots.find(spot => spot.name === category);
-      if (nextSpot) {
-        setActiveSpotId(nextSpot.id);
+      if (category === 'All') {
+        setActiveSpotId('');
+      } else {
+        const nextSpot = atlasSpots.find(spot => spot.name === category);
+        if (nextSpot) setActiveSpotId(nextSpot.id);
+        else setActiveSpotId('');
       }
     },
     [atlasSpots]
@@ -1152,10 +1163,13 @@ export default function ExploreScreen() {
         const payload = JSON.parse(event.nativeEvent.data) as { type?: string; id?: string };
         if (
           payload.type === 'selectSpot' &&
-          typeof payload.id === 'string' &&
-          atlasSpots.some(spot => spot.id === payload.id)
+          typeof payload.id === 'string'
         ) {
-          setActiveSpotId(payload.id);
+          const spot = atlasSpots.find(s => s.id === payload.id);
+          if (spot) {
+            setActiveSpotId(spot.id);
+            setActiveCategory(spot.name);
+          }
         }
       } catch {
         // Ignore non-JSON WebView messages.
@@ -1391,13 +1405,14 @@ export default function ExploreScreen() {
             containerStyle={styles.locationFilterContainer}
           />
 
-          {selectedSpot ? (
+          {atlasSpots.length > 0 ? (
             <View style={styles.atlasSection}>
               <View style={[styles.atlasCard, cardBackground, { borderColor: atlasBorderColor }]}>
                 <View style={styles.mapStage}>
                   <View style={styles.mapBackdrop} />
                   <View style={styles.mapCanvas}>
                     <WebView
+                      ref={webViewRef}
                       source={{ html: mapHtml }}
                       style={styles.mapWebView}
                       originWhitelist={['*']}
@@ -1408,10 +1423,12 @@ export default function ExploreScreen() {
                       showsHorizontalScrollIndicator={false}
                       showsVerticalScrollIndicator={false}
                       onMessage={handleMapMessage}
+                      onLoadEnd={handleMapLoad}
                     />
                   </View>
                 </View>
 
+                {selectedSpot ? (
                 <ImageBackground
                   source={{ uri: selectedSpot.image }}
                   style={styles.atlasDetailBackground}
@@ -1458,8 +1475,17 @@ export default function ExploreScreen() {
                     </ThemedText>
                   </View>
                 </ImageBackground>
+                ) : (
+                  <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 20, gap: 6 }}>
+                    <Ionicons name="location-outline" size={24} color={mutedTextColor} />
+                    <ThemedText type="caption" style={{ color: mutedTextColor, textAlign: 'center' }}>
+                      Tap a pin to explore a location
+                    </ThemedText>
+                  </View>
+                )}
               </View>
 
+              {selectedSpot && (
               <View style={[styles.weatherCard, cardBackground, { borderColor: atlasBorderColor }]}>
                 <View style={styles.featureHeaderRow}>
                   <View style={[styles.featureIcon, { backgroundColor: colorScheme === 'dark' ? '#FFFFFF' : '#1C1C1E' }]}>
@@ -1513,6 +1539,7 @@ export default function ExploreScreen() {
                   </View>
                 )}
               </View>
+              )}
 
               {galleryImages.length > 0 && (
                 <View
@@ -1830,6 +1857,7 @@ export default function ExploreScreen() {
                 )}
               </View>
 
+              {selectedSpot && (<>
               <View style={[styles.aiVisitCard, cardBackground, { borderColor: atlasBorderColor }]}>
                 <View style={styles.featureHeaderRow}>
                   <View style={[styles.featureIcon, { backgroundColor: theme.tint }]}>
@@ -1926,6 +1954,7 @@ export default function ExploreScreen() {
                   ))}
                 </View>
               </View>
+              </>)}
             </View>
           ) : (
             <View

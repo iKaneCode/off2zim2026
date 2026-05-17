@@ -29,6 +29,8 @@ interface FilterBarProps {
   sortDirection?: 'asc' | 'desc';
   onSortDirectionChange?: (direction: 'asc' | 'desc') => void;
   showSortToggle?: boolean;
+  activePillBackground?: string;
+  activePillTextColor?: string;
 }
 
 export function FilterBar({
@@ -40,9 +42,13 @@ export function FilterBar({
   sortDirection = 'desc',
   onSortDirectionChange,
   showSortToggle = false,
+  activePillBackground,
+  activePillTextColor,
 }: FilterBarProps) {
   const colorScheme = useColorScheme();
   const pillColors = getFilterPillColors(colorScheme);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const pillOffsets = useRef<Record<string, number>>({});
 
   // Filter button animations
   const filterAnimations = useRef(
@@ -76,6 +82,14 @@ export function FilterBar({
     }),
     []
   );
+
+  // Scroll to the active filter pill whenever it changes
+  useEffect(() => {
+    const offset = pillOffsets.current[activeFilter];
+    if (offset !== undefined) {
+      scrollViewRef.current?.scrollTo({ x: Math.max(0, offset - 16), animated: true });
+    }
+  }, [activeFilter]);
 
   // Update filter animation values when activeFilter changes
   useEffect(() => {
@@ -113,6 +127,7 @@ export function FilterBar({
     <View style={[styles.filterContainer, containerStyle]}>
       <View style={styles.filterWrapper}>
         <ScrollView
+          ref={scrollViewRef}
           horizontal
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={[styles.filterScrollContent, style]}
@@ -146,11 +161,12 @@ export function FilterBar({
             return (
               <TouchableOpacity
                 key={option.key}
+                onLayout={e => { pillOffsets.current[option.key] = e.nativeEvent.layout.x; }}
                 style={[
                   styles.filterButton,
                   isActive && styles.filterButtonActive,
                   isActive && {
-                    backgroundColor: pillColors.activeBackground,
+                    backgroundColor: activePillBackground ?? pillColors.activeBackground,
                   },
                   !isActive && {
                     backgroundColor: pillColors.inactiveBackground,
@@ -170,7 +186,7 @@ export function FilterBar({
                       styles.filterText,
                       isActive && styles.filterTextActive,
                       {
-                        color: isActive ? pillColors.activeText : pillColors.inactiveText,
+                        color: isActive ? (activePillTextColor ?? pillColors.activeText) : pillColors.inactiveText,
                       },
                     ]}
                   >

@@ -4,6 +4,7 @@ import type { ComponentProps } from 'react';
 import { StatusBar } from 'expo-status-bar';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
+  Dimensions,
   StyleSheet,
   ScrollView,
   FlatList,
@@ -21,7 +22,7 @@ import {
 import WebView, { type WebViewMessageEvent } from 'react-native-webview';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
-import { CustomHeader, EventCard, FilterBar, ListImageCard, LocationPill, ProfileLocationPill, RatingPill, StatusPill, StayCard, ViewAllButton } from '@/components';
+import { CustomHeader, EventCard, FilterBar, ListImageCard, LocationPill, ProfileLocationPill, RatingPill, ShimmerPlaceholder, StatusPill, StayCard, ViewAllButton } from '@/components';
 import { EVENT_CARD_SPACING, EVENT_CARD_WIDTH } from '@/components/EventCard';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -101,8 +102,101 @@ type AtlasSpotSeed = Omit<AtlasSpot, 'image' | 'aiPrompt' | 'lessons' | 'eventLo
   eventLocationAliases?: string[];
 };
 
+type LanguagePhrase = {
+  language: string;
+  phrase: string;
+};
+
 const DEFAULT_ATLAS_IMAGE =
   'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80';
+
+const LANGUAGE_POPULARITY_RANK: Record<string, number> = {
+  Shona: 1,
+  'Karanga Shona': 2,
+  Zezuru: 3,
+  'Manyika Shona': 4,
+  Ndebele: 5,
+  Tonga: 6,
+  Kalanga: 7,
+  Ndau: 8,
+  Shangani: 9,
+  Venda: 10,
+  Nambya: 11,
+};
+
+const REGION_LANGUAGE_PHRASES: Record<string, LanguagePhrase[]> = {
+  'Matabeleland North': [
+    { language: 'Ndebele', phrase: 'Kunjani?' },
+    { language: 'Tonga', phrase: 'Mwapona buti?' },
+    { language: 'Nambya', phrase: 'Mwabonwa' },
+  ],
+  'Bulawayo Metropolitan': [
+    { language: 'Ndebele', phrase: 'Kunjani?' },
+    { language: 'Kalanga', phrase: 'Dumilani' },
+  ],
+  'Bulawayo': [
+    { language: 'Ndebele', phrase: 'Kunjani?' },
+    { language: 'Kalanga', phrase: 'Dumilani' },
+  ],
+  'Mashonaland West': [
+    { language: 'Shona', phrase: 'Makadii?' },
+    { language: 'Tonga', phrase: 'Mwapona buti?' },
+  ],
+  'Manicaland': [
+    { language: 'Manyika Shona', phrase: 'Maswera sei?' },
+    { language: 'Ndau', phrase: 'Maswera sei?' },
+  ],
+  'Masvingo': [
+    { language: 'Karanga Shona', phrase: 'Makadii?' },
+    { language: 'Shangani', phrase: 'Avuxeni' },
+  ],
+  'Harare Metropolitan': [
+    { language: 'Shona', phrase: 'Makadii?' },
+    { language: 'Zezuru', phrase: 'Mhoro!' },
+  ],
+  'Matabeleland South': [
+    { language: 'Ndebele', phrase: 'Linjani?' },
+    { language: 'Kalanga', phrase: 'Dumilani' },
+    { language: 'Venda', phrase: 'Ndaa' },
+  ],
+  'Midlands': [
+    { language: 'Shona', phrase: 'Makadii?' },
+    { language: 'Ndebele', phrase: 'Kunjani?' },
+  ],
+};
+
+function normalizePhraseValue(value: string) {
+  return value.trim().toLowerCase();
+}
+
+function getLanguagePopularityRank(language: string) {
+  return LANGUAGE_POPULARITY_RANK[language] ?? Number.MAX_SAFE_INTEGER;
+}
+
+function getLanguagePhraseOptions(spot: AtlasSpot): LanguagePhrase[] {
+  const phrases = REGION_LANGUAGE_PHRASES[spot.region] ?? [];
+  const seenLanguages = new Set([normalizePhraseValue(spot.language)]);
+  const seenPhrases = new Set([normalizePhraseValue(spot.phrase)]);
+
+  return [...phrases]
+    .sort(
+      (a, b) =>
+        getLanguagePopularityRank(a.language) - getLanguagePopularityRank(b.language) ||
+        a.language.localeCompare(b.language)
+    )
+    .filter(item => {
+      const languageKey = normalizePhraseValue(item.language);
+      const phraseKey = normalizePhraseValue(item.phrase);
+
+      if (seenLanguages.has(languageKey) || seenPhrases.has(phraseKey)) {
+        return false;
+      }
+
+      seenLanguages.add(languageKey);
+      seenPhrases.add(phraseKey);
+      return true;
+    });
+}
 
 function createAtlasSpot(seed: AtlasSpotSeed): AtlasSpot {
   return {
@@ -246,17 +340,6 @@ function buildZimbabweMapHtml(spots: AtlasSpot[], activeSpotId: string, isDark: 
         color: #ff3b30;
         animation: pill-pulse 1.5s ease-out infinite;
       }
-      .map-loading {
-        position: absolute;
-        inset: 0;
-        z-index: 900;
-        display: grid;
-        place-items: center;
-        color: ${panelText};
-        background: ${mapBackground};
-        font-size: 13px;
-        font-weight: 800;
-      }
       @keyframes pill-pulse {
         0%   { box-shadow: 0 0 0 0px rgba(255,59,48,0.75); }
         100% { box-shadow: 0 0 0 10px rgba(255,59,48,0); }
@@ -265,15 +348,10 @@ function buildZimbabweMapHtml(spots: AtlasSpot[], activeSpotId: string, isDark: 
   </head>
   <body>
     <div id="map"></div>
-    <div class="map-loading" id="map-loading">Loading Zimbabwe map...</div>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <script>
       (function () {
-        var loading = document.getElementById('map-loading');
         if (!window.L) {
-          if (loading) {
-            loading.textContent = 'Map needs an internet connection';
-          }
           return;
         }
 
@@ -354,11 +432,6 @@ function buildZimbabweMapHtml(spots: AtlasSpot[], activeSpotId: string, isDark: 
           map.panInsideBounds(zimbabweBounds, { animate: false });
         });
 
-        setTimeout(function () {
-          if (loading) {
-            loading.remove();
-          }
-        }, 650);
       })();
     </script>
   </body>
@@ -367,10 +440,20 @@ function buildZimbabweMapHtml(spots: AtlasSpot[], activeSpotId: string, isDark: 
 
 const AnimatedImage = Animated.createAnimatedComponent(Image);
 const STORY_SLIDE_DURATION = 4500;
+const { width: screenWidth } = Dimensions.get('window');
 const SCREEN_HORIZONTAL_PADDING = responsiveSize(16, 14, 20);
 const TITLE_BOTTOM_PADDING = responsiveSize(8, 6, 10);
 const GALLERY_CARD_GAP = 4;
 const GALLERY_CONTAINER_PADDING = 8;
+const FEATURED_DESTINATION_HORIZONTAL_PADDING = responsiveSize(16);
+const FEATURED_DESTINATION_CARD_SPACING = responsiveSize(16);
+const FEATURED_DESTINATION_CARD_WIDTH =
+  (screenWidth - FEATURED_DESTINATION_HORIZONTAL_PADDING * 2 - FEATURED_DESTINATION_CARD_SPACING) / 2;
+const FEATURED_DESTINATION_CARD_HEIGHT = responsiveSize(200, 176, 224);
+const FEATURED_DESTINATION_CARD_RADIUS = responsiveSize(12, 10, 16);
+const FEATURED_DESTINATION_CARD_INSET = responsiveSize(10, 8, 12);
+const FEATURED_DESTINATION_OVERLAY_PADDING = responsiveSize(8, 7, 10);
+const FEATURED_DESTINATION_ACTION_SIZE = responsiveSize(36, 32, 42);
 
 export default function ExploreScreen() {
   const colorScheme = useColorScheme();
@@ -899,6 +982,7 @@ export default function ExploreScreen() {
 
   const [activeCategory, setActiveCategory] = useState('All');
   const [activeSpotId, setActiveSpotId] = useState('');
+  const [mapLoaded, setMapLoaded] = useState(false);
   const [forecastBySpotId, setForecastBySpotId] = useState<Record<string, WeatherDay[]>>({});
   const [events, setEvents] = useState<EventCardItem[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
@@ -920,6 +1004,10 @@ export default function ExploreScreen() {
   const selectedWeatherLocation = selectedSpot?.weatherLocation;
   const selectedForecast = selectedSpotId ? forecastBySpotId[selectedSpotId] : undefined;
   const galleryImages = selectedSpot ? [selectedSpot.image] : [];
+  const languagePhraseOptions = useMemo(
+    () => (selectedSpot ? getLanguagePhraseOptions(selectedSpot) : []),
+    [selectedSpot]
+  );
   const galleryCardBackground = colorScheme === 'dark' ? '#2C2C2E' : '#E5E5EA';
   const selectedEvents = useMemo(
     () =>
@@ -981,6 +1069,9 @@ export default function ExploreScreen() {
     [colorScheme, atlasSpots] // filteredSpots/activeSpotId intentionally omitted — active state is updated via injectJavaScript
   );
 
+  // Reset shimmer whenever the map HTML rebuilds (e.g. theme switch)
+  useEffect(() => { setMapLoaded(false); }, [mapHtml]);
+
   const webViewRef = useRef<InstanceType<typeof WebView>>(null);
 
   const injectActiveMarker = useCallback((id: string) => {
@@ -991,6 +1082,8 @@ export default function ExploreScreen() {
         if(svg) svg.setAttribute('fill','#8E8E93');
         var lbl = el.querySelector('.pin-label');
         if(lbl) lbl.classList.remove('visible');
+        var icon = el.parentElement;
+        if(icon) icon.style.zIndex = '';
       });
       var el = document.getElementById('mpin-${id}');
       if(el){
@@ -999,6 +1092,8 @@ export default function ExploreScreen() {
         if(svg) svg.setAttribute('fill','#ff3b30');
         var lbl = el.querySelector('.pin-label');
         if(lbl) lbl.classList.add('visible');
+        var icon = el.parentElement;
+        if(icon) icon.style.zIndex = '9999';
       }
       true;
     })();`;
@@ -1010,6 +1105,7 @@ export default function ExploreScreen() {
   }, [selectedSpot?.id, injectActiveMarker]);
 
   const handleMapLoad = useCallback(() => {
+    setMapLoaded(true);
     injectActiveMarker(selectedSpot?.id ?? '');
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [injectActiveMarker, selectedSpot?.id]);
@@ -1425,6 +1521,11 @@ export default function ExploreScreen() {
                       onMessage={handleMapMessage}
                       onLoadEnd={handleMapLoad}
                     />
+                    {!mapLoaded && (
+                      <View style={styles.mapShimmerOverlay} pointerEvents="none">
+                        <ShimmerPlaceholder width="100%" height="100%" borderRadius={0} />
+                      </View>
+                    )}
                   </View>
                 </View>
 
@@ -1857,104 +1958,96 @@ export default function ExploreScreen() {
                 )}
               </View>
 
-              {selectedSpot && (<>
-              <View style={[styles.aiVisitCard, cardBackground, { borderColor: atlasBorderColor }]}>
-                <View style={styles.featureHeaderRow}>
-                  <View style={[styles.featureIcon, { backgroundColor: theme.tint }]}>
-                    <Ionicons name="sparkles" size={18} color={theme.background} />
+              {selectedSpot && (
+                <View
+                  style={[styles.languageCard, cardBackground, { borderColor: atlasBorderColor }]}
+                >
+                  <View style={styles.featureHeaderRow}>
+                    <View style={[styles.featureIcon, styles.languageIcon]}>
+                      <Ionicons name="language-outline" size={18} color="#1F1F1F" />
+                    </View>
+                    <View style={styles.featureTitleGroup}>
+                      <ThemedText type="title3" style={styles.featureTitle}>
+                        Phrase of the Day
+                      </ThemedText>
+                    </View>
                   </View>
-                  <View style={styles.featureTitleGroup}>
-                    <ThemedText type="title3" style={styles.featureTitle}>
-                      AI Virtual Visit
-                    </ThemedText>
-                    <ThemedText
-                      type="caption"
-                      style={[styles.featureCaption, { color: subtleTextColor }]}
+
+                  <View style={styles.phraseRow}>
+                    <View style={styles.phraseBubble}>
+                      <ThemedText type="title3" style={styles.phraseText}>
+                        {selectedSpot.translation}
+                      </ThemedText>
+                    </View>
+                    <View style={styles.phraseDetailStack}>
+                      <ThemedText type="defaultSemiBold" style={styles.localPhraseText}>
+                        {selectedSpot.phrase}
+                      </ThemedText>
+                      <ThemedText
+                        type="caption"
+                        style={[styles.phraseLanguageText, { color: mutedTextColor }]}
+                      >
+                        {selectedSpot.language}
+                      </ThemedText>
+                    </View>
+                  </View>
+
+                  {languagePhraseOptions.length > 0 && (
+                    <View style={styles.lessonList}>
+                      {languagePhraseOptions.map(item => (
+                        <View key={item.language} style={styles.languageRow}>
+                          <ThemedText type="defaultSemiBold" style={styles.languageRowTranslation}>
+                            {item.phrase}
+                          </ThemedText>
+                          <ThemedText
+                            type="caption"
+                            style={[styles.languageRowPhrase, { color: mutedTextColor }]}
+                          >
+                            {item.language}
+                          </ThemedText>
+                        </View>
+                      ))}
+                    </View>
+                  )}
+                </View>
+              )}
+
+              {selectedSpot && (
+                <View style={styles.languageLearningGrid}>
+                  {['Learn Ndebele', 'Learn Shona'].map((title, index) => (
+                    <TouchableOpacity
+                      key={title}
+                      activeOpacity={0.85}
+                      style={[
+                        styles.languageLearningTile,
+                        index === 0 && styles.languageLearningTileSpacing,
+                      ]}
+                      onPress={() => router.push('/translate')}
                     >
-                      Preview the feel of a place before planning the trip.
-                    </ThemedText>
-                  </View>
-                </View>
-                <ThemedText type="default" style={[styles.aiCopy, { color: mutedTextColor }]}>
-                  {selectedSpot.aiPrompt}
-                </ThemedText>
-                <View style={styles.actionRow}>
-                  <Pressable style={[styles.actionButton, { borderColor: atlasBorderColor }]}>
-                    <Ionicons name="scan-outline" size={17} color={theme.tint} />
-                    <ThemedText type="defaultSemiBold" style={styles.actionText}>
-                      Build preview
-                    </ThemedText>
-                  </Pressable>
-                  <Pressable style={[styles.actionButton, { borderColor: atlasBorderColor }]}>
-                    <Ionicons name="cloud-upload-outline" size={17} color={theme.tint} />
-                    <ThemedText type="defaultSemiBold" style={styles.actionText}>
-                      Upload clip
-                    </ThemedText>
-                  </Pressable>
-                </View>
-              </View>
-
-              <View
-                style={[styles.languageCard, cardBackground, { borderColor: atlasBorderColor }]}
-              >
-                <View style={styles.featureHeaderRow}>
-                  <View style={[styles.featureIcon, styles.languageIcon]}>
-                    <Ionicons name="language-outline" size={18} color="#1F1F1F" />
-                  </View>
-                  <View style={styles.featureTitleGroup}>
-                    <ThemedText type="title3" style={styles.featureTitle}>
-                      {selectedSpot.language} Creator Lessons
-                    </ThemedText>
-                    <ThemedText
-                      type="caption"
-                      style={[styles.featureCaption, { color: subtleTextColor }]}
-                    >
-                      Short clips from locals for everyday visitor moments.
-                    </ThemedText>
-                  </View>
-                </View>
-
-                <View style={styles.phraseRow}>
-                  <View style={styles.phraseBubble}>
-                    <ThemedText type="title3" style={styles.phraseText}>
-                      {selectedSpot.phrase}
-                    </ThemedText>
-                  </View>
-                  <ThemedText
-                    type="default"
-                    style={[styles.translationText, { color: mutedTextColor }]}
-                  >
-                    {selectedSpot.translation}
-                  </ThemedText>
-                </View>
-
-                <View style={styles.lessonList}>
-                  {selectedSpot.lessons.map(lesson => (
-                    <Pressable key={lesson.id} style={styles.lessonItem}>
-                      <View style={styles.lessonPlayButton}>
-                        <Ionicons name="play" size={14} color="#FFFFFF" />
+                      <Image
+                        source={{ uri: selectedSpot.image }}
+                        style={styles.languageLearningTileImage}
+                        resizeMode="cover"
+                      />
+                      <View style={styles.languageLearningAction}>
+                        <Ionicons name="logo-youtube" size={18} color="#FF0000" />
                       </View>
-                      <View style={styles.lessonCopy}>
+                      <View style={styles.languageLearningTileInfo}>
                         <ThemedText
-                          type="defaultSemiBold"
-                          style={styles.lessonTitle}
+                          style={styles.languageLearningTileTitle}
                           numberOfLines={1}
+                          ellipsizeMode="tail"
+                          adjustsFontSizeToFit
+                          minimumFontScale={0.82}
                         >
-                          {lesson.title}
+                          {title}
                         </ThemedText>
-                        <ThemedText
-                          type="caption"
-                          style={[styles.lessonMeta, { color: subtleTextColor }]}
-                        >
-                          {lesson.creator} - {lesson.duration}
-                        </ThemedText>
+                        <Ionicons name="chevron-forward" size={16} color="#FFFFFF" />
                       </View>
-                      <Ionicons name="chevron-forward" size={17} color={subtleTextColor} />
-                    </Pressable>
+                    </TouchableOpacity>
                   ))}
                 </View>
-              </View>
-              </>)}
+              )}
             </View>
           ) : (
             <View
@@ -2152,6 +2245,13 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     overflow: 'hidden',
+  },
+  mapShimmerOverlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
   },
   mapWebView: {
     flex: 1,
@@ -2424,6 +2524,63 @@ const styles = StyleSheet.create({
   languageIcon: {
     backgroundColor: '#FFC247',
   },
+  languageLearningGrid: {
+    flexDirection: 'row',
+    marginHorizontal: -SCREEN_HORIZONTAL_PADDING,
+    paddingHorizontal: FEATURED_DESTINATION_HORIZONTAL_PADDING,
+    paddingBottom: GALLERY_CONTAINER_PADDING,
+  },
+  languageLearningTile: {
+    width: FEATURED_DESTINATION_CARD_WIDTH,
+    borderRadius: FEATURED_DESTINATION_CARD_RADIUS,
+    overflow: 'hidden',
+    backgroundColor: '#242021',
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
+    position: 'relative',
+  },
+  languageLearningTileSpacing: {
+    marginRight: FEATURED_DESTINATION_CARD_SPACING,
+  },
+  languageLearningTileImage: {
+    width: '100%',
+    height: FEATURED_DESTINATION_CARD_HEIGHT,
+  },
+  languageLearningAction: {
+    position: 'absolute',
+    top: FEATURED_DESTINATION_CARD_INSET,
+    right: FEATURED_DESTINATION_CARD_INSET,
+    width: FEATURED_DESTINATION_ACTION_SIZE,
+    height: FEATURED_DESTINATION_ACTION_SIZE,
+    borderRadius: FEATURED_DESTINATION_ACTION_SIZE / 2,
+    backgroundColor: 'rgba(255,255,255,0.88)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2,
+  },
+  languageLearningTileInfo: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    padding: FEATURED_DESTINATION_OVERLAY_PADDING,
+    borderBottomLeftRadius: FEATURED_DESTINATION_CARD_RADIUS,
+    borderBottomRightRadius: FEATURED_DESTINATION_CARD_RADIUS,
+  },
+  languageLearningTileTitle: {
+    flex: 1,
+    minWidth: 0,
+    color: '#FFFFFF',
+    fontSize: responsiveFontSize(18),
+    lineHeight: responsiveLineHeight(18),
+    fontFamily: Fonts.bold,
+    textAlign: 'left',
+    letterSpacing: 0.3,
+  },
   weatherIcon: {},
   featureTitleGroup: {
     flex: 1,
@@ -2533,7 +2690,14 @@ const styles = StyleSheet.create({
   phraseText: {
     color: '#B05A00',
   },
-  translationText: {
+  phraseDetailStack: {
+    gap: 3,
+  },
+  localPhraseText: {
+    fontSize: responsiveFontSize(16),
+    lineHeight: responsiveLineHeight(16),
+  },
+  phraseLanguageText: {
     lineHeight: responsiveLineHeight(15),
   },
   lessonList: {
@@ -2562,6 +2726,17 @@ const styles = StyleSheet.create({
   },
   lessonMeta: {
     marginTop: 2,
+  },
+  languageRow: {
+    paddingVertical: 10,
+  },
+  languageRowTranslation: {
+    fontSize: responsiveFontSize(16),
+    lineHeight: responsiveLineHeight(16),
+  },
+  languageRowPhrase: {
+    marginTop: 3,
+    fontSize: responsiveFontSize(13),
   },
   placeholderCard: {
     padding: 20,

@@ -42,8 +42,8 @@ import {
   ShimmerPlaceholder,
   LocationPill,
   RatingPill,
-  DateTimePill,
   StatusPill,
+  EventCard,
 } from '@/components';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faHeart as solidHeart } from '@fortawesome/free-solid-svg-icons';
@@ -51,11 +51,17 @@ import { faHeart as regularHeart } from '@fortawesome/free-regular-svg-icons';
 import * as Haptics from 'expo-haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
-import { subscribeFavorites, getFavoritedIds, toggleFavorite as toggleFavoriteUtil, isFavorited as isFavoritedUtil } from '@/utils/favoritesUtils';
+import {
+  subscribeFavorites,
+  getFavoritedIds,
+  toggleFavorite as toggleFavoriteUtil,
+  isFavorited as isFavoritedUtil,
+} from '@/utils/favoritesUtils';
 import { carouselService, destinationsService } from '@/services/database';
 import { weatherService, locationMappings } from '@/services/weather';
 import { getAmenityIcon } from '@/utils/amenityUtils';
 import { pickBestImageUrl, normalizeStorageImageUrl } from '@/utils/imageUtils';
+import { mapEventRecordToEvent } from '@/utils/eventUtils';
 import { useDestinations } from '@/context/DestinationsContext';
 import { navigateToStayProfile } from '@/utils/navigationUtils';
 import { router } from 'expo-router';
@@ -443,113 +449,6 @@ const StayCard = React.memo(
 
 StayCard.displayName = 'FeaturedStayCard';
 
-// Memoized EventCard component (destination-sized card)
-interface EventCardProps {
-  item: Event;
-  isFavorited: boolean;
-  onToggleFavorite: (id: string, type?: string) => void;
-  heartScale: Animated.Value;
-}
-
-const EventCard = React.memo(
-  ({ item, isFavorited, onToggleFavorite, heartScale }: EventCardProps) => {
-    const colorScheme = useColorScheme();
-    const pillBg = colorScheme === 'dark' ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.8)';
-    const pillTextColor = colorScheme === 'dark' ? '#FFFFFF' : '#000000';
-    const pillIconBackground = colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF';
-    const cardBg = colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF';
-
-    const handleEventPress = useCallback(() => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-      router.push({
-        pathname: '/event-profile',
-        params: {
-          eventId: item.id,
-          eventName: item.name,
-          eventLocation: item.location,
-          eventVenue: item.venue,
-        },
-      });
-    }, [item]);
-
-    const displayImage = item.images && item.images.length > 0 ? item.images[0] : '';
-
-    return (
-      <TouchableOpacity
-        style={[styles.eventCard, { backgroundColor: cardBg }]}
-        onPress={handleEventPress}
-      >
-        <Image source={{ uri: displayImage }} style={styles.destinationImage} resizeMode="cover" />
-        <TouchableOpacity
-          style={[styles.heartContainer, { backgroundColor: pillBg }]}
-          onPress={() => onToggleFavorite(item.id, 'event')}
-          hitSlop={{
-            top: OVERLAY_PADDING,
-            left: OVERLAY_PADDING,
-            bottom: OVERLAY_PADDING,
-            right: OVERLAY_PADDING,
-          }}
-          accessibilityRole="button"
-          accessibilityLabel={`Favorite ${item.name} ${isFavorited ? 'selected' : 'not selected'}`}
-        >
-          <Animated.View style={{ transform: [{ scale: heartScale }] }}>
-            <FontAwesomeIcon
-              icon={isFavorited ? solidHeart : regularHeart}
-              size={18}
-              color="#FF4757"
-            />
-          </Animated.View>
-        </TouchableOpacity>
-        <View style={styles.eventInfoContainer}>
-          {/* Rating above overlay, right-aligned */}
-          <View style={styles.eventTopRow}>
-            <RatingPill
-              value={item.rating}
-              backgroundColor={pillBg}
-              iconBackgroundColor={pillIconBackground}
-              lightTextColor={pillTextColor}
-              darkTextColor={pillTextColor}
-            />
-          </View>
-          <View style={styles.eventOverlay}>
-            <ThemedText
-              style={styles.destinationName}
-              numberOfLines={1}
-              ellipsizeMode="tail"
-              adjustsFontSizeToFit
-              minimumFontScale={0.8}
-            >
-              {item.name}
-            </ThemedText>
-            <View style={styles.eventMetaRow}>
-              <LocationPill
-                label={item.location}
-                backgroundColor={pillBg}
-                iconBackgroundColor={pillIconBackground}
-                lightTextColor={pillTextColor}
-                darkTextColor={pillTextColor}
-                variant="compact"
-              />
-              <DateTimePill
-                label={`${new Date(item.date)
-                  .toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-                  .replace(/,/g, '')} · ${item.time}`}
-                backgroundColor={pillBg}
-                iconBackgroundColor={pillIconBackground}
-                lightTextColor={pillTextColor}
-                darkTextColor={pillTextColor}
-                style={{ marginLeft: 'auto', alignSelf: 'flex-end' }}
-              />
-            </View>
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  }
-);
-
-EventCard.displayName = 'FeaturedEventCard';
-
 // Helper to compute open/closing status for daily activities
 // activity status is imported from utils/timeStatus
 
@@ -886,7 +785,9 @@ export default function Featured() {
       setFavoritesVersion(v => v + 1);
     });
     // initialize
-    setFavorites(Object.fromEntries(getFavoritedIds().map(id => [id, true])) as Record<string, boolean>);
+    setFavorites(
+      Object.fromEntries(getFavoritedIds().map(id => [id, true])) as Record<string, boolean>
+    );
     return unsub;
   }, []);
 
@@ -1155,63 +1056,7 @@ export default function Featured() {
       }
 
       if (data) {
-        const mappedEvents: Event[] = data.map((event: any) => {
-          // Map gallery images sorted by sort_order
-          const galleryImages =
-            event.event_gallery
-              ?.sort((a: any, b: any) => a.sort_order - b.sort_order)
-              .map((img: any) => img.image_url) || [];
-
-          // Combine images from event.images array and gallery
-          const allImages = [...(event.images || []), ...galleryImages];
-
-          // Map ticket types from event_tickets table
-          const ticketTypes =
-            event.event_tickets
-              ?.filter((ticket: any) => ticket.is_active)
-              .map((ticket: any) => ({
-                id: ticket.id,
-                name: ticket.name,
-                price: ticket.base_price,
-                description: ticket.description,
-                available: ticket.tickets_available || 0,
-                perks: ticket.perks || [],
-              })) || [];
-
-          // Get the minimum ticket price as the base ticket price
-          const minTicketPrice =
-            ticketTypes.length > 0
-              ? Math.min(...ticketTypes.map((t: any) => t.price))
-              : event.ticket_price || 0;
-
-          return {
-            id: event.id,
-            name: event.name,
-            location: event.destinations?.location || event.location || '',
-            venue: event.venue || '',
-            date: event.start_date,
-            time: event.start_time || '',
-            endTime: event.end_time,
-            images: allImages,
-            description: event.description || '',
-            rating: event.rating || 0,
-            totalRatings: event.total_ratings || 0,
-            ticketPrice: minTicketPrice,
-            currency: event.currency || 'USD',
-            ticketTypes,
-            category: event.category || 'General',
-            tags: event.tags || [],
-            organizer: event.organizer || { name: '', contact: '', verified: false },
-            capacity: event.capacity,
-            ticketsAvailable: event.tickets_available,
-            featured: event.featured,
-            ageRestriction: event.age_restriction,
-            accessibility: event.accessibility || [],
-            providerId: event.provider_id,
-            providerName: event.service_providers?.business_name,
-            providerLogo: event.service_providers?.logo_url,
-          };
-        });
+        const mappedEvents: Event[] = data.map(mapEventRecordToEvent);
 
         setEvents(mappedEvents);
         console.log('✅ Events loaded from database:', mappedEvents.length, 'featured events');
@@ -1360,11 +1205,11 @@ export default function Featured() {
     ({ item, index }: { item: DatabaseDestination; index: number }) => {
       const isLastItem = index === destinationsData.length - 1;
       return (
-            <DestinationCard
-              item={item}
-              isFavorited={!!favorites[item.id] || isFavoritedUtil(item.id)}
-              onToggleFavorite={toggleFavorite}
-              heartScale={getHeartScale(item.id)}
+        <DestinationCard
+          item={item}
+          isFavorited={!!favorites[item.id] || isFavoritedUtil(item.id)}
+          onToggleFavorite={toggleFavorite}
+          heartScale={getHeartScale(item.id)}
           onImageLoad={handleImageLoad}
           onImageError={handleImageError}
           isLastItem={isLastItem}
@@ -1797,7 +1642,7 @@ export default function Featured() {
               <ThemedText type="sectionTitle" style={styles.sectionTitle}>
                 Popular Destinations
               </ThemedText>
-              <ViewAllButton onPress={() => navigation.navigate('Destinations' as never)} />
+              <ViewAllButton onPress={() => router.navigate('/(tabs)/explore')} />
             </View>
 
             {/* Destinations Grid with Shimmer Loading */}
@@ -1846,8 +1691,14 @@ export default function Featured() {
 
               {/* Stays List */}
               <FlatList
-                data={(staysLoading || stays.length === 0 ? FEATURED_SKELETON_ITEMS : stays.slice(0, 5)) as any}
-                renderItem={staysLoading || stays.length === 0 ? renderShimmerStayCard : renderStayCard}
+                data={
+                  (staysLoading || stays.length === 0
+                    ? FEATURED_SKELETON_ITEMS
+                    : stays.slice(0, 5)) as any
+                }
+                renderItem={
+                  staysLoading || stays.length === 0 ? renderShimmerStayCard : renderStayCard
+                }
                 keyExtractor={item => item.id}
                 horizontal
                 showsHorizontalScrollIndicator={false}
@@ -1884,8 +1735,14 @@ export default function Featured() {
               </View>
 
               <FlatList
-                data={(eventsLoading || events.length === 0 ? FEATURED_SKELETON_ITEMS : events.slice(0, 5)) as any}
-                renderItem={eventsLoading || events.length === 0 ? renderEventShimmerCard : renderEventCard}
+                data={
+                  (eventsLoading || events.length === 0
+                    ? FEATURED_SKELETON_ITEMS
+                    : events.slice(0, 5)) as any
+                }
+                renderItem={
+                  eventsLoading || events.length === 0 ? renderEventShimmerCard : renderEventCard
+                }
                 keyExtractor={item => item.id}
                 horizontal
                 showsHorizontalScrollIndicator={false}

@@ -16,6 +16,7 @@ import { ThemedText } from './ThemedText';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { responsiveFontSize, responsiveLineHeight, responsiveSize, Fonts } from '@/constants/Fonts';
 import { StatusPill, type StatusPillProps } from './StatusPill';
+import { ProfileLocationPill } from './ProfileLocationPill';
 
 const AVATAR_SIZE = responsiveSize(96, 86, 108);
 
@@ -187,14 +188,14 @@ function ProviderHeroCardComponent({
         {location || statusPillProps ? (
           <View style={styles.locationStatusRow}>
             {location ? (
-              <View style={[styles.locationPill, { backgroundColor: subtleBackground }]}>
-                <View style={[styles.footerIconBubble, { backgroundColor: accentSurface }]}>
-                  <Ionicons name={locationIconName} size={10} color={locationIconColor} />
-                </View>
-                <ThemedText style={[styles.locationText, { color: textColor }]} numberOfLines={1}>
-                  {location}
-                </ThemedText>
-              </View>
+              <ProfileLocationPill
+                label={location}
+                backgroundColor={subtleBackground}
+                iconBackgroundColor={accentSurface}
+                iconName={locationIconName}
+                iconColor={locationIconColor}
+                textColor={textColor}
+              />
             ) : null}
 
             {statusPillProps
@@ -350,21 +351,6 @@ const styles = StyleSheet.create({
     lineHeight: responsiveLineHeight(22),
     fontFamily: Fonts.bold,
     textAlign: 'center',
-  },
-  locationPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: responsiveSize(10, 8, 12),
-    paddingVertical: responsiveSize(5, 4, 7),
-    borderRadius: 999,
-    alignSelf: 'center',
-    maxWidth: '100%',
-  },
-  locationText: {
-    fontSize: responsiveFontSize(13),
-    fontFamily: Fonts.bold,
-    flexShrink: 1,
-    letterSpacing: 0.2,
   },
   iconBubble: {
     width: 24,

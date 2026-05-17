@@ -15,9 +15,10 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 
 import {
+  ListImageCardSkeleton,
+  LocationPill,
   PushScreenOptions,
   StayCard,
-  TitleWithLocation,
   WallpaperPattern,
   WebSlideTransition,
   useCollapsibleSearchSection,
@@ -83,13 +84,10 @@ export default function DestinationStaysScreen() {
     searchQuery,
     setSearchQuery,
     refreshing,
-    filterOptions,
+    filterOptions: [],
     activeFilter,
     onFilterChange: handleFilterChange,
     containerStyle: styles.searchFilterContainer,
-    sortDirection,
-    onSortDirectionChange: handleSortDirectionChange,
-    sortToggleFilters: ['rating', 'price'],
     searchBarOverrides: { placeholder: 'Search' },
     disableAutoReveal: true,
   });
@@ -249,28 +247,32 @@ export default function DestinationStaysScreen() {
             </View>
 
             <View style={styles.titleSection}>
-              <TitleWithLocation
-                title="Stays"
-                location={resolvedLocation}
-                style={styles.titleRowContainer}
-                titleStyle={[
-                  styles.pageTitle,
-                  {
-                    color: isDark ? '#FFFFFF' : '#1C1C1E',
-                    textShadowColor: isDark ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.45)',
-                  },
-                ]}
-                titleProps={{ adjustsFontSizeToFit: true, minimumFontScale: 0.9 }}
-                pillStyle={styles.pillTagOverlay}
-                pillTextStyle={styles.pillTextOverlay}
-                pillBackgroundLight="rgba(255,255,255,0.8)"
-                pillBackgroundDark="#1C1C1E"
-                pillTextLight="#000000"
-                pillTextDark="#FFFFFF"
-                pillTextProps={{ numberOfLines: 1 }}
-                iconColor="#FF3B30"
-                iconSize={16}
+              <ThemedText
+                style={[styles.pageTitle, { color: isDark ? '#FFFFFF' : '#1C1C1E' }]}
+                adjustsFontSizeToFit
+                minimumFontScale={0.9}
+                numberOfLines={1}
+              >
+                Stays
+              </ThemedText>
+              <LocationPill
+                label={resolvedLocation}
+                backgroundColor={isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)'}
+                iconBackgroundColor={isDark ? '#1C1C1E' : '#FFFFFF'}
+                lightTextColor={isDark ? '#FFFFFF' : '#000000'}
+                darkTextColor={isDark ? '#FFFFFF' : '#000000'}
+                variant="compact"
               />
+            </View>
+
+            <View style={styles.galleryCountWrapper}>
+              <Ionicons
+                name="bed-outline"
+                size={14}
+                color={isDark ? '#FFFFFF' : '#000000'}
+                style={styles.galleryIcon}
+              />
+              <ThemedText style={styles.galleryCount}>{filteredStays.length} stays</ThemedText>
             </View>
 
             <View
@@ -283,8 +285,8 @@ export default function DestinationStaysScreen() {
             </View>
 
             {loading ? (
-              <View style={styles.loadingContainer}>
-                <ActivityIndicator size="large" color={isDark ? '#FFFFFF' : '#000000'} />
+              <View style={styles.skeletonContainer}>
+                <ListImageCardSkeleton isDark={isDark} count={4} />
               </View>
             ) : (
               <ScrollView
@@ -338,43 +340,31 @@ const styles = StyleSheet.create({
   },
   titleSection: {
     paddingHorizontal: 16,
-    justifyContent: 'center',
-    alignItems: 'stretch',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingTop: 4,
     marginBottom: 2,
   },
-  titleRowContainer: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-    flexWrap: 'nowrap',
-  },
-  pillTagOverlay: {
+  galleryCountWrapper: {
+    paddingHorizontal: 16,
+    paddingVertical: 2,
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    maxWidth: 220,
-    minWidth: 100,
+    marginBottom: 8,
+    marginTop: -6,
   },
-  pillTextOverlay: {
-    fontSize: responsiveFontSize(20),
-    fontFamily: Fonts.bold,
-    letterSpacing: 0.2,
-    marginLeft: 6,
-    flexShrink: 1,
+  galleryIcon: {
+    marginRight: 4,
+  },
+  galleryCount: {
+    fontSize: responsiveFontSize(14),
+    opacity: 0.7,
   },
   pageTitle: {
     fontSize: responsiveFontSize(24),
     fontFamily: Fonts.bold,
-    flex: 1,
-    textAlign: 'left',
-    marginRight: 16,
     lineHeight: 28,
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
   },
   searchSectionWrapper: {
     width: '100%',
@@ -384,6 +374,10 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     marginTop: 4,
     overflow: 'hidden',
+  },
+  skeletonContainer: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
   },
   loadingContainer: {
     flex: 1,

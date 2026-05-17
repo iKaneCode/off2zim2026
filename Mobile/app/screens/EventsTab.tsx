@@ -1,32 +1,28 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { StyleSheet, View, FlatList, useColorScheme, Animated, RefreshControl, StatusBar } from 'react-native';
+﻿import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { StyleSheet, View, FlatList, useColorScheme, Animated, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
-import { CustomHeader } from '@/components/CustomHeader';
-import { PushScreenOptions, WebSlideTransition, WallpaperPattern } from '@/components';
 import { useCollapsibleSearchSection } from '@/components/CollapsibleSearchSection';
-import { responsiveFontSize, Fonts } from '@/constants/Fonts';
+import { Fonts } from '@/constants/Fonts';
 import { eventsService } from '@/services/database';
 import type { Event } from '@/types/Event';
 import { LocationPill } from '@/components/LocationPill';
 import { RatingPill } from '@/components/RatingPill';
 import { DateTimePill } from '@/components/DateTimePill';
 import { ListImageCard } from '@/components/ListImageCard';
-import { ListImageCardSkeleton } from '@/components/ListImageCardSkeleton';
 import { isFavorited as isFavoritedUtil, toggleFavorite as toggleFavoriteUtil, subscribeFavorites, getFavoritedIds } from '@/utils/favoritesUtils';
 
-export default function EventsScreen() {
+export default function EventsTab() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const params = useLocalSearchParams();
-  const locationParam = typeof params.location === 'string' && params.location.trim().length > 0 ? params.location.trim() : '';
 
   const [events, setEvents] = useState<Event[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState('All');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [favorites, setFavorites] = useState<Record<string, boolean>>({});
@@ -128,34 +124,30 @@ export default function EventsScreen() {
     setIsRefreshing(false);
   };
 
-  // Filter events to selected location, then by search query
+  // Filter events based on search query
   const filteredEvents = useMemo(() => {
-    let result = events;
-    if (locationParam) {
-      const loc = locationParam.toLowerCase();
-      result = result.filter(
-        e => e.location.toLowerCase().includes(loc) || loc.includes(e.location.toLowerCase())
-      );
-    }
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(
-        event =>
-          event.name.toLowerCase().includes(query) ||
-          event.location.toLowerCase().includes(query) ||
-          event.venue.toLowerCase().includes(query)
-      );
-    }
-    return result;
-  }, [events, searchQuery, locationParam]);
+    if (!searchQuery.trim()) return events;
+    const query = searchQuery.toLowerCase();
+    return events.filter(
+      event =>
+        event.name.toLowerCase().includes(query) ||
+        event.location.toLowerCase().includes(query) ||
+        event.venue.toLowerCase().includes(query)
+    );
+  }, [events, searchQuery]);
 
-  // Collapsible search section (no filters — scoped to selected location)
+  // Collapsible search section
   const { searchSection, handleScroll, handleMomentumScrollEnd } = useCollapsibleSearchSection({
     searchQuery,
     setSearchQuery,
-    filterOptions: [],
-    activeFilter: '',
-    onFilterChange: () => {},
+    filterOptions: [
+      { key: 'All', label: 'All' },
+      { key: 'Harare', label: 'Harare' },
+      { key: 'Bulawayo', label: 'Bulawayo' },
+      { key: 'Victoria Falls', label: 'Victoria Falls' },
+    ],
+    activeFilter,
+    onFilterChange: setActiveFilter,
     searchBarOverrides: {
       placeholder: 'Search',
     },
@@ -262,7 +254,7 @@ export default function EventsScreen() {
               <DateTimePill
                 label={`${new Date(item.date)
                   .toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })
-                  .replace(/,/g, '')} · ${item.time}`}
+                  .replace(/,/g, '')} ┬╖ ${item.time}`}
                 backgroundColor={pillBg}
                 iconBackgroundColor={pillIconBackground}
                 lightTextColor={pillTextColor}
@@ -310,144 +302,100 @@ export default function EventsScreen() {
     [favorites, getHeartScale, toggleFavorite, isDark]
   );
 
-  const resolvedLocation = locationParam || 'All locations';
-  const pillBgHeader = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)';
-  const pillTextColorHeader = isDark ? '#FFFFFF' : '#000000';
-  const pillIconBgHeader = isDark ? '#1C1C1E' : '#FFFFFF';
-
-  const handleGoBack = () => {
-    if (typeof router.canGoBack === 'function' && router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace('/');
-    }
-  };
-
   return (
-    <>
-      <PushScreenOptions />
-      <IOSScreenWrapper>
-        <WebSlideTransition>
-          <ThemedView style={styles.container} lightColor="#f2f2f7" darkColor="#000000">
-            <WallpaperPattern />
-            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+    <IOSScreenWrapper>
+      <ThemedView style={styles.container} lightColor="#f2f2f7" darkColor="#000000">
+        {searchSection}
 
-            <View style={styles.headerArea}>
-              <CustomHeader
-                showLogo={true}
-                leftAction={{
-                  icon: 'chevron-back',
-                  onPress: handleGoBack,
-                }}
-                style={{ marginBottom: 4 }}
-              />
-            </View>
-
-            <View style={styles.titleSection}>
-              <ThemedText
-                style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#1C1C1E' }]}
-                adjustsFontSizeToFit
-                minimumFontScale={0.9}
-                numberOfLines={1}
-              >
-                Events
-              </ThemedText>
-              <LocationPill
-                label={resolvedLocation}
-                backgroundColor={pillBgHeader}
-                iconBackgroundColor={pillIconBgHeader}
-                lightTextColor={pillTextColorHeader}
-                darkTextColor={pillTextColorHeader}
-                variant="compact"
-              />
-            </View>
-
-            <View style={styles.galleryCountWrapper}>
-              <Ionicons
-                name="calendar-outline"
-                size={14}
-                color={isDark ? '#FFFFFF' : '#000000'}
-                style={styles.galleryIcon}
-              />
-              <ThemedText style={styles.galleryCount}>{filteredEvents.length} events</ThemedText>
-            </View>
-
-            {searchSection}
-
-            {eventsLoading ? (
-              <View style={styles.skeletonContainer}>
-                <ListImageCardSkeleton isDark={isDark} count={4} />
-              </View>
-            ) : filteredEvents.length > 0 ? (
-              <FlatList
-                data={filteredEvents}
-                renderItem={renderEventCard}
-                keyExtractor={item => item.id}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.listContent}
-                onScroll={handleScroll}
-                onMomentumScrollEnd={handleMomentumScrollEnd}
-                scrollEventThrottle={16}
-                refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
-              />
-            ) : (
-              <View style={styles.emptyStateContainer}>
-                <Ionicons
-                  name="search-outline"
-                  size={64}
-                  color={isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.3)'}
-                />
-                <ThemedText style={styles.emptyStateText}>No events matching your search</ThemedText>
-              </View>
-            )}
-          </ThemedView>
-        </WebSlideTransition>
-      </IOSScreenWrapper>
-    </>
+        {filteredEvents.length > 0 || eventsLoading ? (
+          <FlatList
+            data={
+              eventsLoading
+                ? ([
+                    {
+                      id: '1',
+                      name: '',
+                      location: '',
+                      venue: '',
+                      date: '',
+                      time: '',
+                      images: [],
+                      description: '',
+                      rating: 0,
+                      totalRatings: 0,
+                      ticketPrice: 0,
+                      currency: 'USD',
+                      ticketTypes: [],
+                      category: '',
+                      tags: [],
+                      organizer: { name: '', contact: '', verified: false },
+                    },
+                    {
+                      id: '2',
+                      name: '',
+                      location: '',
+                      venue: '',
+                      date: '',
+                      time: '',
+                      images: [],
+                      description: '',
+                      rating: 0,
+                      totalRatings: 0,
+                      ticketPrice: 0,
+                      currency: 'USD',
+                      ticketTypes: [],
+                      category: '',
+                      tags: [],
+                      organizer: { name: '', contact: '', verified: false },
+                    },
+                    {
+                      id: '3',
+                      name: '',
+                      location: '',
+                      venue: '',
+                      date: '',
+                      time: '',
+                      images: [],
+                      description: '',
+                      rating: 0,
+                      totalRatings: 0,
+                      ticketPrice: 0,
+                      currency: 'USD',
+                      ticketTypes: [],
+                      category: '',
+                      tags: [],
+                      organizer: { name: '', contact: '', verified: false },
+                    },
+                  ] as any as Event[])
+                : filteredEvents
+            }
+            renderItem={renderEventCard}
+            keyExtractor={item => item.id}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.listContent}
+            onScroll={handleScroll}
+            onMomentumScrollEnd={handleMomentumScrollEnd}
+            scrollEventThrottle={16}
+            refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
+          />
+        ) : (
+          <View style={styles.emptyStateContainer}>
+            <Ionicons
+              name="search-outline"
+              size={64}
+              color={isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.3)'}
+            />
+            <ThemedText style={styles.emptyStateText}>No events matching your search</ThemedText>
+          </View>
+        )}
+      </ThemedView>
+    </IOSScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  headerArea: {
-    position: 'relative',
-    width: '100%',
-    zIndex: 10,
-    marginBottom: 2,
-  },
-  titleSection: {
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 4,
-    marginBottom: 2,
-  },
-  sectionTitle: {
-    fontSize: responsiveFontSize(24),
-    fontFamily: Fonts.bold,
-    lineHeight: 28,
-  },
-  galleryCountWrapper: {
-    paddingHorizontal: 16,
-    paddingVertical: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    marginTop: -6,
-  },
-  galleryIcon: {
-    marginRight: 4,
-  },
-  galleryCount: {
-    fontSize: responsiveFontSize(14),
-    opacity: 0.7,
-  },
-  skeletonContainer: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
   },
   listContent: {
     paddingHorizontal: 16,
@@ -473,7 +421,7 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   emptyStateText: {
-    fontSize: responsiveFontSize(16),
+    fontSize: 16,
     marginTop: 16,
     textAlign: 'center',
     opacity: 0.7,
@@ -483,7 +431,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   priceLabel: {
-    fontSize: responsiveFontSize(11),
+    fontSize: 11,
     letterSpacing: 0.2,
     fontFamily: Fonts.medium,
     textTransform: 'lowercase',
@@ -498,16 +446,16 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   priceValue: {
-    fontSize: responsiveFontSize(16),
+    fontSize: 16,
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
   },
   priceCurrency: {
-    fontSize: responsiveFontSize(13),
+    fontSize: 13,
     fontFamily: Fonts.medium,
   },
   priceUnit: {
-    fontSize: responsiveFontSize(12),
+    fontSize: 12,
     fontFamily: Fonts.medium,
     marginLeft: 4,
   },

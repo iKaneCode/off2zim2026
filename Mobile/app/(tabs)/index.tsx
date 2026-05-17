@@ -19,10 +19,9 @@ import { useOverlayDrawer } from '@/context/OverlayDrawerContext';
 
 // Screens
 import Featured from '@/app/screens/Featured';
-import DestinationsScreen from '@/app/screens/DestinationsScreen';
 import Stays from '@/app/screens/Stays';
-import Events from '@/app/screens/Events';
-import ThingsToDoScreen from '@/app/screens/ThingsToDoScreen';
+import EventsTab from '@/app/screens/EventsTab';
+import ThingsToDoTab from '@/app/screens/ThingsToDoTab';
 import Bus from '@/app/screens/Bus';
 import Flights from '@/app/screens/Flights';
 
@@ -56,10 +55,9 @@ function FeaturedWrapper() {
 // Tab configuration data
 const TAB_SCREENS = [
   { name: 'Featured', component: FeaturedWrapper, label: 'Featured' },
-  { name: 'Destinations', component: DestinationsScreen, label: 'Destinations' },
   { name: 'Stays', component: Stays, label: 'Stays' },
-  { name: 'Events', component: Events, label: 'Events' },
-  { name: 'ThingsToDo', component: ThingsToDoScreen, label: 'Experiences' },
+  { name: 'Events', component: EventsTab, label: 'Events' },
+  { name: 'ThingsToDo', component: ThingsToDoTab, label: 'Experiences' },
   { name: 'Bus', component: Bus, label: 'Transport' },
   { name: 'Flights', component: Flights, label: 'Flights' },
 ] as const;

@@ -47,6 +47,22 @@ const getWeatherEmoji = (conditionCode: number, isDay: boolean = true): string =
   return '🌤️'; // Default partly sunny
 };
 
+const getWeatherIconName = (conditionCode: number, isDay: boolean = true): string => {
+  if (conditionCode === 1000) return isDay ? 'sunny-outline' : 'moon-outline';
+  if (conditionCode >= 1003 && conditionCode <= 1006) return 'partly-sunny-outline';
+  if (conditionCode === 1009) return 'cloudy-outline';
+  if (conditionCode >= 1030 && conditionCode <= 1147) return 'cloud-outline';
+  if (conditionCode === 1087) return 'thunderstorm-outline';
+  if (conditionCode >= 1114 && conditionCode <= 1117) return 'snow-outline';
+  if (conditionCode >= 1150 && conditionCode <= 1201) return 'rainy-outline';
+  if (conditionCode >= 1204 && conditionCode <= 1237) return 'snow-outline';
+  if (conditionCode >= 1240 && conditionCode <= 1246) return 'rainy-outline';
+  if (conditionCode >= 1249 && conditionCode <= 1264) return 'snow-outline';
+  if (conditionCode >= 1273 && conditionCode <= 1282) return 'thunderstorm-outline';
+
+  return 'partly-sunny-outline';
+};
+
 export const weatherService = {
   // Get current weather for a location
   getCurrentWeather: async (location: string): Promise<string | null> => {
@@ -96,7 +112,13 @@ export const weatherService = {
   // Get 5-day weather forecast for a location
   getForecast: async (
     location: string
-  ): Promise<Array<{ day: string; icon: string; high: number; low: number }> | null> => {
+  ): Promise<Array<{
+    day: string;
+    icon: string;
+    iconName: string;
+    high: number;
+    low: number;
+  }> | null> => {
     try {
       const mappedLocation = locationMappings[location] || location;
       const response = await fetch(
@@ -114,10 +136,12 @@ export const weatherService = {
         const dayName =
           index === 0 ? 'Today' : date.toLocaleDateString('en-US', { weekday: 'short' });
         const emoji = getWeatherEmoji(day.day.condition.code, true);
+        const iconName = getWeatherIconName(day.day.condition.code, true);
 
         return {
           day: dayName,
           icon: emoji,
+          iconName,
           high: Math.round(day.day.maxtemp_c),
           low: Math.round(day.day.mintemp_c),
         };

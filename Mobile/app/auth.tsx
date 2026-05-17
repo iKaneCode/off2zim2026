@@ -727,14 +727,6 @@ export default function AuthScreen() {
                 { backgroundColor: cardBackground, borderColor: cardBorderColor },
               ]}
             >
-              <View style={styles.authIntro}>
-                <Text style={[styles.authIntroTitle, { color: palette.text }]}>
-                  {variantConfig.authTitle}
-                </Text>
-                <Text style={[styles.authIntroSubtitle, { color: inactiveTabTextColor }]}>
-                  {variantConfig.authSubtitle}
-                </Text>
-              </View>
               <>
                   <View
                     style={[
@@ -1086,72 +1078,6 @@ export default function AuthScreen() {
                         </>
                       ) : (
                         <>
-                          <View style={{ gap: 8 }}>
-                            <View style={styles.labelErrorContainer}>
-                              <Text style={[styles.inputLabel, { color: palette.text }]}>
-                                Explorer type
-                              </Text>
-                            </View>
-                            <View
-                              style={[
-                                styles.userTypeSwitch,
-                                {
-                                  borderColor: segmentBorderColor,
-                                  backgroundColor: segmentBackground,
-                                },
-                              ]}
-                            >
-                              <TouchableOpacity
-                                style={[
-                                  styles.userTypeButton,
-                                  explorerType === 'local' && {
-                                    backgroundColor: activeTabBackground,
-                                  },
-                                  explorerType === 'local' && styles.userTypeButtonActive,
-                                ]}
-                                onPress={() => setExplorerType('local')}
-                                disabled={explorerType === 'local'}
-                              >
-                                <Text
-                                  style={[
-                                    styles.userTypeButtonText,
-                                    { color: inactiveTabTextColor },
-                                    explorerType === 'local' && {
-                                      color: activeTabTextColor,
-                                    },
-                                    explorerType === 'local' && styles.userTypeButtonTextActive,
-                                  ]}
-                                >
-                                  Local
-                                </Text>
-                              </TouchableOpacity>
-                              <TouchableOpacity
-                                style={[
-                                  styles.userTypeButton,
-                                  explorerType === 'foreign' && {
-                                    backgroundColor: activeTabBackground,
-                                  },
-                                  explorerType === 'foreign' && styles.userTypeButtonActive,
-                                ]}
-                                onPress={() => setExplorerType('foreign')}
-                                disabled={explorerType === 'foreign'}
-                              >
-                                <Text
-                                  style={[
-                                    styles.userTypeButtonText,
-                                    { color: inactiveTabTextColor },
-                                    explorerType === 'foreign' && {
-                                      color: activeTabTextColor,
-                                    },
-                                    explorerType === 'foreign' && styles.userTypeButtonTextActive,
-                                  ]}
-                                >
-                                  Foreign
-                                </Text>
-                              </TouchableOpacity>
-                            </View>
-                          </View>
-
                           <View style={{ gap: 8 }}>
                             <View style={styles.labelErrorContainer}>
                               <Text style={[styles.inputLabel, { color: palette.text }]}>

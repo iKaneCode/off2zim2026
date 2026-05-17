@@ -1,15 +1,13 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { StyleSheet, View, FlatList, useColorScheme, Animated, RefreshControl, StatusBar } from 'react-native';
+﻿import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { StyleSheet, View, FlatList, useColorScheme, Animated, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
-import { CustomHeader } from '@/components/CustomHeader';
-import { PushScreenOptions, WebSlideTransition, WallpaperPattern } from '@/components';
 import { useCollapsibleSearchSection } from '@/components/CollapsibleSearchSection';
-import { responsiveFontSize, responsiveLineHeight, Fonts } from '@/constants/Fonts';
+import { Fonts } from '@/constants/Fonts';
 import { thingsToDoData } from '@/constants/FeaturedData';
 import { getActivityStatus, activityStatusColor, ActivityStatus } from '@/utils/timeStatus';
 import { LocationPill } from '@/components/LocationPill';
@@ -17,7 +15,6 @@ import { RatingPill } from '@/components/RatingPill';
 import { ListImageCard } from '@/components/ListImageCard';
 import { isFavorited as isFavoritedUtil, toggleFavorite as toggleFavoriteUtil, subscribeFavorites, getFavoritedIds } from '@/utils/favoritesUtils';
 import { StatusPill } from '@/components/StatusPill';
-import { ListImageCardSkeleton } from '@/components/ListImageCardSkeleton';
 
 interface ActivityItem {
   id: string;
@@ -30,15 +27,13 @@ interface ActivityItem {
   durationHours?: number;
 }
 
-export default function ThingsToDoScreen() {
+export default function ThingsToDoTab() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
-  const params = useLocalSearchParams();
-  const locationParam = typeof params.location === 'string' && params.location.trim().length > 0 ? params.location.trim() : '';
 
   const [activities, setActivities] = useState<ActivityItem[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeFilter, setActiveFilter] = useState('All');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [favorites, setFavorites] = useState<Record<string, boolean>>({});
   const [heartScales] = useState<Record<string, Animated.Value>>({});
@@ -57,7 +52,6 @@ export default function ThingsToDoScreen() {
     // Simulate loading from API
     await new Promise(resolve => setTimeout(resolve, 800));
     setActivities(thingsToDoData);
-    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -70,31 +64,30 @@ export default function ThingsToDoScreen() {
     setIsRefreshing(false);
   };
 
-  // Filter activities to selected location, then by search query
+  // Filter activities based on search query
   const filteredActivities = useMemo(() => {
-    let result = activities;
-    if (locationParam) {
-      const loc = locationParam.toLowerCase();
-      result = result.filter(
-        a => a.location.toLowerCase().includes(loc) || loc.includes(a.location.toLowerCase())
-      );
-    }
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(
-        a => a.name.toLowerCase().includes(query) || a.location.toLowerCase().includes(query)
-      );
-    }
-    return result;
-  }, [activities, searchQuery, locationParam]);
+    if (!searchQuery.trim()) return activities;
+    const query = searchQuery.toLowerCase();
+    return activities.filter(
+      activity =>
+        activity.name.toLowerCase().includes(query) ||
+        activity.location.toLowerCase().includes(query)
+    );
+  }, [activities, searchQuery]);
 
-  // Collapsible search section (no filters — scoped to selected location)
+  // Collapsible search section
   const { searchSection, handleScroll, handleMomentumScrollEnd } = useCollapsibleSearchSection({
     searchQuery,
     setSearchQuery,
-    filterOptions: [],
-    activeFilter: '',
-    onFilterChange: () => {},
+    filterOptions: [
+      { key: 'All', label: 'All' },
+      { key: 'Harare', label: 'Harare' },
+      { key: 'Victoria Falls', label: 'Victoria Falls' },
+      { key: 'Mutare', label: 'Mutare' },
+      { key: 'Kariba', label: 'Kariba' },
+    ],
+    activeFilter,
+    onFilterChange: setActiveFilter,
     searchBarOverrides: {
       placeholder: 'Search',
     },
@@ -227,21 +220,21 @@ export default function ThingsToDoScreen() {
                     style={styles.priceIcon}
                   />
                   <ThemedText
-                    style={styles.priceCurrency}
-                    lightColor={isDark ? '#FFFFFF' : '#1C1C1E'}
-                    darkColor="#FFFFFF"
-                  >
-                    $
-                  </ThemedText>
-                  <ThemedText
                     style={styles.priceValue}
                     lightColor={isDark ? '#FFFFFF' : '#1C1C1E'}
                     darkColor="#FFFFFF"
                   >
+                    <ThemedText
+                      style={styles.priceCurrency}
+                      lightColor={isDark ? '#FFFFFF' : '#1C1C1E'}
+                      darkColor="#FFFFFF"
+                    >
+                      $
+                    </ThemedText>
                     {basePackagePrice}
-                  </ThemedText>
-                  <ThemedText style={styles.priceUnit} lightColor="#8E8E93" darkColor="#8E8E93">
-                    /person
+                    <ThemedText style={styles.priceUnit} lightColor="#8E8E93" darkColor="#8E8E93">
+                      /person
+                    </ThemedText>
                   </ThemedText>
                 </View>
               </View>
@@ -253,149 +246,43 @@ export default function ThingsToDoScreen() {
     [favorites, getHeartScale, toggleFavorite, isDark, nowTick]
   );
 
-  const resolvedLocation = locationParam || 'All locations';
-  const pillBgHeader = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)';
-  const pillTextColorHeader = isDark ? '#FFFFFF' : '#000000';
-  const pillIconBgHeader = isDark ? '#1C1C1E' : '#FFFFFF';
-
-  // Custom back navigation (matches gallery)
-  const handleGoBack = () => {
-    if (typeof router.canGoBack === 'function' && router.canGoBack()) {
-      router.back();
-    } else {
-      router.replace('/');
-    }
-  };
-
   return (
-    <>
-      <PushScreenOptions />
-      <IOSScreenWrapper>
-        <WebSlideTransition>
-          <ThemedView style={styles.container} lightColor="#f2f2f7" darkColor="#000000">
-            <WallpaperPattern />
-            <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} />
+    <IOSScreenWrapper>
+      <ThemedView style={styles.container} lightColor="#f2f2f7" darkColor="#000000">
+        {searchSection}
 
-            {/* Header section with CustomHeader */}
-            <View style={styles.headerArea}>
-              <CustomHeader
-                showLogo={true}
-                leftAction={{
-                  icon: 'chevron-back',
-                  onPress: handleGoBack,
-                }}
-                style={{ marginBottom: 4 }}
-              />
-            </View>
-
-            {/* Title section with title and location pill */}
-            <View style={styles.titleSection}>
-              <ThemedText
-                style={[
-                  styles.sectionTitle,
-                  { color: isDark ? '#FFFFFF' : '#1C1C1E' },
-                ]}
-                adjustsFontSizeToFit
-                minimumFontScale={0.9}
-                numberOfLines={1}
-              >
-                Things To Do
-              </ThemedText>
-              <LocationPill
-                label={resolvedLocation}
-                backgroundColor={pillBgHeader}
-                iconBackgroundColor={pillIconBgHeader}
-                lightTextColor={pillTextColorHeader}
-                darkTextColor={pillTextColorHeader}
-                variant="compact"
-              />
-            </View>
-
-            {/* Count row below the title */}
-            <View style={styles.galleryCountWrapper}>
-              <Ionicons
-                name="list-outline"
-                size={14}
-                color={isDark ? '#FFFFFF' : '#000000'}
-                style={styles.galleryIcon}
-              />
-              <ThemedText style={styles.galleryCount}>{filteredActivities.length} activities</ThemedText>
-            </View>
-
-            {searchSection}
-
-            {loading ? (
-              <View style={styles.listContent}>
-                <ListImageCardSkeleton isDark={isDark} count={4} />
-              </View>
-            ) : filteredActivities.length > 0 ? (
-              <FlatList
-                data={filteredActivities}
-                renderItem={renderActivityCard}
-                keyExtractor={item => item.id}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={styles.listContent}
-                onScroll={handleScroll}
-                onMomentumScrollEnd={handleMomentumScrollEnd}
-                scrollEventThrottle={16}
-                refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
-              />
-            ) : (
-              <View style={styles.emptyStateContainer}>
-                <Ionicons
-                  name="search-outline"
-                  size={64}
-                  color={isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.3)'}
-                />
-                <ThemedText style={styles.emptyStateText}>
-                  No activities matching your search
-                </ThemedText>
-              </View>
-            )}
-          </ThemedView>
-        </WebSlideTransition>
-      </IOSScreenWrapper>
-    </>
+        {filteredActivities.length > 0 ? (
+          <FlatList
+            data={filteredActivities}
+            renderItem={renderActivityCard}
+            keyExtractor={item => item.id}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.listContent}
+            onScroll={handleScroll}
+            onMomentumScrollEnd={handleMomentumScrollEnd}
+            scrollEventThrottle={16}
+            refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
+          />
+        ) : (
+          <View style={styles.emptyStateContainer}>
+            <Ionicons
+              name="search-outline"
+              size={64}
+              color={isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.3)'}
+            />
+            <ThemedText style={styles.emptyStateText}>
+              No activities matching your search
+            </ThemedText>
+          </View>
+        )}
+      </ThemedView>
+    </IOSScreenWrapper>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  headerArea: {
-    position: 'relative',
-    width: '100%',
-    zIndex: 10,
-    marginBottom: 2,
-  },
-  titleSection: {
-    paddingHorizontal: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 4,
-    marginBottom: 2,
-  },
-  sectionTitle: {
-    fontSize: responsiveFontSize(24),
-    fontFamily: Fonts.bold,
-    lineHeight: 28,
-  },
-  galleryCountWrapper: {
-    paddingHorizontal: 16,
-    paddingVertical: 2,
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-    marginTop: -6,
-  },
-  galleryIcon: {
-    marginRight: 4,
-  },
-  galleryCount: {
-    fontSize: responsiveFontSize(14),
-    opacity: 0.7,
   },
   listContent: {
     paddingHorizontal: 16,
@@ -421,7 +308,7 @@ const styles = StyleSheet.create({
     marginTop: 40,
   },
   emptyStateText: {
-    fontSize: responsiveFontSize(16),
+    fontSize: 16,
     marginTop: 16,
     textAlign: 'center',
     opacity: 0.7,
@@ -431,34 +318,32 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   priceLabel: {
-    fontSize: responsiveFontSize(11),
-    lineHeight: responsiveLineHeight(11),
+    fontSize: 11,
     letterSpacing: 0.2,
     fontFamily: Fonts.medium,
     textTransform: 'lowercase',
+    marginBottom: 0,
   },
   priceRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginTop: -8,
   },
   priceIcon: {
-    marginRight: 4,
+    marginRight: 6,
   },
   priceValue: {
-    fontSize: responsiveFontSize(16),
-    lineHeight: responsiveLineHeight(16),
+    fontSize: 16,
     fontFamily: Fonts.bold,
     letterSpacing: 0.2,
   },
   priceCurrency: {
-    fontSize: responsiveFontSize(13),
-    lineHeight: responsiveLineHeight(16),
+    fontSize: 13,
     fontFamily: Fonts.medium,
   },
   priceUnit: {
-    fontSize: responsiveFontSize(12),
-    lineHeight: responsiveLineHeight(16),
+    fontSize: 12,
     fontFamily: Fonts.medium,
-    marginLeft: 2,
+    marginLeft: 4,
   },
 });

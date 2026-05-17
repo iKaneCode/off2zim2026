@@ -13,6 +13,7 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import * as Haptics from 'expo-haptics';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { responsiveFontSize, Fonts } from '@/constants/Fonts';
+import { getFilterPillColors } from '@/utils/filterPillStyles';
 
 interface FilterOption {
   key: string;
@@ -41,7 +42,7 @@ export function FilterBar({
   showSortToggle = false,
 }: FilterBarProps) {
   const colorScheme = useColorScheme();
-  const isDarkMode = colorScheme === 'dark';
+  const pillColors = getFilterPillColors(colorScheme);
 
   // Filter button animations
   const filterAnimations = useRef(
@@ -149,14 +150,10 @@ export function FilterBar({
                   styles.filterButton,
                   isActive && styles.filterButtonActive,
                   isActive && {
-                    backgroundColor: isDarkMode
-                      ? 'rgba(255, 255, 255, 0.85)'
-                      : 'rgba(0, 0, 0, 0.85)',
+                    backgroundColor: pillColors.activeBackground,
                   },
                   !isActive && {
-                    backgroundColor: isDarkMode
-                      ? 'rgba(120, 120, 120, 0.3)'
-                      : 'rgba(120, 120, 120, 0.15)',
+                    backgroundColor: pillColors.inactiveBackground,
                   },
                 ]}
                 onPress={() => handleFilterPress(option.key)}
@@ -173,13 +170,7 @@ export function FilterBar({
                       styles.filterText,
                       isActive && styles.filterTextActive,
                       {
-                        color: isActive
-                          ? isDarkMode
-                            ? '#000000'
-                            : '#FFFFFF'
-                          : isDarkMode
-                            ? 'rgba(255, 255, 255, 0.6)'
-                            : 'rgba(0, 0, 0, 0.6)',
+                        color: isActive ? pillColors.activeText : pillColors.inactiveText,
                       },
                     ]}
                   >
@@ -196,9 +187,7 @@ export function FilterBar({
             style={[
               styles.sortToggle,
               {
-                backgroundColor: isDarkMode
-                  ? 'rgba(120, 120, 120, 0.3)'
-                  : 'rgba(120, 120, 120, 0.15)',
+                backgroundColor: pillColors.inactiveBackground,
               },
             ]}
             onPress={handleSortToggle}
@@ -207,7 +196,7 @@ export function FilterBar({
             <FontAwesome6
               name={sortDirection === 'asc' ? 'arrow-up-wide-short' : 'arrow-down-wide-short'}
               size={18}
-              color={isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.8)'}
+              color={pillColors.sortIcon}
             />
           </TouchableOpacity>
         )}

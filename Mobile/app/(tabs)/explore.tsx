@@ -18,16 +18,18 @@ import {
   TouchableWithoutFeedback,
   Easing,
   RefreshControl,
+  LayoutAnimation,
+  UIManager,
+  Platform,
 } from 'react-native';
 import WebView, { type WebViewMessageEvent } from 'react-native-webview';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
-import { CustomHeader, EventCard, FilterBar, ListImageCard, LocationPill, ProfileLocationPill, RatingPill, ShimmerPlaceholder, StatusPill, StayCard, ViewAllButton } from '@/components';
+import { CustomHeader, EventCard, FilterBar, ListImageCard, LocationPill, RatingPill, ShimmerPlaceholder, StatusPill, StayCard, ViewAllButton } from '@/components';
 import { EVENT_CARD_SPACING, EVENT_CARD_WIDTH } from '@/components/EventCard';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
-import { getProfileLocationPillColors } from '@/utils/profileLocationPillStyles';
 import { weatherService } from '@/services/weather';
 import { eventsService, staysService } from '@/services/database';
 import { thingsToDoData } from '@/constants/FeaturedData';
@@ -44,6 +46,8 @@ import {
 } from '@/utils/favoritesUtils';
 import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
+import { SvgUri } from 'react-native-svg';
+import { Asset } from 'expo-asset';
 
 type StorySlide = {
   id: string;
@@ -74,6 +78,276 @@ type WeatherDay = {
   high: number;
   low: number;
 };
+
+type WildlifeIconName =
+  | 'lion'
+  | 'leopard'
+  | 'cheetah'
+  | 'wild-dog'
+  | 'hippo'
+  | 'elephant'
+  | 'buffalo'
+  | 'giraffe'
+  | 'zebra'
+  | 'sable'
+  | 'hyena'
+  | 'brown-hyena'
+  | 'wildebeest'
+  | 'eland'
+  | 'aardvark'
+  | 'crocodile'
+  | 'rhino';
+
+type WildlifeSightingItem = {
+  label: string;
+  icon: WildlifeIconName;
+  note: string;
+};
+
+type WildlifeSightingRule = WildlifeSightingItem & {
+  keywords: string[];
+};
+
+const SAFARI_DEFAULT_SIGHTINGS: WildlifeSightingItem[] = [
+  { label: 'Elephant', icon: 'elephant', note: 'Common' },
+  { label: 'Lion', icon: 'lion', note: 'Possible' },
+  { label: 'Buffalo', icon: 'buffalo', note: 'Common' },
+  { label: 'Zebra', icon: 'zebra', note: 'Possible' },
+  { label: 'Giraffe', icon: 'giraffe', note: 'Possible' },
+  { label: 'Leopard', icon: 'leopard', note: 'Rare' },
+];
+
+const WATER_DEFAULT_SIGHTINGS: WildlifeSightingItem[] = [
+  { label: 'Hippo', icon: 'hippo', note: 'Common' },
+  { label: 'Crocodile', icon: 'crocodile', note: 'Common' },
+  { label: 'Elephant', icon: 'elephant', note: 'Waterways' },
+  { label: 'Buffalo', icon: 'buffalo', note: 'Possible' },
+];
+
+const QUIET_WILDLIFE_SIGHTINGS: WildlifeSightingItem[] = [
+  { label: 'Sable antelope', icon: 'sable', note: 'Possible' },
+  { label: 'Eland', icon: 'eland', note: 'Possible' },
+  { label: 'Zebra', icon: 'zebra', note: 'Possible' },
+];
+
+const WILDLIFE_SIGHTING_RULES: WildlifeSightingRule[] = [
+  {
+    label: 'Lion',
+    icon: 'lion',
+    note: 'Possible',
+    keywords: ['lion', 'lions'],
+  },
+  {
+    label: 'Leopard',
+    icon: 'leopard',
+    note: 'Rare',
+    keywords: ['leopard', 'leopards'],
+  },
+  {
+    label: 'Cheetah',
+    icon: 'cheetah',
+    note: 'Rare',
+    keywords: ['cheetah', 'cheetahs'],
+  },
+  {
+    label: 'Wild dog',
+    icon: 'wild-dog',
+    note: 'Rare',
+    keywords: ['wild dog', 'wild dogs', 'painted dog', 'painted dogs'],
+  },
+  {
+    label: 'Elephant',
+    icon: 'elephant',
+    note: 'Common',
+    keywords: ['elephant', 'elephants'],
+  },
+  {
+    label: 'Buffalo',
+    icon: 'buffalo',
+    note: 'Common',
+    keywords: ['buffalo', 'buffalos'],
+  },
+  {
+    label: 'Giraffe',
+    icon: 'giraffe',
+    note: 'Possible',
+    keywords: ['giraffe', 'giraffes'],
+  },
+  {
+    label: 'Zebra',
+    icon: 'zebra',
+    note: 'Possible',
+    keywords: ['zebra', 'zebras'],
+  },
+  {
+    label: 'Rhino',
+    icon: 'rhino',
+    note: 'Possible',
+    keywords: ['rhino', 'rhinos'],
+  },
+  {
+    label: 'Hippo',
+    icon: 'hippo',
+    note: 'Common',
+    keywords: ['hippo', 'hippos', 'zambezi', 'lake', 'river', 'pool', 'floodplain'],
+  },
+  {
+    label: 'Crocodile',
+    icon: 'crocodile',
+    note: 'Common',
+    keywords: ['crocodile', 'crocodiles'],
+  },
+  {
+    label: 'Sable antelope',
+    icon: 'sable',
+    note: 'Possible',
+    keywords: ['sable', 'antelope', 'kudu', 'nyala'],
+  },
+  {
+    label: 'Spotted Hyena',
+    icon: 'hyena',
+    note: 'Possible',
+    keywords: ['spotted hyena', 'hyena', 'hyenas'],
+  },
+  {
+    label: 'Brown Hyena',
+    icon: 'brown-hyena',
+    note: 'Rare',
+    keywords: ['brown hyena'],
+  },
+  {
+    label: 'Wildebeest',
+    icon: 'wildebeest',
+    note: 'Possible',
+    keywords: ['wildebeest', 'gnu'],
+  },
+  {
+    label: 'Eland',
+    icon: 'eland',
+    note: 'Possible',
+    keywords: ['eland'],
+  },
+  {
+    label: 'Aardvark',
+    icon: 'aardvark',
+    note: 'Rare',
+    keywords: ['aardvark', 'aardvarks'],
+  },
+];
+
+function mergeWildlifeSightings(...groups: WildlifeSightingItem[][]): WildlifeSightingItem[] {
+  const merged: WildlifeSightingItem[] = [];
+  groups.flat().forEach(item => {
+    if (!merged.some(candidate => candidate.label === item.label)) {
+      merged.push(item);
+    }
+  });
+  return merged;
+}
+
+function getWildlifeSightings(spot: AtlasSpot): WildlifeSightingItem[] {
+  const searchText = `${spot.name} ${spot.region} ${spot.description} ${spot.liveSignal}`.toLowerCase();
+  const matches = WILDLIFE_SIGHTING_RULES.filter(rule =>
+    rule.keywords.some(keyword => searchText.includes(keyword))
+  ).map(({ label, icon, note }) => ({ label, icon, note }));
+
+  const safariArea = /\b(national park|safari|game park|game reserve|reserve|conservancy|sanctuary|wildlife|waterhole|lowveld|savanna|bush)\b/.test(searchText);
+  const waterArea = /\b(zambezi|lake|river|dam|reservoir|pool|floodplain|wetland|waterway|shoreline|falls)\b/.test(searchText);
+  const rhinoArea = /\b(matobo|matopos|rhino)\b/.test(searchText);
+  const predatorArea = /\b(hwange|mana pools|gonarezhou|matusadona|chizarira|zambezi national park|save|sapi|chewore)\b/.test(searchText);
+  const specialistSightings: WildlifeSightingItem[] = [];
+
+  if (rhinoArea) {
+    specialistSightings.push({ label: 'Rhino', icon: 'rhino', note: 'Possible' });
+  }
+
+  if (predatorArea) {
+    specialistSightings.push(
+      { label: 'Lion', icon: 'lion', note: 'Possible' },
+      { label: 'Leopard', icon: 'leopard', note: 'Rare' },
+      { label: 'Wild dog', icon: 'wild-dog', note: 'Rare' },
+    );
+  }
+
+  const sightings = mergeWildlifeSightings(
+    matches,
+    specialistSightings,
+    safariArea ? SAFARI_DEFAULT_SIGHTINGS : [],
+    waterArea ? WATER_DEFAULT_SIGHTINGS : [],
+    QUIET_WILDLIFE_SIGHTINGS,
+  );
+
+  return sightings.slice(0, 8);
+}
+
+const WILDLIFE_ICON_ASSETS: Record<WildlifeIconName, number> = {
+  lion: require('@/assets/images/wildlife/lion.svg'),
+  leopard: require('@/assets/images/wildlife/leopard.svg'),
+  cheetah: require('@/assets/images/wildlife/cheetah.svg'),
+  'wild-dog': require('@/assets/images/wildlife/wild-dog.svg'),
+  hippo: require('@/assets/images/wildlife/hippo.svg'),
+  elephant: require('@/assets/images/wildlife/elephant.svg'),
+  buffalo: require('@/assets/images/wildlife/buffalo.svg'),
+  giraffe: require('@/assets/images/wildlife/giraffe.svg'),
+  zebra: require('@/assets/images/wildlife/zebra.svg'),
+  sable: require('@/assets/images/wildlife/sable-antelope.svg'),
+  hyena: require('@/assets/images/wildlife/spotted-hyena.svg'),
+  'brown-hyena': require('@/assets/images/wildlife/brown-hyena.svg'),
+  wildebeest: require('@/assets/images/wildlife/wildebeest.svg'),
+  eland: require('@/assets/images/wildlife/eland.svg'),
+  aardvark: require('@/assets/images/wildlife/aardvark.svg'),
+  crocodile: require('@/assets/images/wildlife/crocodile.svg'),
+  rhino: require('@/assets/images/wildlife/rhino.svg'),
+};
+
+function WildlifeIcon({
+  name,
+  color,
+  size = 44,
+}: {
+  name: WildlifeIconName;
+  color: string;
+  size?: number;
+}) {
+  const iconAsset = useMemo(() => Asset.fromModule(WILDLIFE_ICON_ASSETS[name]), [name]);
+  const [uri, setUri] = useState<string | null>(
+    iconAsset.localUri ?? (iconAsset.downloaded ? iconAsset.uri : null)
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const prepareAsset = async () => {
+      if (!iconAsset.localUri && !iconAsset.downloaded) {
+        await iconAsset.downloadAsync();
+      }
+
+      if (isMounted) {
+        setUri(iconAsset.localUri ?? iconAsset.uri);
+      }
+    };
+
+    prepareAsset();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [iconAsset]);
+
+  if (!uri) {
+    return <View style={{ width: size, height: size }} />;
+  }
+
+  return (
+    <SvgUri
+      uri={uri}
+      width={size}
+      height={size}
+      color={color}
+      fill={color}
+    />
+  );
+}
 
 type AtlasSpot = {
   id: string;
@@ -162,6 +436,14 @@ const REGION_LANGUAGE_PHRASES: Record<string, LanguagePhrase[]> = {
   'Midlands': [
     { language: 'Shona', phrase: 'Makadii?' },
     { language: 'Ndebele', phrase: 'Kunjani?' },
+  ],
+  'Mashonaland East': [
+    { language: 'Shona', phrase: 'Makadii?' },
+    { language: 'Zezuru', phrase: 'Mhoro!' },
+  ],
+  'Mashonaland Central': [
+    { language: 'Shona', phrase: 'Makadii?' },
+    { language: 'Zezuru', phrase: 'Mhoro!' },
   ],
 };
 
@@ -278,20 +560,42 @@ function buildZimbabweMapHtml(spots: AtlasSpot[], activeSpotId: string, isDark: 
       .leaflet-tile {
         filter: ${tileFilter};
       }
-      .leaflet-control-attribution {
-        border-radius: 10px 0 0 0;
-        font-size: 9px;
-        background: ${panelBackground};
-        color: ${panelText};
-      }
       .leaflet-control-zoom {
-        border: 0;
-        box-shadow: 0 10px 24px rgba(0,0,0,0.22);
+        background: transparent !important;
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        gap: 10px !important;
+        padding: 0 !important;
       }
-      .leaflet-control-zoom a {
-        border: 0;
-        color: ${panelText};
-        background: ${panelBackground};
+      .leaflet-control-zoom-in,
+      .leaflet-control-zoom-out {
+        width: 40px !important;
+        height: 40px !important;
+        min-height: 40px !important;
+        line-height: 40px !important;
+        border: none !important;
+        border-bottom: none !important;
+        border-radius: 50% !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        color: ${panelText} !important;
+        background: ${panelBackground} !important;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.28) !important;
+        display: flex !important;
+        align-items: center !important;
+        justify-content: center !important;
+        text-align: center !important;
+        font-size: 20px !important;
+        font-weight: 400 !important;
+        text-decoration: none !important;
+      }
+      .leaflet-control-zoom-in:hover,
+      .leaflet-control-zoom-out:hover {
+        background: ${panelBackground} !important;
+        border-bottom: none !important;
       }
       .off2zim-marker {
         background: transparent;
@@ -360,7 +664,7 @@ function buildZimbabweMapHtml(spots: AtlasSpot[], activeSpotId: string, isDark: 
         var zimbabweBounds = L.latLngBounds([[-22.45, 25.12], [-15.55, 33.15]]);
         var map = L.map('map', {
           zoomControl: false,
-          attributionControl: true,
+          attributionControl: false,
           maxBounds: zimbabweBounds.pad(0.08),
           maxBoundsViscosity: 1,
           minZoom: 6,
@@ -373,6 +677,7 @@ function buildZimbabweMapHtml(spots: AtlasSpot[], activeSpotId: string, isDark: 
           attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
 
+        window._leafletMap = map;
         map.fitBounds(zimbabweBounds, { padding: [14, 14], animate: false });
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
@@ -406,14 +711,8 @@ function buildZimbabweMapHtml(spots: AtlasSpot[], activeSpotId: string, isDark: 
               openLabel.classList.remove('visible');
             }
             if (label) {
-              var showing = label.classList.contains('visible');
-              if (!showing) {
-                label.classList.add('visible');
-                openLabel = label;
-              } else {
-                label.classList.remove('visible');
-                openLabel = null;
-              }
+              label.classList.add('visible');
+              openLabel = label;
             }
             if (window.ReactNativeWebView) {
               window.ReactNativeWebView.postMessage(JSON.stringify({
@@ -430,6 +729,12 @@ function buildZimbabweMapHtml(spots: AtlasSpot[], activeSpotId: string, isDark: 
 
         map.on('drag', function () {
           map.panInsideBounds(zimbabweBounds, { animate: false });
+        });
+
+        map.whenReady(function () {
+          if (window.ReactNativeWebView) {
+            window.ReactNativeWebView.postMessage(JSON.stringify({ type: 'mapReady' }));
+          }
         });
 
       })();
@@ -459,36 +764,6 @@ export default function ExploreScreen() {
   const colorScheme = useColorScheme();
   const theme = Colors[colorScheme ?? 'light'];
   const insets = useSafeAreaInsets();
-
-  const categories = useMemo(
-    () => [
-      'All',
-      'Binga',
-      'Bulawayo',
-      'Chinhoyi Caves',
-      'Chimanimani',
-      'Eastern Highlands',
-      'Gonarezhou',
-      'Great Zimbabwe',
-      'Harare',
-      'Hwange National Park',
-      'Kariba',
-      'Khami Ruins',
-      'Mana Pools',
-      'Masvingo',
-      'Matobo Hills',
-      'Mutare',
-      'Nyanga',
-      'Victoria Falls',
-      'Vumba',
-      'Zvishavane',
-    ],
-    []
-  );
-  const locationFilterOptions = useMemo(
-    () => categories.map(category => ({ key: category, label: category })),
-    [categories]
-  );
 
   const stories = useMemo<StoryItem[]>(
     () => [
@@ -687,7 +962,7 @@ export default function ExploreScreen() {
         name: 'Binga',
         region: 'Matabeleland North',
         weatherLocation: 'Binga, Zimbabwe',
-        coordinates: { latitude: -17.6167, longitude: 27.3333 },
+        coordinates: { latitude: -17.6203, longitude: 27.3414 },
         creator: 'Kariba Voyager',
         uploads: '104 tagged clips',
         liveSignal: 'Lake shore clips',
@@ -702,7 +977,7 @@ export default function ExploreScreen() {
         name: 'Bulawayo',
         region: 'Bulawayo Metropolitan',
         weatherLocation: 'Bulawayo, Zimbabwe',
-        coordinates: { latitude: -20.1325, longitude: 28.6265 },
+        coordinates: { latitude: -20.1561, longitude: 28.5887 },
         creator: 'City of Kings Creators',
         uploads: '286 tagged clips',
         liveSignal: 'City walk active',
@@ -718,7 +993,7 @@ export default function ExploreScreen() {
         region: 'Mashonaland West',
         weatherLocation: 'Chinhoyi, Zimbabwe',
         eventLocationAliases: ['Chinhoyi Caves', 'Chinhoyi'],
-        coordinates: { latitude: -17.3568, longitude: 30.1282 },
+        coordinates: { latitude: -17.3571, longitude: 30.1290 },
         creator: 'Caves & Karst Collective',
         uploads: '132 tagged clips',
         liveSignal: 'Pool depth clips',
@@ -749,7 +1024,7 @@ export default function ExploreScreen() {
         region: 'Manicaland',
         weatherLocation: 'Mutare, Zimbabwe',
         eventLocationAliases: ['Eastern Highlands', 'Mutare', 'Nyanga', 'Vumba'],
-        coordinates: { latitude: -18.9707, longitude: 32.6709 },
+        coordinates: { latitude: -18.1783, longitude: 32.7459 },
         creator: 'Eastern Highlands Collective',
         uploads: '207 tagged clips',
         liveSignal: 'Mist trail active',
@@ -765,7 +1040,7 @@ export default function ExploreScreen() {
         region: 'Masvingo',
         weatherLocation: 'Chiredzi, Zimbabwe',
         eventLocationAliases: ['Gonarezhou', 'Chiredzi'],
-        coordinates: { latitude: -21.6667, longitude: 31.6667 },
+        coordinates: { latitude: -21.6815, longitude: 31.8347 },
         creator: 'Lowveld Wild Guides',
         uploads: '218 tagged clips',
         liveSignal: 'Chilojo Cliffs watch',
@@ -812,7 +1087,7 @@ export default function ExploreScreen() {
         region: 'Matabeleland North',
         weatherLocation: 'Hwange, Zimbabwe',
         eventLocationAliases: ['Hwange National Park', 'Hwange'],
-        coordinates: { latitude: -18.6299, longitude: 26.5 },
+        coordinates: { latitude: -19.1890, longitude: 26.7401 },
         creator: 'Savanna Trails',
         uploads: '391 tagged clips',
         liveSignal: 'Waterhole watch',
@@ -827,7 +1102,7 @@ export default function ExploreScreen() {
         name: 'Kariba',
         region: 'Mashonaland West',
         weatherLocation: 'Kariba, Zimbabwe',
-        coordinates: { latitude: -16.5167, longitude: 28.8 },
+        coordinates: { latitude: -16.5273, longitude: 28.7755 },
         creator: 'Kariba Voyager',
         uploads: '176 tagged clips',
         liveSignal: 'Sunset deck live',
@@ -843,7 +1118,7 @@ export default function ExploreScreen() {
         region: 'Bulawayo',
         weatherLocation: 'Bulawayo, Zimbabwe',
         eventLocationAliases: ['Khami Ruins', 'Bulawayo'],
-        coordinates: { latitude: -20.1589, longitude: 28.3764 },
+        coordinates: { latitude: -20.1442, longitude: 28.4233 },
         creator: 'Heritage Guides',
         uploads: '98 tagged clips',
         liveSignal: 'Stone terraces route',
@@ -855,16 +1130,16 @@ export default function ExploreScreen() {
       }),
       createAtlasSpot({
         id: 'mana-pools',
-        name: 'Mana Pools',
+        name: 'Mana Pools Area',
         region: 'Mashonaland West',
         weatherLocation: 'Kariba, Zimbabwe',
-        eventLocationAliases: ['Mana Pools', 'Kariba'],
-        coordinates: { latitude: -15.8192, longitude: 29.4017 },
+        eventLocationAliases: ['Mana Pools Area', 'Mana Pools', 'Mana Pools floodplain', 'Mana Pools World Heritage Area'],
+        coordinates: { latitude: -15.7220, longitude: 29.3637 },
         creator: 'Zambezi Wild Stories',
         uploads: '263 tagged clips',
         liveSignal: 'Canoe route clips',
         description:
-          'Mana Pools is a UNESCO-listed Zambezi floodplain known for canoe safaris, walking safaris, elephants and wild dogs. Mana means four in Shona, referring to the seasonal pools that draw wildlife.',
+          'The Mana Pools Area is the wider Zambezi floodplain and World Heritage landscape around the pools, river channels and safari camps. It is known for canoe safaris, walking safaris, elephants, wild dogs and seasonal water that draws wildlife to the valley floor.',
         language: 'Shona',
         phrase: 'Mauya',
         translation: 'Welcome.',
@@ -920,7 +1195,7 @@ export default function ExploreScreen() {
         name: 'Nyanga',
         region: 'Manicaland',
         weatherLocation: 'Nyanga, Zimbabwe',
-        coordinates: { latitude: -18.2167, longitude: 32.75 },
+        coordinates: { latitude: -18.2327, longitude: 32.7376 },
         creator: 'Nyanga Trail Notes',
         uploads: '203 tagged clips',
         liveSignal: 'Skyline trail clips',
@@ -951,7 +1226,7 @@ export default function ExploreScreen() {
         region: 'Manicaland',
         weatherLocation: 'Mutare, Zimbabwe',
         eventLocationAliases: ['Vumba', 'Mutare'],
-        coordinates: { latitude: -19.1, longitude: 32.75 },
+        coordinates: { latitude: -19.1151, longitude: 32.7814 },
         creator: 'Vumba Viewfinders',
         uploads: '156 tagged clips',
         liveSignal: 'Mist garden clips',
@@ -976,13 +1251,2413 @@ export default function ExploreScreen() {
         phrase: 'Masikati',
         translation: 'Good afternoon.',
       }),
+      createAtlasSpot({
+        id: 'chizarira',
+        name: 'Chizarira National Park',
+        region: 'Matabeleland North',
+        weatherLocation: 'Binga, Zimbabwe',
+        eventLocationAliases: ['Chizarira', 'Chizarira National Park'],
+        coordinates: { latitude: -17.7714, longitude: 27.8460 },
+        creator: 'Escarpment Wild Guides',
+        uploads: '89 tagged clips',
+        liveSignal: 'Gorge trail clips',
+        description:
+          "Chizarira is one of Zimbabwe's most remote national parks, set on the Zambezi escarpment above Binga. Known for rugged gorges, buffalo herds, lion and leopard, its isolation makes it a true off-the-beaten-track wilderness.",
+        language: 'Tonga',
+        phrase: 'Mwapona buti',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'zambezi-national-park',
+        name: 'Zambezi National Park',
+        region: 'Matabeleland North',
+        weatherLocation: 'Victoria Falls, Zimbabwe',
+        eventLocationAliases: ['Zambezi National Park', 'Victoria Falls'],
+        coordinates: { latitude: -17.9267, longitude: 25.6683 },
+        creator: 'Zambezi Creators Guild',
+        uploads: '154 tagged clips',
+        liveSignal: 'River drive clips',
+        description:
+          "Zambezi National Park borders the Zambezi River directly adjacent to Victoria Falls town, offering game drives and river safaris through elephant corridors, lion territory and prolific birdlife along the river's edge.",
+        language: 'Nambya',
+        phrase: 'Mwabonwa',
+        translation: 'A warm greeting used around Victoria Falls.',
+      }),
+      createAtlasSpot({
+        id: 'kazuma-pan',
+        name: 'Kazuma Pan National Park',
+        region: 'Matabeleland North',
+        weatherLocation: 'Hwange, Zimbabwe',
+        eventLocationAliases: ['Kazuma Pan', 'Kazuma Pan National Park'],
+        coordinates: { latitude: -18.2956, longitude: 25.5994 },
+        creator: 'Pan Country Wild',
+        uploads: '67 tagged clips',
+        liveSignal: 'Pan elephant watch',
+        description:
+          'Kazuma Pan is a quiet national park on the Botswana border known for vast seasonal pans that attract elephant, roan antelope and migratory birds. One of Zimbabwe\'s most peaceful and least-visited wilderness areas.',
+        language: 'Ndebele',
+        phrase: 'Salibonani',
+        translation: 'Hello to more than one person.',
+      }),
+      createAtlasSpot({
+        id: 'save-valley',
+        name: 'Save Valley Conservancy',
+        region: 'Masvingo',
+        weatherLocation: 'Chiredzi, Zimbabwe',
+        eventLocationAliases: ['Save Valley', 'Save Valley Conservancy'],
+        coordinates: { latitude: -20.4528, longitude: 32.1037 },
+        creator: 'Lowveld Wild Guides',
+        uploads: '112 tagged clips',
+        liveSignal: 'Big five alert',
+        description:
+          "Save Valley Conservancy is one of Africa's largest private wildlife conservancies, stretching across the Lowveld. Known for black and white rhino, wild dog, elephant and some of Zimbabwe's most remote luxury tented camps.",
+        language: 'Karanga Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'malilangwe',
+        name: 'Malilangwe Wildlife Reserve',
+        region: 'Masvingo',
+        weatherLocation: 'Chiredzi, Zimbabwe',
+        eventLocationAliases: ['Malilangwe', 'Malilangwe Wildlife Reserve'],
+        coordinates: { latitude: -21.1034, longitude: 31.8957 },
+        creator: 'Lowveld Wild Guides',
+        uploads: '98 tagged clips',
+        liveSignal: 'Reserve sunset clips',
+        description:
+          'Malilangwe Wildlife Reserve borders Gonarezhou and is known for the big five, prolific birdlife and exclusive camps. The reserve supports significant rhino conservation and protects pristine Lowveld bush and ancient rock art sites.',
+        language: 'Shangani',
+        phrase: 'Avuxeni',
+        translation: 'Good morning.',
+      }),
+      createAtlasSpot({
+        id: 'bubye-valley',
+        name: 'Bubye Valley Conservancy',
+        region: 'Matabeleland South',
+        weatherLocation: 'Beitbridge, Zimbabwe',
+        eventLocationAliases: ['Bubye Valley', 'Bubye Valley Conservancy'],
+        coordinates: { latitude: -21.5403, longitude: 30.0612 },
+        creator: 'Southern Wild Trails',
+        uploads: '78 tagged clips',
+        liveSignal: 'Lion territory watch',
+        description:
+          "Bubye Valley Conservancy is a vast private reserve in southern Zimbabwe that holds one of the world's largest privately managed lion populations alongside the full big five. Remote bushveld and authentic wilderness characterise every stay.",
+        language: 'Venda',
+        phrase: 'Ndaa',
+        translation: 'Respectful greeting.',
+      }),
+      createAtlasSpot({
+        id: 'imire',
+        name: 'Imire Rhino & Wildlife Conservation',
+        region: 'Mashonaland East',
+        weatherLocation: 'Marondera, Zimbabwe',
+        eventLocationAliases: ['Imire', 'Imire Rhino & Wildlife Conservation'],
+        coordinates: { latitude: -18.4759, longitude: 31.5033 },
+        creator: 'Conservation Connect',
+        uploads: '93 tagged clips',
+        liveSignal: 'Rhino tracking clips',
+        description:
+          'Imire is a private wildlife sanctuary near Harare known for its rhino breeding programme and elephant orphan care. It offers intimate conservation experiences, guided bush walks and close wildlife encounters with a strong community mission.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'antelope-park',
+        name: 'Antelope Park',
+        region: 'Midlands',
+        weatherLocation: 'Gweru, Zimbabwe',
+        eventLocationAliases: ['Antelope Park', 'Gweru'],
+        coordinates: { latitude: -19.5024, longitude: 29.7111 },
+        creator: 'Lion Encounter Guides',
+        uploads: '85 tagged clips',
+        liveSignal: 'Lion walk clips',
+        description:
+          'Antelope Park near Gweru is known for lion rehabilitation walks, game drives and conservation education. The park runs reintroduction programmes returning lions to wild habitats and offers some of the most memorable predator encounters in Zimbabwe.',
+        language: 'Shona',
+        phrase: 'Masikati',
+        translation: 'Good afternoon.',
+      }),
+      createAtlasSpot({
+        id: 'charara',
+        name: 'Charara Safari Area',
+        region: 'Mashonaland West',
+        weatherLocation: 'Kariba, Zimbabwe',
+        eventLocationAliases: ['Charara Safari Area', 'Charara'],
+        coordinates: { latitude: -16.5494, longitude: 29.1571 },
+        creator: 'Kariba Voyager',
+        uploads: '74 tagged clips',
+        liveSignal: 'Shoreline game watch',
+        description:
+          'Charara Safari Area lies along Lake Kariba\'s eastern shore and is known for elephant, hippo, buffalo and crocodile. Its combination of lake frontage and woodland supports prolific wildlife close to Kariba town.',
+        language: 'Tonga',
+        phrase: 'Mwapona buti',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'chete',
+        name: 'Chete Safari Area',
+        region: 'Matabeleland North',
+        weatherLocation: 'Binga, Zimbabwe',
+        eventLocationAliases: ['Chete Safari Area', 'Chete Island'],
+        coordinates: { latitude: -17.3836, longitude: 27.7307 },
+        creator: 'Kariba Voyager',
+        uploads: '61 tagged clips',
+        liveSignal: 'Island shore clips',
+        description:
+          'Chete Safari Area encompasses Chete Island and mainland shores on the western arm of Lake Kariba. Known for dramatic lake scenery, elephant, buffalo, lion and excellent tiger fishing in one of Zimbabwe\'s most remote settings.',
+        language: 'Tonga',
+        phrase: 'Mwapona buti',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'chewore',
+        name: 'Chewore Safari Area',
+        region: 'Mashonaland West',
+        weatherLocation: 'Kariba, Zimbabwe',
+        eventLocationAliases: ['Chewore Safari Area', 'Chewore'],
+        coordinates: { latitude: -16.0094, longitude: 29.9182 },
+        creator: 'Zambezi Wild Stories',
+        uploads: '83 tagged clips',
+        liveSignal: 'Valley walk clips',
+        description:
+          'Chewore Safari Area is a vast and remote wilderness in the northern Zambezi Valley, forming part of the UNESCO Middle Zambezi Biosphere Reserve. It is known for large buffalo herds, elephant, lion and some of the best walking safari territory in Africa.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'chipinge-safari',
+        name: 'Chipinge Safari Area',
+        region: 'Manicaland',
+        weatherLocation: 'Chipinge, Zimbabwe',
+        eventLocationAliases: ['Chipinge Safari Area', 'Chipinge'],
+        coordinates: { latitude: -20.20, longitude: 32.65 },
+        creator: 'Eastern Highlands Collective',
+        uploads: '55 tagged clips',
+        liveSignal: 'Forest edge clips',
+        description:
+          'Chipinge Safari Area covers dense forest and escarpment terrain in southeastern Manicaland near the Mozambique border. It supports sable antelope, elephant and a rich variety of forest birds in seldom-visited wilderness.',
+        language: 'Ndau',
+        phrase: 'Maswera sei?',
+        translation: 'How has your day been?',
+      }),
+      createAtlasSpot({
+        id: 'chirisa',
+        name: 'Chirisa Safari Area',
+        region: 'Midlands',
+        weatherLocation: 'Gokwe, Zimbabwe',
+        eventLocationAliases: ['Chirisa Safari Area', 'Chirisa'],
+        coordinates: { latitude: -17.9350, longitude: 28.2422 },
+        creator: 'Midlands Roadtrippers',
+        uploads: '49 tagged clips',
+        liveSignal: 'Bush trail clips',
+        description:
+          'Chirisa Safari Area is a remote and rarely visited wilderness north of Gokwe, between the Bumi and Sengwa rivers. It supports sable antelope, elephant, buffalo and lion in undisturbed mopane and jesse bush.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'dande',
+        name: 'Dande Safari Area',
+        region: 'Mashonaland Central',
+        weatherLocation: 'Kariba, Zimbabwe',
+        eventLocationAliases: ['Dande Safari Area', 'Dande'],
+        coordinates: { latitude: -15.9418, longitude: 30.2507 },
+        creator: 'Zambezi Wild Stories',
+        uploads: '71 tagged clips',
+        liveSignal: 'Escarpment walk clips',
+        description:
+          'Dande Safari Area occupies rugged Zambezi escarpment terrain east of Mana Pools. It is known for walking safaris, buffalo, elephant and lion in a wild and challenging landscape that rewards adventurous visitors.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'deka',
+        name: 'Deka Safari Area',
+        region: 'Matabeleland North',
+        weatherLocation: 'Hwange, Zimbabwe',
+        eventLocationAliases: ['Deka Safari Area', 'Deka'],
+        coordinates: { latitude: -18.5044, longitude: 26.4168 },
+        creator: 'Savanna Trails',
+        uploads: '58 tagged clips',
+        liveSignal: 'Elephant corridor watch',
+        description:
+          'Deka Safari Area links Hwange National Park and Chizarira across a remote wildlife corridor. Elephant, sable antelope and lion pass through its teak and mopane woodland, making it an important buffer between two major protected areas.',
+        language: 'Ndebele',
+        phrase: 'Salibonani',
+        translation: 'Hello to more than one person.',
+      }),
+      createAtlasSpot({
+        id: 'doma',
+        name: 'Doma Safari Area',
+        region: 'Mashonaland Central',
+        weatherLocation: 'Kariba, Zimbabwe',
+        eventLocationAliases: ['Doma Safari Area', 'Doma'],
+        coordinates: { latitude: -16.4965, longitude: 30.2045 },
+        creator: 'Zambezi Wild Stories',
+        uploads: '44 tagged clips',
+        liveSignal: 'Buffalo herd clips',
+        description:
+          'Doma Safari Area is a remote and largely undisturbed wilderness in the Zambezi Valley, east of Mana Pools. Known for large buffalo herds, elephant and lion, it sees very few visitors and offers a truly wild off-grid experience.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'hurungwe',
+        name: 'Hurungwe Safari Area',
+        region: 'Mashonaland West',
+        weatherLocation: 'Kariba, Zimbabwe',
+        eventLocationAliases: ['Hurungwe Safari Area', 'Hurungwe'],
+        coordinates: { latitude: -16.1832, longitude: 29.0945 },
+        creator: 'Zambezi Wild Stories',
+        uploads: '92 tagged clips',
+        liveSignal: 'Wild dog sighting clips',
+        description:
+          'Hurungwe Safari Area is one of Zimbabwe\'s largest wildlife areas, stretching north of Kariba into the Zambezi Valley. It supports elephant, lion, wild dog and buffalo across extensive jesse bush, mopane and riverine forest.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'malapati',
+        name: 'Malapati Safari Area',
+        region: 'Masvingo',
+        weatherLocation: 'Chiredzi, Zimbabwe',
+        eventLocationAliases: ['Malapati Safari Area', 'Malapati'],
+        coordinates: { latitude: -22.0640, longitude: 31.4363 },
+        creator: 'Lowveld Wild Guides',
+        uploads: '52 tagged clips',
+        liveSignal: 'Limpopo border clips',
+        description:
+          'Malapati Safari Area forms the southern fringe of the Gonarezhou ecosystem and connects to the Great Limpopo Transfrontier Park with Mozambique and South Africa. It supports elephant, lion, leopard and diverse Lowveld birdlife.',
+        language: 'Shangani',
+        phrase: 'Avuxeni',
+        translation: 'Good morning.',
+      }),
+      createAtlasSpot({
+        id: 'matetsi',
+        name: 'Matetsi Safari Area',
+        region: 'Matabeleland North',
+        weatherLocation: 'Victoria Falls, Zimbabwe',
+        eventLocationAliases: ['Matetsi Safari Area', 'Matetsi'],
+        coordinates: { latitude: -18.3843, longitude: 26.0166 },
+        creator: 'Zambezi Creators Guild',
+        uploads: '118 tagged clips',
+        liveSignal: 'Game drive clips',
+        description:
+          'Matetsi Safari Area lies between Victoria Falls and Hwange, hosting exclusive private lodges and some of the finest game viewing in Zimbabwe. Elephant, lion, wild dog and sable antelope move freely through its diverse habitats.',
+        language: 'Nambya',
+        phrase: 'Mwabonwa',
+        translation: 'A warm greeting used around Victoria Falls.',
+      }),
+      createAtlasSpot({
+        id: 'mbona',
+        name: 'Mbona Safari Area',
+        region: 'Manicaland',
+        weatherLocation: 'Chipinge, Zimbabwe',
+        eventLocationAliases: ['Mbona Safari Area', 'Mbona'],
+        coordinates: { latitude: -20.55, longitude: 32.55 },
+        creator: 'Eastern Highlands Collective',
+        uploads: '38 tagged clips',
+        liveSignal: 'Escarpment edge clips',
+        description:
+          'Mbona Safari Area occupies rugged eastern escarpment terrain south of Chipinge, bordering Mozambique. It is one of Zimbabwe\'s least-visited wildlife areas, known for sable antelope, buffalo and exceptional forest birdlife.',
+        language: 'Ndau',
+        phrase: 'Maswera sei?',
+        translation: 'How has your day been?',
+      }),
+      createAtlasSpot({
+        id: 'sapi',
+        name: 'Sapi Safari Area',
+        region: 'Mashonaland West',
+        weatherLocation: 'Kariba, Zimbabwe',
+        eventLocationAliases: ['Sapi Safari Area', 'Sapi'],
+        coordinates: { latitude: -15.8372, longitude: 29.6970 },
+        creator: 'Zambezi Wild Stories',
+        uploads: '107 tagged clips',
+        liveSignal: 'Canoe trail clips',
+        description:
+          'Sapi Safari Area lies between Mana Pools and Chewore along the Zambezi River. Famous for walking and canoe safaris, it draws visitors for its classic Zambezi scenery, wild dog encounters, elephant and exceptional predator-prey action.',
+        language: 'Shona',
+        phrase: 'Mauya',
+        translation: 'Welcome.',
+      }),
+      createAtlasSpot({
+        id: 'tuli',
+        name: 'Tuli Safari Area',
+        region: 'Matabeleland South',
+        weatherLocation: 'Beitbridge, Zimbabwe',
+        eventLocationAliases: ['Tuli Safari Area', 'Tuli'],
+        coordinates: { latitude: -21.9463, longitude: 29.1007 },
+        creator: 'Southern Wild Trails',
+        uploads: '63 tagged clips',
+        liveSignal: 'Baobab plains clips',
+        description:
+          'Tuli Safari Area sits at the confluence of the Shashe and Limpopo rivers on the Botswana and South Africa borders. It is known for ancient baobab landscapes, elephant, leopard and connections to the wider Northern Tuli Game Reserve ecosystem.',
+        language: 'Ndebele',
+        phrase: 'Linjani?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'umfurudzi',
+        name: 'Umfurudzi Safari Area',
+        region: 'Mashonaland Central',
+        weatherLocation: 'Bindura, Zimbabwe',
+        eventLocationAliases: ['Umfurudzi Safari Area', 'Umfurudzi'],
+        coordinates: { latitude: -17.0165, longitude: 31.8060 },
+        creator: 'Conservation Connect',
+        uploads: '67 tagged clips',
+        liveSignal: 'Sable sighting clips',
+        description:
+          'Umfurudzi Safari Area is a scenic wildlife area north of Bindura, accessible from Harare and known for sable antelope, elephant, fishing on the Mazowe River and mountain bushveld scenery. It is a popular weekend wilderness destination for city visitors.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'matusadona',
+        name: 'Matusadona National Park',
+        region: 'Mashonaland West',
+        weatherLocation: 'Kariba, Zimbabwe',
+        eventLocationAliases: ['Matusadona National Park', 'Matusadona'],
+        coordinates: { latitude: -16.9685, longitude: 28.6296 },
+        creator: 'Kariba Voyager',
+        uploads: '138 tagged clips',
+        liveSignal: 'Shoreline game watch',
+        description:
+          'Matusadona National Park lines the southern shore of Lake Kariba and is one of Zimbabwe\'s most scenic national parks. Known for large elephant herds, lion, buffalo, Nile crocodile and tiger fishing, it is best explored by houseboat or walking safari along the lake shore.',
+        language: 'Tonga',
+        phrase: 'Mwapona buti',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'nyanga-national-park',
+        name: 'Nyanga National Park',
+        region: 'Manicaland',
+        weatherLocation: 'Nyanga, Zimbabwe',
+        eventLocationAliases: ['Nyanga National Park', 'Nyanga'],
+        coordinates: { latitude: -18.3070, longitude: 32.7774 },
+        creator: 'Nyanga Trail Notes',
+        uploads: '171 tagged clips',
+        liveSignal: 'Summit trail clips',
+        description:
+          'Nyanga National Park encompasses the highest terrain in Zimbabwe, including Mount Nyangani at 2592 m, dramatic waterfalls, trout streams and ancient terracing. It is a premier hiking and nature destination in the Eastern Highlands.',
+        language: 'Manyika Shona',
+        phrase: 'Maswera sei?',
+        translation: 'How has your day been?',
+      }),
+      createAtlasSpot({
+        id: 'karinyanga-wildlife-conservancy',
+        name: 'Karinyanga Wildlife Conservancy',
+        region: 'Mashonaland Central',
+        weatherLocation: 'Guruve, Zimbabwe',
+        eventLocationAliases: ['Karinyanga Wildlife Conservancy', 'Karinyanga'],
+        coordinates: { latitude: -16.1264, longitude: 30.7407 },
+        creator: 'Zambezi Valley Conservancies',
+        uploads: '53 tagged clips',
+        liveSignal: 'Community wildlife clips',
+        description:
+          'Karinyanga Wildlife Conservancy is a protected wildlife landscape in the Guruve area of the Zambezi Valley. It helps buffer remote northern habitats and supports community-based conservation around elephant, antelope and predator country.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'mbire',
+        name: 'Mbire Wildlife Area',
+        region: 'Mashonaland Central',
+        weatherLocation: 'Kariba, Zimbabwe',
+        eventLocationAliases: ['Mbire Wildlife Area', 'Mbire'],
+        coordinates: { latitude: -16.0620, longitude: 30.2237 },
+        creator: 'Zambezi Wild Stories',
+        uploads: '46 tagged clips',
+        liveSignal: 'Valley plains clips',
+        description:
+          'Mbire District covers a vast stretch of Zambezi Valley wilderness in Mashonaland Central, hosting community wildlife areas and communal conservancies with elephant, buffalo, lion and prolific birdlife. It links the Dande, Doma and Sapi wildlife ecosystems.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'lake-chivero',
+        name: 'Lake Chivero Recreational Park',
+        region: 'Mashonaland West',
+        weatherLocation: 'Harare, Zimbabwe',
+        eventLocationAliases: ['Lake Chivero Recreational Park', 'Lake Chivero', 'Harare'],
+        coordinates: { latitude: -17.9024, longitude: 30.7941 },
+        creator: 'Urban Pulse Tours',
+        uploads: '91 tagged clips',
+        liveSignal: 'Weekend wildlife clips',
+        description:
+          'Lake Chivero Recreational Park is the closest wildlife and recreation area to Harare, offering game drives, white rhino sightings, birding and water sports on the reservoir. It is a popular weekend retreat for city residents and families.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'lake-mutirikwi',
+        name: 'Lake Mutirikwi Recreational Park',
+        region: 'Masvingo',
+        weatherLocation: 'Masvingo, Zimbabwe',
+        eventLocationAliases: ['Lake Mutirikwi Recreational Park', 'Lake Mutirikwi', 'Lake Kyle'],
+        coordinates: { latitude: -20.1904, longitude: 31.0320 },
+        creator: 'Masvingo Makers',
+        uploads: '84 tagged clips',
+        liveSignal: 'Lakeside game clips',
+        description:
+          'Lake Mutirikwi Recreational Park surrounds the reservoir near Masvingo and is home to white rhino, giraffe, zebra and impala on its game reserve peninsula. The lake views paired with proximity to Great Zimbabwe make it a memorable stop on the heritage circuit.',
+        language: 'Karanga Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'ngezi',
+        name: 'Ngezi Recreational Park',
+        region: 'Mashonaland West',
+        weatherLocation: 'Kadoma, Zimbabwe',
+        eventLocationAliases: ['Ngezi Recreational Park', 'Ngezi'],
+        coordinates: { latitude: -18.6839, longitude: 30.3996 },
+        creator: 'Midlands Roadtrippers',
+        uploads: '48 tagged clips',
+        liveSignal: 'Dam birding clips',
+        description:
+          'Ngezi Recreational Park protects the Ngezi dam catchment near Kadoma, known for excellent birding, fishing, forest walks and quiet bush picnics. Its indigenous forest and wetland habitats support a wide range of wildlife and migratory bird species.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'sebakwe',
+        name: 'Sebakwe Recreational Park',
+        region: 'Midlands',
+        weatherLocation: 'Kwekwe, Zimbabwe',
+        eventLocationAliases: ['Sebakwe Recreational Park', 'Sebakwe'],
+        coordinates: { latitude: -19.0318, longitude: 30.2247 },
+        creator: 'Midlands Roadtrippers',
+        uploads: '41 tagged clips',
+        liveSignal: 'Lakeside clips',
+        description:
+          'Sebakwe Recreational Park protects the Sebakwe dam near Kwekwe, offering fishing, birding, game viewing and camping in a quiet bushveld setting. It is a valued green space for the Midlands region and a peaceful escape from nearby mining towns.',
+        language: 'Shona',
+        phrase: 'Masikati',
+        translation: 'Good afternoon.',
+      }),
+      createAtlasSpot({
+        id: 'mukuvisi-woodlands',
+        name: 'Mukuvisi Woodlands',
+        region: 'Harare Metropolitan',
+        weatherLocation: 'Harare, Zimbabwe',
+        eventLocationAliases: ['Mukuvisi Woodlands', 'Harare'],
+        coordinates: { latitude: -17.8438, longitude: 31.0883 },
+        creator: 'Harare Wildlife Trails',
+        uploads: '89 tagged clips',
+        liveSignal: 'Woodland walk live',
+        description:
+          'Mukuvisi Woodlands is a 265-hectare urban wildlife sanctuary in Harare, home to giraffe, zebra, impala, white rhino and over 200 bird species. It offers guided walks, horseback trails and educational visits in the heart of the capital.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'chipangali',
+        name: 'Chipangali Wildlife Orphanage',
+        region: 'Matabeleland South',
+        weatherLocation: 'Bulawayo, Zimbabwe',
+        eventLocationAliases: ['Chipangali', 'Chipangali Wildlife Orphanage'],
+        coordinates: { latitude: -20.2525, longitude: 28.7809 },
+        creator: 'Bulawayo Wild Lens',
+        uploads: '67 tagged clips',
+        liveSignal: 'Rescue animal clips',
+        description:
+          "Chipangali Wildlife Orphanage is a rescue and rehabilitation centre near Bulawayo, housing lions, leopards, cheetahs, wild dogs and hundreds of other animals. Founded in 1973, it remains one of Zimbabwe's most visited wildlife centres.",
+        language: 'Ndebele',
+        phrase: 'Kunjani?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'mbizi-game-park',
+        name: 'Mbizi Game Park',
+        region: 'Harare Metropolitan',
+        weatherLocation: 'Harare, Zimbabwe',
+        eventLocationAliases: ['Mbizi Game Park', 'Harare', 'Chitungwiza'],
+        coordinates: { latitude: -17.9116, longitude: 31.0967 },
+        creator: 'Harare Wildlife Trails',
+        uploads: '54 tagged clips',
+        liveSignal: 'Game viewing clips',
+        description:
+          "Mbizi Game Park near Harare is an accessible private wildlife estate for day visits, team outings, game drives, picnics and overnight stays. The park is known for relaxed family-friendly encounters with plains game close to the capital.",
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'lion-cheetah-park',
+        name: 'Lion and Cheetah Park',
+        region: 'Mashonaland West',
+        weatherLocation: 'Harare, Zimbabwe',
+        eventLocationAliases: ['Lion and Cheetah Park', 'Harare'],
+        coordinates: { latitude: -17.8396, longitude: 30.8131 },
+        creator: 'Harare Wildlife Trails',
+        uploads: '73 tagged clips',
+        liveSignal: 'Big cat clips',
+        description:
+          'The Lion and Cheetah Park on the Bulawayo road outside Harare offers visitors the chance to photograph and observe lions, cheetahs, white lions and other predators at close range. A popular day trip from the capital.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'harare-botanical-garden',
+        name: 'National Botanical Garden',
+        region: 'Harare Metropolitan',
+        weatherLocation: 'Harare, Zimbabwe',
+        eventLocationAliases: ['National Botanical Garden', 'Harare Botanical Garden'],
+        coordinates: { latitude: -17.8009, longitude: 31.0519 },
+        creator: 'Harare Green Spaces',
+        uploads: '58 tagged clips',
+        liveSignal: 'Garden walks',
+        description:
+          'The National Botanical Garden in Harare showcases over 900 indigenous Zimbabwean plant species across 67 hectares of landscaped grounds. It is a peaceful retreat for nature lovers and a major centre for botanical research and conservation.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'ewanrigg',
+        name: 'Ewanrigg Botanical Garden',
+        region: 'Mashonaland Central',
+        weatherLocation: 'Bindura, Zimbabwe',
+        eventLocationAliases: ['Ewanrigg Botanical Garden', 'Ewanrigg'],
+        coordinates: { latitude: -17.6948, longitude: 31.3342 },
+        creator: 'Mashonaland Botanicals',
+        uploads: '44 tagged clips',
+        liveSignal: 'Aloe garden clips',
+        description:
+          'Ewanrigg Botanical Garden north of Harare is renowned for its spectacular aloe and cycad collection, with over 150 aloe species in full bloom during winter. The garden sits on a kopje hillside with scenic views across Mashonaland Central.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'naletale-ruins',
+        name: 'Naletale Ruins',
+        region: 'Midlands',
+        weatherLocation: 'Gweru, Zimbabwe',
+        eventLocationAliases: ['Naletale Ruins', 'Danangombe', 'Dhlo-Dhlo'],
+        coordinates: { latitude: -19.8877, longitude: 29.5327 },
+        creator: 'Midlands Heritage Routes',
+        uploads: '38 tagged clips',
+        liveSignal: 'Historic site clips',
+        description:
+          'Naletale (also known as Danangombe or Dhlo-Dhlo) is a late Iron Age stone enclosure near Gweru, featuring the most ornate dry-stone walling in Zimbabwe after Great Zimbabwe. It was a Rozvi Empire capital with elaborate decorative panels and chevron work.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'domboshava',
+        name: 'Domboshava',
+        region: 'Mashonaland Central',
+        weatherLocation: 'Harare, Zimbabwe',
+        eventLocationAliases: ['Domboshava', 'Domboshava Cave', 'Domboshava Rock Art'],
+        coordinates: { latitude: -17.6100, longitude: 31.1747 },
+        creator: 'Mashonaland Heritage',
+        uploads: '62 tagged clips',
+        liveSignal: 'Cave art clips',
+        description:
+          'Domboshava is a large granite dome north of Harare with ancient San (Bushman) rock paintings deep inside its cave. The site also features impressive balancing rocks and is a major heritage destination combining archaeology with dramatic granite scenery.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'epworth-balancing-rocks',
+        name: 'Epworth Balancing Rocks',
+        region: 'Harare Metropolitan',
+        weatherLocation: 'Harare, Zimbabwe',
+        eventLocationAliases: ['Epworth Balancing Rocks', 'Balancing Rocks'],
+        coordinates: { latitude: -17.8851, longitude: 31.1277 },
+        creator: 'Harare Geological Trails',
+        uploads: '47 tagged clips',
+        liveSignal: 'Rock formation clips',
+        description:
+          "The Epworth Balancing Rocks near Harare are iconic granite formations delicately stacked on top of each other, shaped over millions of years of weathering. Zimbabwe's most photographed natural monuments, they once featured on the country's banknotes.",
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'mtarazi-falls',
+        name: 'Mtarazi Falls',
+        region: 'Manicaland',
+        weatherLocation: 'Nyanga, Zimbabwe',
+        eventLocationAliases: ['Mtarazi Falls', 'Mtarazi'],
+        coordinates: { latitude: -18.4841, longitude: 32.7924 },
+        creator: 'Eastern Highlands Explorers',
+        uploads: '91 tagged clips',
+        liveSignal: 'Waterfall clips',
+        description:
+          'Mtarazi Falls in Nyanga National Park is the highest waterfall in Zimbabwe and one of the highest in Africa, plunging 762 metres off the Honde Valley escarpment. The gorge viewpoint offers breathtaking panoramic views over Mozambique.',
+        language: 'Manyika Shona',
+        phrase: 'Maswera sei?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'bridal-veil-falls',
+        name: 'Bridal Veil Falls',
+        region: 'Manicaland',
+        weatherLocation: 'Chimanimani, Zimbabwe',
+        eventLocationAliases: ['Bridal Veil Falls', 'Chimanimani Falls'],
+        coordinates: { latitude: -19.7921, longitude: 32.8481 },
+        creator: 'Eastern Highlands Explorers',
+        uploads: '76 tagged clips',
+        liveSignal: 'Waterfall clips',
+        description:
+          'Bridal Veil Falls cascades 50 metres into a natural pool in the Chimanimani area, surrounded by lush fern-lined rock walls and mist. A short walk from Chimanimani town, it is one of the most beautiful and accessible waterfalls in Zimbabwe.',
+        language: 'Manyika Shona',
+        phrase: 'Maswera sei?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'mount-nyangani',
+        name: 'Mount Nyangani',
+        region: 'Manicaland',
+        weatherLocation: 'Nyanga, Zimbabwe',
+        eventLocationAliases: ['Mount Nyangani', 'Nyangani Peak', 'Inyangani'],
+        coordinates: { latitude: -18.3014, longitude: 32.8419 },
+        creator: 'Eastern Highlands Explorers',
+        uploads: '83 tagged clips',
+        liveSignal: 'Summit clips',
+        description:
+          'Mount Nyangani (also known as Inyangani) is the highest point in Zimbabwe at 2,592 metres above sea level. Located within Nyanga National Park, it offers a challenging day hike through montane grassland with spectacular views over the Eastern Highlands.',
+        language: 'Manyika Shona',
+        phrase: 'Maswera sei?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'chirinda-forest',
+        name: 'Chirinda Forest',
+        region: 'Manicaland',
+        weatherLocation: 'Chipinge, Zimbabwe',
+        eventLocationAliases: ['Chirinda Forest', 'Chirinda Forest Reserve'],
+        coordinates: { latitude: -20.4153, longitude: 32.7108 },
+        creator: 'Chipinge Conservation',
+        uploads: '55 tagged clips',
+        liveSignal: 'Forest canopy clips',
+        description:
+          "Chirinda Forest near Chipinge is one of Zimbabwe's finest subtropical rainforests, home to giant red mahogany trees including the Big Tree — one of the largest in Southern Africa. The forest shelters Samango monkeys, rare forest birds and endemic plant species.",
+        language: 'Ndau',
+        phrase: 'Maswera sei?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'manjirenji',
+        name: 'Manjirenji Recreational Park',
+        region: 'Masvingo',
+        weatherLocation: 'Chiredzi, Zimbabwe',
+        eventLocationAliases: ['Manjirenji Recreational Park', 'Manjirenji'],
+        coordinates: { latitude: -20.6262, longitude: 31.6093 },
+        creator: 'Lowveld Outdoor',
+        uploads: '33 tagged clips',
+        liveSignal: 'Lakeside clips',
+        description:
+          'Manjirenji Recreational Park in Masvingo province protects Manjirenji Dam and its surrounds, offering boating, fishing, birdwatching and camping in the hot lowveld. Hippos and crocodiles are frequently spotted along the shoreline.',
+        language: 'Karanga Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'cleveland-dam',
+        name: 'Cleveland Dam',
+        region: 'Harare Metropolitan',
+        weatherLocation: 'Harare, Zimbabwe',
+        eventLocationAliases: ['Cleveland Dam', 'Cleveland Dam Recreational Park'],
+        coordinates: { latitude: -17.8401, longitude: 31.1510 },
+        creator: 'Harare Outdoors',
+        uploads: '28 tagged clips',
+        liveSignal: 'Waterside clips',
+        description:
+          'Cleveland Dam is a popular outdoor recreational area in northern Harare, offering sailing, birdwatching and walking trails around the reservoir. The surrounding miombo woodland supports a rich variety of resident and migrant birds.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'bangala-dam',
+        name: 'Bangala Dam',
+        region: 'Masvingo',
+        weatherLocation: 'Masvingo, Zimbabwe',
+        eventLocationAliases: ['Bangala Dam', 'Bangala Recreational Park'],
+        coordinates: { latitude: -20.6748, longitude: 31.1733 },
+        creator: 'Masvingo Outdoors',
+        uploads: '29 tagged clips',
+        liveSignal: 'Dam clips',
+        description:
+          'Bangala Dam in southern Masvingo province is a quiet recreational destination for fishing, birdwatching and picnics. The dam supports diverse waterbird populations and its surrounding thornveld is habitat for smaller mammals and raptors.',
+        language: 'Karanga Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'mazowe-dam',
+        name: 'Mazowe Dam',
+        region: 'Mashonaland Central',
+        weatherLocation: 'Bindura, Zimbabwe',
+        eventLocationAliases: ['Mazowe Dam', 'Mazowe Valley'],
+        coordinates: { latitude: -17.5326, longitude: 30.9982 },
+        creator: 'Mazowe Valley Tours',
+        uploads: '36 tagged clips',
+        liveSignal: 'Valley clips',
+        description:
+          'Mazowe Dam sits in the scenic Mazowe Valley north of Harare, surrounded by citrus orchards and miombo woodland. The dam is popular for fishing, picnics and birdwatching, and the valley is known for the historic Mazowe Orange Estates.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'lake-manyame',
+        name: 'Lake Manyame',
+        region: 'Mashonaland West',
+        weatherLocation: 'Chegutu, Zimbabwe',
+        eventLocationAliases: ['Lake Manyame', 'Manyame Recreational Park'],
+        coordinates: { latitude: -17.8046, longitude: 30.5331 },
+        creator: 'Mashonaland West Outdoors',
+        uploads: '42 tagged clips',
+        liveSignal: 'Lake clips',
+        description:
+          'Lake Manyame Recreational Park covers a large reservoir west of Harare, popular for fishing, boating, birdwatching and lakeside camping. The lake supports rich waterbird populations including herons, storks, fish eagles and kingfishers.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'gweru',
+        name: 'Gweru',
+        region: 'Midlands',
+        weatherLocation: 'Gweru, Zimbabwe',
+        coordinates: { latitude: -19.4514, longitude: 29.8176 },
+        creator: 'Midlands Road Crew',
+        uploads: '82 tagged clips',
+        liveSignal: 'City live',
+        description:
+          "Gweru is the capital of the Midlands province and a central hub for industry and heritage. The city is home to the Zimbabwe Military Museum, Antelope Park and the historic Naletale Ruins, and is positioned at the geographical heart of Zimbabwe.",
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'kwekwe',
+        name: 'Kwekwe',
+        region: 'Midlands',
+        weatherLocation: 'Kwekwe, Zimbabwe',
+        coordinates: { latitude: -18.9295, longitude: 29.8166 },
+        creator: 'Steeltown Visuals',
+        uploads: '71 tagged clips',
+        liveSignal: 'City live',
+        description:
+          "Kwekwe is Zimbabwe's steelmaking capital, home to ZISCO steel works and the National Gold Mining Museum. The surrounding area includes Sebakwe Recreational Park and several gold-panning sites with longstanding historical significance.",
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'bindura',
+        name: 'Bindura',
+        region: 'Mashonaland Central',
+        weatherLocation: 'Bindura, Zimbabwe',
+        coordinates: { latitude: -17.2983, longitude: 31.3317 },
+        creator: 'Mashonaland Lens',
+        uploads: '53 tagged clips',
+        liveSignal: 'Town clips',
+        description:
+          'Bindura is the capital of Mashonaland Central province, surrounded by nickel mining and agricultural land. It is a gateway to Umfurudzi Safari Area and is close to the Mazowe Valley, Domboshava and Ewanrigg Botanical Garden.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'gwanda',
+        name: 'Gwanda',
+        region: 'Matabeleland South',
+        weatherLocation: 'Gwanda, Zimbabwe',
+        coordinates: { latitude: -20.9414, longitude: 29.0037 },
+        creator: 'Matabeleland South Crew',
+        uploads: '39 tagged clips',
+        liveSignal: 'Town clips',
+        description:
+          'Gwanda is the capital of Matabeleland South province, a market town surrounded by semi-arid thornveld and gold-mining areas. It is a base for exploring the Tuli Safari Area and the remote southern reaches of Zimbabwe.',
+        language: 'Ndebele',
+        phrase: 'Linjani?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'beitbridge',
+        name: 'Beitbridge',
+        region: 'Matabeleland South',
+        weatherLocation: 'Beitbridge, Zimbabwe',
+        coordinates: { latitude: -22.1986, longitude: 29.9918 },
+        creator: 'Border Town Lens',
+        uploads: '48 tagged clips',
+        liveSignal: 'Border crossing live',
+        description:
+          "Beitbridge is Zimbabwe's southernmost town on the Limpopo River, hosting the busiest land border crossing in Southern Africa. The surrounding Limpopo Valley is prime wildlife territory with baobab trees, elephant corridors and savanna.",
+        language: 'Ndebele',
+        phrase: 'Linjani?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'marondera',
+        name: 'Marondera',
+        region: 'Mashonaland East',
+        weatherLocation: 'Marondera, Zimbabwe',
+        coordinates: { latitude: -18.1885, longitude: 31.5540 },
+        creator: 'Mashonaland East Trails',
+        uploads: '44 tagged clips',
+        liveSignal: 'Town clips',
+        description:
+          "Marondera is a prosperous farming town east of Harare in Zimbabwe's top wine and horse-racing country. The area is known for Imire Rhino Conservation, polo clubs, tobacco farming and the scenic Ruzawi River valley.",
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'chiredzi',
+        name: 'Chiredzi',
+        region: 'Masvingo',
+        weatherLocation: 'Chiredzi, Zimbabwe',
+        coordinates: { latitude: -21.0453, longitude: 31.6689 },
+        creator: 'Lowveld Safari Crew',
+        uploads: '61 tagged clips',
+        liveSignal: 'Lowveld live',
+        description:
+          "Chiredzi is the main town in Zimbabwe's hot lowveld, surrounded by sugarcane plantations and close to Gonarezhou National Park, Save Valley Conservancy and Malilangwe Wildlife Reserve. It is the gateway to the south-east wildlife corridor.",
+        language: 'Karanga Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'kadoma',
+        name: 'Kadoma',
+        region: 'Mashonaland West',
+        weatherLocation: 'Kadoma, Zimbabwe',
+        coordinates: { latitude: -18.3400, longitude: 29.9150 },
+        creator: 'Cotton Country Lens',
+        uploads: '38 tagged clips',
+        liveSignal: 'Town clips',
+        description:
+          'Kadoma is a mid-sized town in Mashonaland West, historically important for gold mining and today a centre of the cotton industry. It is close to Ngezi Recreational Park and lies along the main highway connecting Harare and Bulawayo.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'chegutu',
+        name: 'Chegutu',
+        region: 'Mashonaland West',
+        weatherLocation: 'Chegutu, Zimbabwe',
+        coordinates: { latitude: -18.1333, longitude: 30.1333 },
+        creator: 'Mashonaland West Roads',
+        uploads: '32 tagged clips',
+        liveSignal: 'Town clips',
+        description:
+          'Chegutu is a farming and industrial town west of Harare on the Bulawayo highway, known for tobacco, citrus and cotton production. It borders the Lake Manyame catchment and lies between the capital and the Midlands.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'plumtree',
+        name: 'Plumtree',
+        region: 'Matabeleland South',
+        weatherLocation: 'Plumtree, Zimbabwe',
+        coordinates: { latitude: -20.4811, longitude: 27.8008 },
+        creator: 'Matabeleland Border Lens',
+        uploads: '27 tagged clips',
+        liveSignal: 'Border town clips',
+        description:
+          'Plumtree is a quiet border town in Matabeleland South near the Botswana frontier, known for railway heritage, cross-border travel and surrounding communal areas. The town lies on the old railway route and is surrounded by dry savanna and mopane woodland.',
+        language: 'Ndebele',
+        phrase: 'Linjani?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'hwange-town',
+        name: 'Hwange Town',
+        region: 'Matabeleland North',
+        weatherLocation: 'Hwange, Zimbabwe',
+        eventLocationAliases: ['Hwange Town', 'Hwange Colliery'],
+        coordinates: { latitude: -18.3649, longitude: 26.4992 },
+        creator: 'Hwange Town Collective',
+        uploads: '45 tagged clips',
+        liveSignal: 'Town clips',
+        description:
+          "Hwange Town is a coal-mining centre built around the Hwange Colliery, which has powered Zimbabwe for over a century. The town is the main services gateway for Hwange National Park visitors arriving from Bulawayo.",
+        language: 'Ndebele',
+        phrase: 'Salibonani',
+        translation: 'Hello to more than one person.',
+      }),
+      createAtlasSpot({
+        id: 'rusape',
+        name: 'Rusape',
+        region: 'Manicaland',
+        weatherLocation: 'Rusape, Zimbabwe',
+        coordinates: { latitude: -18.5333, longitude: 32.1333 },
+        creator: 'Manicaland Roads Crew',
+        uploads: '36 tagged clips',
+        liveSignal: 'Town clips',
+        description:
+          'Rusape is a transit town in Manicaland province on the Harare-Mutare highway, surrounded by granite hills, tobacco farms and timber plantations. It is close to Tsatse River recreation areas and community wildlife projects.',
+        language: 'Manyika Shona',
+        phrase: 'Maswera sei?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'national-heroes-acre',
+        name: 'National Heroes Acre',
+        region: 'Harare Metropolitan',
+        weatherLocation: 'Harare, Zimbabwe',
+        eventLocationAliases: ['National Heroes Acre', 'Heroes Acre'],
+        coordinates: { latitude: -17.8345, longitude: 30.9874 },
+        creator: 'Harare Heritage Walks',
+        uploads: '52 tagged clips',
+        liveSignal: 'Monument clips',
+        description:
+          "National Heroes Acre is a state burial ground and national monument on a hill west of Harare, honouring those who died in Zimbabwe's liberation struggle. The site features bold monumental sculptures, an eternal flame and panoramic views of the capital.",
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'museum-human-sciences',
+        name: 'Museum of Human Sciences',
+        region: 'Harare Metropolitan',
+        weatherLocation: 'Harare, Zimbabwe',
+        eventLocationAliases: ['Museum of Human Sciences', 'Zimbabwe Museum', 'Queen Victoria Museum'],
+        coordinates: { latitude: -17.8289, longitude: 31.0439 },
+        creator: 'Harare Cultural Routes',
+        uploads: '41 tagged clips',
+        liveSignal: 'Museum clips',
+        description:
+          "The Museum of Human Sciences in Harare (formerly the Queen Victoria Museum) houses extensive collections on Zimbabwe's archaeology, ethnography, natural history and rock art. It is the country's national museum of history and culture.",
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'natural-history-museum',
+        name: 'Natural History Museum of Zimbabwe',
+        region: 'Bulawayo Metropolitan',
+        weatherLocation: 'Bulawayo, Zimbabwe',
+        eventLocationAliases: ['Natural History Museum', 'Natural History Museum of Zimbabwe'],
+        coordinates: { latitude: -20.1558, longitude: 28.5964 },
+        creator: 'Bulawayo Museums',
+        uploads: '49 tagged clips',
+        liveSignal: 'Museum clips',
+        description:
+          'The Natural History Museum of Zimbabwe in Bulawayo is one of the largest natural history museums in Africa, displaying geological, zoological and botanical collections from across Southern Africa. The iconic elephant skeleton and full mammal hall are major highlights.',
+        language: 'Ndebele',
+        phrase: 'Kunjani?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'leopard-rock',
+        name: 'Leopard Rock',
+        region: 'Manicaland',
+        weatherLocation: 'Mutare, Zimbabwe',
+        eventLocationAliases: ['Leopard Rock', 'Leopard Rock Hotel', 'Bvumba'],
+        coordinates: { latitude: -19.1321, longitude: 32.7826 },
+        creator: 'Vumba Highlands',
+        uploads: '68 tagged clips',
+        liveSignal: 'Highlands live',
+        description:
+          'Leopard Rock is an iconic luxury hotel and golf course set in the Bvumba highlands south of Mutare, surrounded by ancient forest, flower gardens and mountain mist. The castle-style hotel and its 18-hole course rank among the most scenic destinations in Zimbabwe.',
+        language: 'Manyika Shona',
+        phrase: 'Maswera sei?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'gosho-game-park',
+        name: 'Gosho Game Park',
+        region: 'Mashonaland East',
+        weatherLocation: 'Marondera, Zimbabwe',
+        eventLocationAliases: ['Gosho Game Park', 'Gosho Park'],
+        coordinates: { latitude: -18.1804, longitude: 31.6236 },
+        creator: 'Mazowe Valley Safaris',
+        uploads: '61 tagged clips',
+        liveSignal: 'Game viewing clips',
+        description:
+          'Gosho Game Park is a private wildlife sanctuary in the scenic Mazowe Valley north of Harare, home to giraffe, zebra, wildebeest, impala and diverse birdlife. A popular day-trip destination from the capital with self-drive and guided options.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'pamuzinda',
+        name: 'Pamuzinda Safari Lodge',
+        region: 'Mashonaland West',
+        weatherLocation: 'Chegutu, Zimbabwe',
+        eventLocationAliases: ['Pamuzinda', 'Pamuzinda Safari Lodge'],
+        coordinates: { latitude: -18.1471, longitude: 30.3474 },
+        creator: 'Mashonaland Wild',
+        uploads: '74 tagged clips',
+        liveSignal: 'Lodge safari clips',
+        description:
+          "Pamuzinda Safari Lodge is a private game reserve approximately 90km from Harare, offering Big Five game drives on a 5,000-hectare property. It is one of Zimbabwe's premier private safari escapes within easy reach of the capital, known for white rhino and sable antelope.",
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'chengeta',
+        name: 'Chengeta Game Reserve',
+        region: 'Mashonaland West',
+        weatherLocation: 'Chinhoyi, Zimbabwe',
+        eventLocationAliases: ['Chengeta', 'Chengeta Game Reserve', 'Chengeta Safari'],
+        coordinates: { latitude: -18.1518, longitude: 30.4383 },
+        creator: 'Mashonaland Wild',
+        uploads: '58 tagged clips',
+        liveSignal: 'Bush camp clips',
+        description:
+          'Chengeta Game Reserve is a private wilderness area west of Harare on the Chinhoyi road, offering walking safaris, guided game drives and overnight bush experiences. The reserve is known for its quiet, intimate atmosphere and diverse wildlife.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'wild-is-life',
+        name: 'Wild Is Life Sanctuary',
+        region: 'Harare Metropolitan',
+        weatherLocation: 'Harare, Zimbabwe',
+        eventLocationAliases: ['Wild Is Life', 'Zimbabwe Elephant Nursery', 'Wild Is Life Sanctuary'],
+        coordinates: { latitude: -17.9410, longitude: 31.1103 },
+        creator: 'Harare Wildlife Trails',
+        uploads: '88 tagged clips',
+        liveSignal: 'Elephant nursery live',
+        description:
+          'Wild Is Life is a sanctuary and elephant nursery near Harare that rescues and rehabilitates orphaned and injured wildlife including baby elephants, rhino and pangolin. Founded by Roxy Danckwerts, it is one of the most moving wildlife experiences in Zimbabwe.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'tshabalala',
+        name: 'Tshabalala Wildlife Sanctuary',
+        region: 'Bulawayo Metropolitan',
+        weatherLocation: 'Bulawayo, Zimbabwe',
+        eventLocationAliases: ['Tshabalala', 'Tshabalala Wildlife Sanctuary'],
+        coordinates: { latitude: -20.2451, longitude: 28.5597 },
+        creator: 'Bulawayo Wild Lens',
+        uploads: '49 tagged clips',
+        liveSignal: 'Sanctuary walk clips',
+        description:
+          "Tshabalala Wildlife Sanctuary on the southern edge of Bulawayo is a small but well-loved urban game sanctuary for walking among giraffe, zebra, impala, wildebeest and eland. It is Bulawayo's own walkable wildlife area and a popular family destination.",
+        language: 'Ndebele',
+        phrase: 'Kunjani?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'worlds-view-matobo',
+        name: "World's View",
+        region: 'Matabeleland South',
+        weatherLocation: 'Bulawayo, Zimbabwe',
+        eventLocationAliases: ["World's View", 'Rhodes Grave', 'Malindidzimu'],
+        coordinates: { latitude: -20.4903, longitude: 28.5148 },
+        creator: 'Matobo Heritage Walks',
+        uploads: '93 tagged clips',
+        liveSignal: 'Kopje summit clips',
+        description:
+          "World's View (Malindidzimu — Dwelling Place of Spirits) in Matobo Hills is the burial site of Cecil John Rhodes and one of the most dramatic granite viewpoints in Zimbabwe. The sweeping panorama of ancient kopjes and balancing rocks is considered among Africa's finest landscapes.",
+        language: 'Ndebele',
+        phrase: 'Linjani?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'larvon-bird-gardens',
+        name: 'Larvon Bird Gardens',
+        region: 'Mashonaland West',
+        weatherLocation: 'Harare, Zimbabwe',
+        eventLocationAliases: ['Larvon Bird Gardens', 'Larvon'],
+        coordinates: { latitude: -17.8689, longitude: 30.8002 },
+        creator: 'Harare Bird Watchers',
+        uploads: '52 tagged clips',
+        liveSignal: 'Aviary clips',
+        description:
+          'Larvon Bird Gardens near Harare is a private bird sanctuary housing over 400 bird species from across Africa. The landscaped gardens and well-maintained aviaries make it a favourite for birders and families, and it claims to be the largest private bird collection in Africa.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'sinamatella',
+        name: 'Sinamatella',
+        region: 'Matabeleland North',
+        weatherLocation: 'Hwange, Zimbabwe',
+        eventLocationAliases: ['Sinamatella', 'Sinamatella Camp', 'Hwange Sinamatella'],
+        coordinates: { latitude: -18.5858, longitude: 26.3157 },
+        creator: 'Hwange Wilderness',
+        uploads: '66 tagged clips',
+        liveSignal: 'Waterhole watch',
+        description:
+          "Sinamatella is a remote camp in the northern sector of Hwange National Park, accessible via the Binga road and offering spectacular escarpment views over the park's vast teak forests. Less visited than Main Camp, it gives an especially wild and unspoilt safari experience.",
+        language: 'Ndebele',
+        phrase: 'Salibonani',
+        translation: 'Hello to more than one person.',
+      }),
+      createAtlasSpot({
+        id: 'chilo-gorge',
+        name: 'Chilo Gorge',
+        region: 'Masvingo',
+        weatherLocation: 'Chiredzi, Zimbabwe',
+        eventLocationAliases: ['Chilo Gorge', 'Chilo Gorge Safari Lodge'],
+        coordinates: { latitude: -21.2488, longitude: 32.3485 },
+        creator: 'Gonarezhou Wilderness',
+        uploads: '71 tagged clips',
+        liveSignal: 'Gorge safari clips',
+        description:
+          'Chilo Gorge Safari Lodge sits on the edge of Gonarezhou National Park overlooking the Save-Runde confluence, with panoramic views into one of Africa\'s wildest landscapes. The surrounding wilderness is home to huge elephant herds and the rare Lichtenstein\'s hartebeest.',
+        language: 'Karanga Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'pungwe-falls',
+        name: 'Pungwe Falls',
+        region: 'Manicaland',
+        weatherLocation: 'Nyanga, Zimbabwe',
+        eventLocationAliases: ['Pungwe Falls', 'Pungwe Gorge'],
+        coordinates: { latitude: -18.4215, longitude: 32.7808 },
+        creator: 'Eastern Highlands Explorers',
+        uploads: '67 tagged clips',
+        liveSignal: 'Waterfall clips',
+        description:
+          'Pungwe Falls in Nyanga National Park plunges into the spectacular Pungwe Gorge, with hiking trails leading through montane grassland and protea forest to dramatic viewpoints. The Pungwe River originates on the Nyangani slopes and carves one of the Eastern Highlands\' finest gorges.',
+        language: 'Manyika Shona',
+        phrase: 'Maswera sei?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'mavuradonha',
+        name: 'Mavuradonha Wilderness',
+        region: 'Mashonaland Central',
+        weatherLocation: 'Bindura, Zimbabwe',
+        eventLocationAliases: ['Mavuradonha', 'Mavuradonha Wilderness Area'],
+        coordinates: { latitude: -16.5000, longitude: 31.1667 },
+        creator: 'Zimbabwe Wilderness Trails',
+        uploads: '43 tagged clips',
+        liveSignal: 'Wilderness hike clips',
+        description:
+          'Mavuradonha Wilderness Area in northern Mashonaland Central is a remote and pristine highland wilderness known for rugged escarpment walks, natural pools and untouched miombo woodland. It is one of Zimbabwe\'s best kept secrets for hiking and adventure camping.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'ziwa-ruins',
+        name: 'Ziwa Ruins',
+        region: 'Manicaland',
+        weatherLocation: 'Nyanga, Zimbabwe',
+        eventLocationAliases: ['Ziwa Ruins', 'Ziwa National Monument'],
+        coordinates: { latitude: -18.1352, longitude: 32.6372 },
+        creator: 'Eastern Highlands Heritage',
+        uploads: '34 tagged clips',
+        liveSignal: 'Ruins site clips',
+        description:
+          'Ziwa Ruins near Nyanga are a complex of Iron Age stone enclosures, terraced fields and pit structures built by early Shona farmers between the 14th and 19th centuries. The site offers a fascinating window into ancient highland agricultural civilisation.',
+        language: 'Manyika Shona',
+        phrase: 'Maswera sei?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'bubiana',
+        name: 'Bubiana Conservancy',
+        region: 'Matabeleland South',
+        weatherLocation: 'Gwanda, Zimbabwe',
+        eventLocationAliases: ['Bubiana', 'Bubiana Conservancy'],
+        coordinates: { latitude: -21.1061, longitude: 29.8288 },
+        creator: 'Matabeleland South Wild',
+        uploads: '39 tagged clips',
+        liveSignal: 'Conservancy clips',
+        description:
+          "Bubiana Conservancy in Matabeleland South is a private wildlife conservancy renowned for one of Zimbabwe's largest sable antelope populations. The remote bushveld landscape also supports lion, leopard, painted wolf and abundant plains game.",
+        language: 'Ndebele',
+        phrase: 'Linjani?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'kariba-croc-farm',
+        name: 'Kariba Crocodile Farm',
+        region: 'Mashonaland West',
+        weatherLocation: 'Kariba, Zimbabwe',
+        eventLocationAliases: ['Kariba Crocodile Farm', 'Kariba Croc Farm'],
+        coordinates: { latitude: -16.5407, longitude: 28.8737 },
+        creator: 'Kariba Voyager',
+        uploads: '38 tagged clips',
+        liveSignal: 'Croc farm clips',
+        description:
+          'The Kariba Crocodile Farm in Kariba town breeds Nile crocodiles from egg through to adulthood, offering guided tours that give visitors close-up views of hundreds of crocodiles at different life stages. It is one of the top town attractions at Zimbabwe\'s famous inland sea.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'guruve',
+        name: 'Guruve',
+        region: 'Mashonaland Central',
+        weatherLocation: 'Bindura, Zimbabwe',
+        eventLocationAliases: ['Guruve'],
+        coordinates: { latitude: -16.6594, longitude: 30.7034 },
+        creator: 'Mashonaland Central Trails',
+        uploads: '31 tagged clips',
+        liveSignal: 'Town clips',
+        description:
+          "Guruve is a small town in Mashonaland Central that serves as the northern overland gateway to Mana Pools National Park. The surrounding communal areas and escarpment roads offer dramatic views and access to Zimbabwe's remote Zambezi Valley wilderness.",
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'mount-darwin',
+        name: 'Mount Darwin',
+        region: 'Mashonaland Central',
+        weatherLocation: 'Bindura, Zimbabwe',
+        eventLocationAliases: ['Mount Darwin'],
+        coordinates: { latitude: -16.7833, longitude: 31.5833 },
+        creator: 'Mashonaland Central Trails',
+        uploads: '28 tagged clips',
+        liveSignal: 'Town clips',
+        description:
+          'Mount Darwin is a remote market town in northern Mashonaland Central, named after the mountain that rises above the town. It is a departure point for the Mavuradonha Wilderness, Muzarabani Valley and the remote northern borderlands near the Mozambique frontier.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'umzingwane-dam',
+        name: 'Umzingwane Dam',
+        region: 'Matabeleland South',
+        weatherLocation: 'Gwanda, Zimbabwe',
+        eventLocationAliases: ['Umzingwane Dam', 'Umzingwane Recreational Park'],
+        coordinates: { latitude: -20.0667, longitude: 29.1667 },
+        creator: 'Matabeleland South Wild',
+        uploads: '27 tagged clips',
+        liveSignal: 'Dam clips',
+        description:
+          'Umzingwane Dam Recreational Park in Matabeleland South offers fishing, birdwatching and picnicking in a quiet bushveld setting south of Bulawayo. The dam and its surrounds attract waterbirds and provide a peaceful retreat from the city.',
+        language: 'Ndebele',
+        phrase: 'Linjani?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'makuti',
+        name: 'Makuti',
+        region: 'Mashonaland West',
+        weatherLocation: 'Kariba, Zimbabwe',
+        eventLocationAliases: ['Makuti', 'Makuti Village'],
+        coordinates: { latitude: -16.3169, longitude: 29.2518 },
+        creator: 'Zambezi Valley Routes',
+        uploads: '33 tagged clips',
+        liveSignal: 'Escarpment clips',
+        description:
+          'Makuti is a small village perched on the Zambezi Escarpment en route from Harare to Kariba, serving as the last fuel and supplies point before the descent into the Zambezi Valley. The roadside viewpoints here offer sweeping vistas over the Mana Pools wilderness below.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'nyaminyami',
+        name: 'Nyaminyami Cultural Area',
+        region: 'Matabeleland North',
+        weatherLocation: 'Binga, Zimbabwe',
+        eventLocationAliases: ['Nyaminyami', 'Nyamaneche', 'Binga Cultural Village'],
+        coordinates: { latitude: -17.6270, longitude: 27.3440 },
+        creator: 'Tonga Cultural Routes',
+        uploads: '44 tagged clips',
+        liveSignal: 'Tonga ceremony clips',
+        description:
+          'The Nyaminyami is the legendary river spirit of the Tonga people, revered as the guardian of the Zambezi and Lake Kariba. The Binga area is the heartland of Tonga culture where you can experience traditional ceremonies, basket weaving, and oral history tied to the displacement caused by the Kariba Dam.',
+        language: 'Tonga',
+        phrase: 'Mubotu',
+        translation: 'Good day.',
+      }),
+      createAtlasSpot({
+        id: 'honde-valley',
+        name: 'Honde Valley',
+        region: 'Manicaland',
+        weatherLocation: 'Mutare, Zimbabwe',
+        eventLocationAliases: ['Honde Valley', 'Aberfoyle Tea Estate', 'Honde'],
+        coordinates: { latitude: -18.4968, longitude: 32.8532 },
+        creator: 'Eastern Highlands Journeys',
+        uploads: '58 tagged clips',
+        liveSignal: 'Tea estate clips',
+        description:
+          'The Honde Valley drops dramatically from the Nyanga highlands into a lush tropical basin straddling the Mozambique border. It is known for Aberfoyle Tea Estate, coffee plantations, the Mutarazi Falls access route, and a dense network of waterfalls fed by the highest rainfall in Zimbabwe.',
+        language: 'Manyika Shona',
+        phrase: 'Mhoro',
+        translation: 'Hello.',
+      }),
+      createAtlasSpot({
+        id: 'troutbeck',
+        name: 'Troutbeck',
+        region: 'Manicaland',
+        weatherLocation: 'Nyanga, Zimbabwe',
+        eventLocationAliases: ['Troutbeck', 'Troutbeck Resort', 'Troutbeck Inn'],
+        coordinates: { latitude: -18.1844, longitude: 32.8108 },
+        creator: 'Nyanga Highlands Guides',
+        uploads: '52 tagged clips',
+        liveSignal: 'Highland resort clips',
+        description:
+          'Troutbeck is a classic highland resort village near the summit of the Nyanga plateau, surrounded by pine forests, trout streams and moorland. The historic Troutbeck Inn with its English country-house atmosphere has been a retreat for Zimbabweans since the colonial era.',
+        language: 'Manyika Shona',
+        phrase: 'Mhoro',
+        translation: 'Hello.',
+      }),
+      createAtlasSpot({
+        id: 'birchenough-bridge',
+        name: 'Birchenough Bridge',
+        region: 'Manicaland',
+        weatherLocation: 'Chipinge, Zimbabwe',
+        eventLocationAliases: ['Birchenough Bridge', 'Save River Bridge'],
+        coordinates: { latitude: -19.9620, longitude: 32.3443 },
+        creator: 'Save Valley Trails',
+        uploads: '39 tagged clips',
+        liveSignal: 'Bridge & river clips',
+        description:
+          'The Birchenough Bridge is a single-span steel arch bridge over the Save River, once the third-largest arch bridge in the world when completed in 1935. Designed by Ralph Freeman — the same engineer behind the Sydney Harbour Bridge — it remains an iconic landmark on the road from Mutare to Chiredzi.',
+        language: 'Manyika Shona',
+        phrase: 'Mhoro',
+        translation: 'Hello.',
+      }),
+      createAtlasSpot({
+        id: 'chilojo-cliffs',
+        name: 'Chilojo Cliffs',
+        region: 'Masvingo',
+        weatherLocation: 'Chiredzi, Zimbabwe',
+        eventLocationAliases: ['Chilojo Cliffs', 'Chilojo', 'Gonarezhou Cliffs'],
+        coordinates: { latitude: -21.4494, longitude: 32.0821 },
+        creator: 'Gonarezhou Bush Stories',
+        uploads: '63 tagged clips',
+        liveSignal: 'Runde River cliffs',
+        description:
+          "Gonarezhou's most iconic feature — towering red sandstone bluffs that glow crimson at sunrise and sunset above the Runde River. Massive elephant herds gather at the base of the cliffs during the dry season, making this one of Zimbabwe's most dramatic wildlife spectacles.",
+        language: 'Karanga Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'crooks-corner',
+        name: "Crooks' Corner",
+        region: 'Masvingo',
+        weatherLocation: 'Chiredzi, Zimbabwe',
+        eventLocationAliases: ["Crooks' Corner", 'Crooks Corner', 'Pafuri Junction'],
+        coordinates: { latitude: -22.4261, longitude: 31.3072 },
+        creator: 'Southern Lowveld Journeys',
+        uploads: '28 tagged clips',
+        liveSignal: 'Tri-border confluence clips',
+        description:
+          "The remote tri-border point where Zimbabwe, Mozambique and South Africa meet at the confluence of the Limpopo and Luvuvhu rivers. Historically a refuge for ivory poachers who could slip between jurisdictions, it now sits within Gonarezhou NP and is reached by 4WD through pristine bushveld.",
+        language: 'Shangani',
+        phrase: 'Avuxeni',
+        translation: 'Good morning.',
+      }),
+      createAtlasSpot({
+        id: 'hippo-valley',
+        name: 'Hippo Valley',
+        region: 'Masvingo',
+        weatherLocation: 'Chiredzi, Zimbabwe',
+        eventLocationAliases: ['Hippo Valley', 'Hippo Valley Estate', 'Triangle Estate'],
+        coordinates: { latitude: -21.0710, longitude: 31.6457 },
+        creator: 'Lowveld Sugar Routes',
+        uploads: '35 tagged clips',
+        liveSignal: 'Sugar estate clips',
+        description:
+          "Hippo Valley Estate and the nearby Triangle are the heartland of Zimbabwe's sugar industry, producing the majority of the country's sugar from vast irrigated cane fields fed by the Runde River. The surrounding lowveld supports abundant birdlife and the estate offers guided farm tours.",
+        language: 'Karanga Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'mlibizi',
+        name: 'Mlibizi',
+        region: 'Matabeleland North',
+        weatherLocation: 'Binga, Zimbabwe',
+        eventLocationAliases: ['Mlibizi', 'Mlibizi Ferry', 'Lake Kariba West'],
+        coordinates: { latitude: -18.0287, longitude: 27.1111 },
+        creator: 'Kariba Western Routes',
+        uploads: '41 tagged clips',
+        liveSignal: 'Lake ferry clips',
+        description:
+          'Mlibizi is the western terminus of the Kariba Houseboat Ferry, a popular two-day lake crossing to Kariba town. The village on the Gwaai River mouth offers excellent tiger fishing, a tranquil lakeside camp, and proximity to Binga and Chizarira National Park.',
+        language: 'Tonga',
+        phrase: 'Mubotu',
+        translation: 'Good day.',
+      }),
+      createAtlasSpot({
+        id: 'tiger-bay',
+        name: 'Tiger Bay',
+        region: 'Mashonaland West',
+        weatherLocation: 'Kariba, Zimbabwe',
+        eventLocationAliases: ['Tiger Bay', 'Tiger Bay Resort'],
+        coordinates: { latitude: -16.9112, longitude: 28.4262 },
+        creator: 'Kariba Fishing Routes',
+        uploads: '47 tagged clips',
+        liveSignal: 'Tiger fish clips',
+        description:
+          "Tiger Bay is one of Lake Kariba's most celebrated tiger fishing destinations, offering world-class angling for tigerfish, bream and vundu catfish. The resort camp provides self-catering chalets on the Ume River bay, with spectacular sunsets and a backdrop of flooded mopane woodland.",
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'bumi-hills',
+        name: 'Bumi Hills',
+        region: 'Mashonaland West',
+        weatherLocation: 'Kariba, Zimbabwe',
+        eventLocationAliases: ['Bumi Hills', 'Bumi Hills Safari Lodge'],
+        coordinates: { latitude: -16.8057, longitude: 28.3485 },
+        creator: 'Kariba Safari Routes',
+        uploads: '55 tagged clips',
+        liveSignal: 'Lake Kariba safari clips',
+        description:
+          'Bumi Hills sits on a dramatic escarpment overlooking Lake Kariba, the gateway to Matusadona National Park. The safari lodge perches atop red rock cliffs with sweeping lake views, offering game drives, boat safaris, fishing, and visits to the flooded shoreline teeming with crocodile and hippo.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'kariba-dam-wall',
+        name: 'Kariba Dam Wall',
+        region: 'Mashonaland West',
+        weatherLocation: 'Kariba, Zimbabwe',
+        eventLocationAliases: ['Kariba Dam Wall', 'Kariba Wall', 'Kariba Dam Viewpoint'],
+        coordinates: { latitude: -16.5200, longitude: 28.7700 },
+        creator: 'Zambezi Engineering Tours',
+        uploads: '68 tagged clips',
+        liveSignal: 'Dam wall viewpoint clips',
+        description:
+          "The Kariba Dam Wall is one of Africa's greatest engineering achievements, impounding the world's largest man-made reservoir by volume. Built 1956–1959 across the Zambezi Gorge, it straddles the Zimbabwe-Zambia border and a viewing platform gives breathtaking perspectives of the gorge.",
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'dete',
+        name: 'Dete',
+        region: 'Matabeleland North',
+        weatherLocation: 'Hwange, Zimbabwe',
+        eventLocationAliases: ['Dete', 'Dete Village', 'Hwange Gateway'],
+        coordinates: { latitude: -18.6166, longitude: 26.8612 },
+        creator: 'Hwange Safari Routes',
+        uploads: '37 tagged clips',
+        liveSignal: 'Safari gateway clips',
+        description:
+          "Dete is the small railway village and safari hub on the doorstep of Hwange National Park, serving the major camps at Ngamo, Linkwasha and Main Camp. The town has a station, curio stalls and a wildlife art gallery, and the bush begins immediately at the village edge.",
+        language: 'Ndebele',
+        phrase: 'Salibonani',
+        translation: 'Hello to more than one person.',
+      }),
+      createAtlasSpot({
+        id: 'tsholotsho',
+        name: 'Tsholotsho',
+        region: 'Matabeleland North',
+        weatherLocation: 'Hwange, Zimbabwe',
+        eventLocationAliases: ['Tsholotsho', 'Tsholo', 'Tsholotsho District'],
+        coordinates: { latitude: -19.7663, longitude: 27.7571 },
+        creator: 'Matabeleland Cultural Routes',
+        uploads: '43 tagged clips',
+        liveSignal: 'Cultural village clips',
+        description:
+          'Tsholotsho is a remote district in the dry Gwaai River basin between Bulawayo and Hwange, inhabited predominantly by Ndebele communities with rich traditional culture. The communal lands buffer the southern edge of Hwange National Park and host significant seasonal elephant populations.',
+        language: 'Ndebele',
+        phrase: 'Salibonani',
+        translation: 'Hello to more than one person.',
+      }),
+      createAtlasSpot({
+        id: 'lupane',
+        name: 'Lupane',
+        region: 'Matabeleland North',
+        weatherLocation: 'Hwange, Zimbabwe',
+        eventLocationAliases: ['Lupane', 'Lupane District'],
+        coordinates: { latitude: -18.9347, longitude: 27.7728 },
+        creator: 'Matabeleland North Routes',
+        uploads: '31 tagged clips',
+        liveSignal: 'Matabeleland North clips',
+        description:
+          'Lupane is the capital of Matabeleland North Province, a quiet town on the road between Bulawayo and Hwange. It serves as the administrative and service centre for the rural communities of the Gwaai and Shangani River valleys and is surrounded by communal conservancies.',
+        language: 'Ndebele',
+        phrase: 'Salibonani',
+        translation: 'Hello to more than one person.',
+      }),
+      createAtlasSpot({
+        id: 'chipinge',
+        name: 'Chipinge',
+        region: 'Manicaland',
+        weatherLocation: 'Chipinge, Zimbabwe',
+        eventLocationAliases: ['Chipinge', 'Chipinge Town', 'Mount Selinda'],
+        coordinates: { latitude: -20.1889, longitude: 32.6194 },
+        creator: 'Eastern Highlands Coffee Routes',
+        uploads: '46 tagged clips',
+        liveSignal: 'Coffee estate clips',
+        description:
+          "Chipinge is the gateway to Zimbabwe's coffee and macadamia farming industry, set among rolling hills in the Eastern Highlands. It accesses Chirinda Forest (Africa's tallest indigenous trees), the Haroni-Rusitu confluence, and private coffee and tea estates open to visitors.",
+        language: 'Manyika Shona',
+        phrase: 'Mhoro',
+        translation: 'Hello.',
+      }),
+      createAtlasSpot({
+        id: 'mushandike',
+        name: 'Mushandike Sanctuary',
+        region: 'Masvingo',
+        weatherLocation: 'Masvingo, Zimbabwe',
+        eventLocationAliases: ['Mushandike Sanctuary', 'Mushandike Dam'],
+        coordinates: { latitude: -20.1031, longitude: 30.6484 },
+        creator: 'Masvingo Lowveld Routes',
+        uploads: '29 tagged clips',
+        liveSignal: 'Lowveld sanctuary clips',
+        description:
+          'Mushandike Sanctuary is a small wildlife reserve and recreational area near Masvingo, centred on Mushandike Dam with giraffe, zebra, waterbuck and antelope. Popular with locals for picnicking, fishing, boating and birdwatching on the reed-fringed lake.',
+        language: 'Karanga Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'ruwa',
+        name: 'Ruwa',
+        region: 'Harare Metropolitan',
+        weatherLocation: 'Harare, Zimbabwe',
+        eventLocationAliases: ['Ruwa', 'Ruwa Town'],
+        coordinates: { latitude: -17.8830, longitude: 31.2480 },
+        creator: 'Harare Outskirts Routes',
+        uploads: '36 tagged clips',
+        liveSignal: 'Town clips',
+        description:
+          'Ruwa is a fast-growing satellite town east of Harare known for its equestrian culture, pony clubs, and upmarket residential estates. Riding schools and small game farms make it a popular weekend retreat from the capital.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'norton',
+        name: 'Norton',
+        region: 'Mashonaland West',
+        weatherLocation: 'Harare, Zimbabwe',
+        eventLocationAliases: ['Norton', 'Norton Town'],
+        coordinates: { latitude: -17.8834, longitude: 30.7019 },
+        creator: 'Mashonaland West Routes',
+        uploads: '27 tagged clips',
+        liveSignal: 'Agricultural town clips',
+        description:
+          'Norton is an industrial and agricultural town 40km west of Harare on the road to Chegutu, known for horticulture, tobacco and small-scale manufacturing. The surrounding areas include coffee estates, small game farms and proximity to Lake Manyame.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'africa-unity-square',
+        name: 'Africa Unity Square',
+        region: 'Harare Metropolitan',
+        weatherLocation: 'Harare, Zimbabwe',
+        eventLocationAliases: ['Africa Unity Square', 'Cecil Square', 'Harare City Park'],
+        coordinates: { latitude: -17.8286, longitude: 31.0490 },
+        creator: 'Harare City Walks',
+        uploads: '72 tagged clips',
+        liveSignal: 'City square clips',
+        description:
+          "Africa Unity Square is the green heart of Harare's CBD, flanked by Parliament, the Reserve Bank and the Anglican Cathedral. Originally Cecil Square, it was renamed to celebrate continental unity. The square features a flower market, benches, fountains and is a focal point for city life.",
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'military-museum-gweru',
+        name: 'Zimbabwe Military Museum',
+        region: 'Midlands',
+        weatherLocation: 'Gweru, Zimbabwe',
+        eventLocationAliases: ['Zimbabwe Military Museum', 'Gweru Military Museum'],
+        coordinates: { latitude: -19.4500, longitude: 29.8167 },
+        creator: 'Gweru Heritage Routes',
+        uploads: '33 tagged clips',
+        liveSignal: 'Museum clips',
+        description:
+          'The Zimbabwe Military Museum in Gweru displays an extensive outdoor and indoor collection of aircraft, armoured vehicles, artillery and small arms spanning the colonial era through the Liberation War and post-independence period. One of the finest military museums in southern Africa.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'batoka-gorge',
+        name: 'Batoka Gorge',
+        region: 'Matabeleland North',
+        weatherLocation: 'Victoria Falls, Zimbabwe',
+        eventLocationAliases: ['Batoka Gorge', 'Zambezi Gorge', 'Victoria Falls Gorge'],
+        coordinates: { latitude: -17.9982, longitude: 25.9236 },
+        creator: 'Zambezi Adventures',
+        uploads: '89 tagged clips',
+        liveSignal: 'Gorge action clips',
+        description:
+          "The Batoka Gorge stretches 120km downstream from Victoria Falls, carved deep into the basalt plateau by the Zambezi. Home to Grade 5 whitewater rafting — some of the world's most thrilling rapids — plus bungee jumping from the Falls Bridge, abseiling, gorge-swing and helicopter flips.",
+        language: 'Ndebele',
+        phrase: 'Salibonani',
+        translation: 'Hello to more than one person.',
+      }),
+      createAtlasSpot({
+        id: 'mutoko',
+        name: 'Mutoko',
+        region: 'Mashonaland East',
+        weatherLocation: 'Mutare, Zimbabwe',
+        eventLocationAliases: ['Mutoko', 'Mutoko District'],
+        coordinates: { latitude: -17.4046, longitude: 32.2256 },
+        creator: 'Mashonaland East Routes',
+        uploads: '28 tagged clips',
+        liveSignal: 'Town clips',
+        description:
+          'Mutoko is a granite-country town in Mashonaland East famous for its lime deposits, black granite quarrying and communal lands rich in rock art and sacred ancestral sites. It lies on the main road to the Nyamapanda border post with Mozambique.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'gokwe',
+        name: 'Gokwe',
+        region: 'Midlands',
+        weatherLocation: 'Kwekwe, Zimbabwe',
+        eventLocationAliases: ['Gokwe', 'Gokwe Town', 'Gokwe North'],
+        coordinates: { latitude: -18.2250, longitude: 28.9539 },
+        creator: 'Midlands Cotton Routes',
+        uploads: '32 tagged clips',
+        liveSignal: 'Cotton country clips',
+        description:
+          "Gokwe is the commercial centre of Zimbabwe's premier cotton-growing region in the Midlands, a vast semi-arid plateau bordering the Zambezi Valley. The surrounding communal lands contain community wildlife areas and significant baobab forests.",
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'nkayi',
+        name: 'Nkayi',
+        region: 'Matabeleland North',
+        weatherLocation: 'Bulawayo, Zimbabwe',
+        eventLocationAliases: ['Nkayi', 'Nkayi District', 'Nkai'],
+        coordinates: { latitude: -19.0100, longitude: 28.8969 },
+        creator: 'Matabeleland North Routes',
+        uploads: '26 tagged clips',
+        liveSignal: 'Rural district clips',
+        description:
+          'Nkayi is the administrative centre of the Nkayi District in Matabeleland North, a remote rural area on the Shangani River plains. Known for traditional cattle ranching, Ndebele cultural ceremonies and the Shangani River which supports hippo and crocodile populations.',
+        language: 'Ndebele',
+        phrase: 'Salibonani',
+        translation: 'Hello to more than one person.',
+      }),
+      createAtlasSpot({
+        id: 'redcliff',
+        name: 'Redcliff',
+        region: 'Midlands',
+        weatherLocation: 'Kwekwe, Zimbabwe',
+        eventLocationAliases: ['Redcliff', 'Red Cliff', 'Zimbabwe Iron & Steel'],
+        coordinates: { latitude: -19.0333, longitude: 29.7833 },
+        creator: 'Midlands Steel Routes',
+        uploads: '24 tagged clips',
+        liveSignal: 'Steel town clips',
+        description:
+          "Redcliff is an industrial town adjacent to Kwekwe, home to the Zimbabwe Iron and Steel Company (ZISCO), once one of Africa's largest integrated steel mills. The red kopje hills gave it its name and the area offers industrial heritage tourism and proximity to Sebakwe Recreational Park.",
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'mvuma',
+        name: 'Mvuma',
+        region: 'Midlands',
+        weatherLocation: 'Gweru, Zimbabwe',
+        eventLocationAliases: ['Mvuma', 'Mvuma Town'],
+        coordinates: { latitude: -19.2833, longitude: 30.5333 },
+        creator: 'Midlands Crossroads Routes',
+        uploads: '22 tagged clips',
+        liveSignal: 'Crossroads town clips',
+        description:
+          'Mvuma is a small town at the geographical crossroads of Zimbabwe, roughly equidistant from Harare, Bulawayo, Mutare and Masvingo. The area has gold mining history and is a popular rest stop on the main transit routes through the Midlands.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'mwenezi',
+        name: 'Mwenezi',
+        region: 'Masvingo',
+        weatherLocation: 'Masvingo, Zimbabwe',
+        eventLocationAliases: ['Mwenezi', 'Mwenezi District', 'Nuanetsi'],
+        coordinates: { latitude: -21.4231, longitude: 30.7275 },
+        creator: 'Southern Lowveld Routes',
+        uploads: '28 tagged clips',
+        liveSignal: 'Lowveld plains clips',
+        description:
+          'Mwenezi District in southern Masvingo Province covers vast lowveld plains bordering South Africa and Mozambique. The Nuanetsi Ranch area hosts one of the largest remaining privately managed wildlife populations in Zimbabwe, and the Mwenezi River runs en route to Beitbridge.',
+        language: 'Karanga Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'centenary',
+        name: 'Centenary',
+        region: 'Mashonaland Central',
+        weatherLocation: 'Bindura, Zimbabwe',
+        eventLocationAliases: ['Centenary', 'Centenary Town', 'Muzarabani'],
+        coordinates: { latitude: -16.7305, longitude: 31.1211 },
+        creator: 'Mashonaland Central Routes',
+        uploads: '27 tagged clips',
+        liveSignal: 'Tobacco farming clips',
+        description:
+          'Centenary is a tobacco farming town in Mashonaland Central on fertile soils north of Bindura. The area transitions from highveld farmland into the Zambezi Valley escarpment and is close to Mavuradonha Wilderness and the Muzarabani lowlands where the Mazowe River enters the valley.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'harare-gardens',
+        name: 'Harare Gardens',
+        region: 'Harare Metropolitan',
+        weatherLocation: 'Harare, Zimbabwe',
+        eventLocationAliases: ['Harare Gardens', 'Harare City Gardens'],
+        coordinates: { latitude: -17.8248, longitude: 31.0453 },
+        creator: 'Harare City Walks',
+        uploads: '61 tagged clips',
+        liveSignal: 'City garden clips',
+        description:
+          "Harare Gardens is the city's main recreational park, a large green space near the city centre with manicured lawns, an outdoor theatre, children's play areas and colourful flower beds. It hosts outdoor concerts, arts events and the city's social calendar throughout the year.",
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'bulawayo-art-gallery',
+        name: 'Bulawayo Art Gallery',
+        region: 'Bulawayo Metropolitan',
+        weatherLocation: 'Bulawayo, Zimbabwe',
+        eventLocationAliases: ['Bulawayo Art Gallery', 'National Gallery Bulawayo'],
+        coordinates: { latitude: -20.1503, longitude: 28.5833 },
+        creator: 'Bulawayo Heritage Walks',
+        uploads: '44 tagged clips',
+        liveSignal: 'Gallery clips',
+        description:
+          "The Bulawayo Art Gallery (National Gallery of Zimbabwe Bulawayo) is housed in a colonial-era building in the city's cultural precinct, showcasing Zimbabwean stone sculpture, painting and contemporary art. It sits alongside the Natural History Museum and Bulawayo's civic institutions.",
+        language: 'Ndebele',
+        phrase: 'Salibonani',
+        translation: 'Hello to more than one person.',
+      }),
+      createAtlasSpot({
+        id: 'penhalonga',
+        name: 'Penhalonga',
+        region: 'Manicaland',
+        weatherLocation: 'Mutare, Zimbabwe',
+        eventLocationAliases: ['Penhalonga', 'Penhalonga Valley'],
+        coordinates: { latitude: -18.8819, longitude: 32.6745 },
+        creator: 'Mutare Valley Routes',
+        uploads: '38 tagged clips',
+        liveSignal: 'Valley mining clips',
+        description:
+          'Penhalonga is a narrow valley north of Mutare with a history of alluvial and hard-rock gold mining stretching back to pre-colonial times. The Mutare River runs through the valley past small mining operations, verdant smallholdings and a scenic route connecting to the Nyanga highlands via the Honde Valley road.',
+        language: 'Manyika Shona',
+        phrase: 'Mhoro',
+        translation: 'Hello.',
+      }),
+      createAtlasSpot({
+        id: 'mana-pools-national-park',
+        name: 'Mana Pools National Park',
+        region: 'Mashonaland West',
+        weatherLocation: 'Kariba, Zimbabwe',
+        eventLocationAliases: ['Mana Pools National Park', 'Mana Pools NP', 'Mana Pools'],
+        coordinates: { latitude: -15.9660, longitude: 29.4312 },
+        creator: 'Zambezi Wild Stories',
+        uploads: '148 tagged clips',
+        liveSignal: 'Floodplain safari clips',
+        description:
+          'Mana Pools National Park is the protected national park within the wider Mana Pools landscape. It follows the lower Zambezi floodplain and is famous for walking safaris, canoeing, elephants standing under albida trees and wild dogs.',
+        language: 'Shona',
+        phrase: 'Mauya',
+        translation: 'Welcome.',
+      }),
+      createAtlasSpot({
+        id: 'phundundu-wildlife-area',
+        name: 'Phundundu Wildlife Area',
+        region: 'Mashonaland West',
+        weatherLocation: 'Kariba, Zimbabwe',
+        eventLocationAliases: ['Phundundu Wildlife Area', 'Phundundu', 'Phundundu Safari Area'],
+        coordinates: { latitude: -16.3144, longitude: 29.4631 },
+        creator: 'Zambezi Valley Conservancies',
+        uploads: '34 tagged clips',
+        liveSignal: 'Escarpment wildlife clips',
+        description:
+          'Phundundu Wildlife Area sits in the Hurungwe/Zambezi Valley conservation belt between Kariba, Makuti and Mana Pools routes. It adds another remote wildlife landscape for elephant, antelope and dry woodland habitats.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'chimanimani-national-park',
+        name: 'Chimanimani National Park',
+        region: 'Manicaland',
+        weatherLocation: 'Chimanimani, Zimbabwe',
+        eventLocationAliases: ['Chimanimani National Park', 'Chimanimani Mountains'],
+        coordinates: { latitude: -19.8362, longitude: 33.0122 },
+        creator: 'Highlands Collective',
+        uploads: '77 tagged clips',
+        liveSignal: 'Mountain park clips',
+        description:
+          "Chimanimani National Park protects quartzite peaks, montane grassland, caves, streams and cross-border mountain wilderness on the Mozambique frontier. It is one of Zimbabwe's strongest hiking and wilderness parks.",
+        language: 'Manyika Shona',
+        phrase: 'Maswera sei?',
+        translation: 'How has your day been?',
+      }),
+      createAtlasSpot({
+        id: 'matobo-national-park',
+        name: 'Matobo National Park',
+        region: 'Matabeleland South',
+        weatherLocation: 'Bulawayo, Zimbabwe',
+        eventLocationAliases: ['Matobo National Park', 'Matopos National Park', 'Matobo'],
+        coordinates: { latitude: -20.4892, longitude: 28.5326 },
+        creator: 'Matobo Heritage Walks',
+        uploads: '119 tagged clips',
+        liveSignal: 'Rhino tracking clips',
+        description:
+          "Matobo National Park protects granite kopjes, balancing rocks, rock art sites and one of Zimbabwe's best rhino tracking landscapes. It sits within the wider Matobo Hills cultural landscape south of Bulawayo.",
+        language: 'Ndebele',
+        phrase: 'Linjani?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'victoria-falls-national-park',
+        name: 'Victoria Falls National Park',
+        region: 'Matabeleland North',
+        weatherLocation: 'Victoria Falls, Zimbabwe',
+        eventLocationAliases: ['Victoria Falls National Park', 'Victoria Falls Rainforest', 'Mosi-oa-Tunya'],
+        coordinates: { latitude: -17.9471, longitude: 25.8449 },
+        creator: 'Zambezi Creators Guild',
+        uploads: '154 tagged clips',
+        liveSignal: 'Rainforest viewpoints',
+        description:
+          'Victoria Falls National Park protects the Zimbabwean rainforest viewpoints and gorge-edge walks beside Mosi-oa-Tunya. It is the formal protected area around the falls, spray forest and Zambezi edge.',
+        language: 'Nambya',
+        phrase: 'Mwabonwa',
+        translation: 'A warm greeting used around Hwange and Victoria Falls.',
+      }),
+      createAtlasSpot({
+        id: 'sengwa-wildlife-research-area',
+        name: 'Sengwa Wildlife Research Area',
+        region: 'Midlands',
+        weatherLocation: 'Gokwe, Zimbabwe',
+        eventLocationAliases: ['Sengwa Wildlife Research Area', 'Sengwa Wildlife Area', 'Sengwa Research Area'],
+        coordinates: { latitude: -18.0778, longitude: 28.1948 },
+        creator: 'Sebungwe Wildlife Routes',
+        uploads: '24 tagged clips',
+        liveSignal: 'Research area clips',
+        description:
+          'Sengwa Wildlife Research Area is a remote north-western Zimbabwe conservation and research landscape in the Gokwe/Sebungwe region. It is known for dry woodland, riverine habitat and long-running wildlife ecology work.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'chitungwiza',
+        name: 'Chitungwiza',
+        region: 'Harare Metropolitan',
+        weatherLocation: 'Harare, Zimbabwe',
+        eventLocationAliases: ['Chitungwiza', 'Chitungwiza City'],
+        coordinates: { latitude: -18.0143, longitude: 31.0727 },
+        creator: 'Urban Pulse Tours',
+        uploads: '83 tagged clips',
+        liveSignal: 'Township culture clips',
+        description:
+          "Chitungwiza is one of Zimbabwe's largest urban centres, south of Harare. It is known for township culture, music, markets, dense neighbourhood life and commuter routes into the capital.",
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'epworth',
+        name: 'Epworth',
+        region: 'Harare Metropolitan',
+        weatherLocation: 'Harare, Zimbabwe',
+        eventLocationAliases: ['Epworth', 'Epworth Town'],
+        coordinates: { latitude: -17.8877, longitude: 31.1568 },
+        creator: 'Harare City Walks',
+        uploads: '55 tagged clips',
+        liveSignal: 'Granite township clips',
+        description:
+          'Epworth is a large settlement south-east of Harare, closely associated with granite outcrops, balancing rocks and fast-growing urban communities. It gives context to the nearby Epworth Balancing Rocks monument.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'chinhoyi',
+        name: 'Chinhoyi',
+        region: 'Mashonaland West',
+        weatherLocation: 'Chinhoyi, Zimbabwe',
+        eventLocationAliases: ['Chinhoyi', 'Chinhoyi Town'],
+        coordinates: { latitude: -17.3615, longitude: 30.1929 },
+        creator: 'Mashonaland West Routes',
+        uploads: '61 tagged clips',
+        liveSignal: 'Provincial town clips',
+        description:
+          'Chinhoyi is the Mashonaland West provincial capital and a gateway to Chinhoyi Caves, Karoi, Kariba and the Zambezi Valley. It is an important farming, university and road-trip stop on the Harare-Kariba route.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'karoi',
+        name: 'Karoi',
+        region: 'Mashonaland West',
+        weatherLocation: 'Kariba, Zimbabwe',
+        eventLocationAliases: ['Karoi', 'Karoi Town'],
+        coordinates: { latitude: -16.8190, longitude: 29.6837 },
+        creator: 'Zambezi Valley Routes',
+        uploads: '39 tagged clips',
+        liveSignal: 'Kariba road clips',
+        description:
+          'Karoi is a major farming and service town on the road from Harare to Kariba and the Zambezi Valley. It is a practical stop for supplies before Makuti, Mana Pools and Kariba routes.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'shurugwi',
+        name: 'Shurugwi',
+        region: 'Midlands',
+        weatherLocation: 'Gweru, Zimbabwe',
+        eventLocationAliases: ['Shurugwi', 'Selukwe'],
+        coordinates: { latitude: -19.6682, longitude: 30.0004 },
+        creator: 'Midlands Roadtrippers',
+        uploads: '35 tagged clips',
+        liveSignal: 'Mining town clips',
+        description:
+          'Shurugwi is a Midlands mining town known historically as Selukwe, set among hills south-east of Gweru. The town connects mining heritage, chrome country and scenic Midlands road routes.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'murehwa',
+        name: 'Murehwa',
+        region: 'Mashonaland East',
+        weatherLocation: 'Harare, Zimbabwe',
+        eventLocationAliases: ['Murehwa', 'Mrehwa'],
+        coordinates: { latitude: -17.8044, longitude: 31.8388 },
+        creator: 'Mashonaland East Routes',
+        uploads: '31 tagged clips',
+        liveSignal: 'Growth point clips',
+        description:
+          'Murehwa is a major service centre in Mashonaland East, known for rural markets, granite hills and routes toward Mutoko and Nyamapanda. It gives the atlas stronger coverage east of Harare.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'shamva',
+        name: 'Shamva',
+        region: 'Mashonaland Central',
+        weatherLocation: 'Bindura, Zimbabwe',
+        eventLocationAliases: ['Shamva', 'Shamva Town'],
+        coordinates: { latitude: -17.3125, longitude: 31.5785 },
+        creator: 'Mashonaland Central Routes',
+        uploads: '29 tagged clips',
+        liveSignal: 'Mining town clips',
+        description:
+          'Shamva is a mining and farming town in Mashonaland Central, north-east of Harare. It helps cover the Bindura-Shamva-Mazowe corridor and the rural routes toward the northern escarpment.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'lake-kariba',
+        name: 'Lake Kariba',
+        region: 'Mashonaland West',
+        weatherLocation: 'Kariba, Zimbabwe',
+        eventLocationAliases: ['Lake Kariba', 'Kariba Reservoir', 'Kariba Recreational Park'],
+        coordinates: { latitude: -16.9167, longitude: 28.0000 },
+        creator: 'Kariba Voyager',
+        uploads: '221 tagged clips',
+        liveSignal: 'Houseboat lake clips',
+        description:
+          'Lake Kariba is the enormous Zambezi reservoir shared by Zimbabwe and Zambia, stretching from the dam wall toward Binga and Mlibizi. It is central to houseboats, fishing, sunsets, lakeshore wildlife and Matusadona scenery.',
+        language: 'Tonga',
+        phrase: 'Mwapona buti',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'tokwe-mukorsi-dam',
+        name: 'Tokwe-Mukorsi Dam',
+        region: 'Masvingo',
+        weatherLocation: 'Masvingo, Zimbabwe',
+        eventLocationAliases: ['Tokwe-Mukorsi Dam', 'Tugwi-Mukosi Dam', 'Tugwi Mukosi'],
+        coordinates: { latitude: -20.6879, longitude: 30.8231 },
+        creator: 'Masvingo Water Routes',
+        uploads: '42 tagged clips',
+        liveSignal: 'Reservoir clips',
+        description:
+          "Tokwe-Mukorsi Dam is one of Zimbabwe's largest inland reservoirs, south of Masvingo. It supports irrigation, fishing, boating prospects and new lakeside tourism routes in the Lowveld gateway.",
+        language: 'Karanga Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'mazvikadei-dam',
+        name: 'Mazvikadei Dam',
+        region: 'Mashonaland West',
+        weatherLocation: 'Chinhoyi, Zimbabwe',
+        eventLocationAliases: ['Mazvikadei Dam', 'Mazvikadei'],
+        coordinates: { latitude: -17.2204, longitude: 30.3874 },
+        creator: 'Mashonaland West Outdoors',
+        uploads: '36 tagged clips',
+        liveSignal: 'Dam wall clips',
+        description:
+          'Mazvikadei Dam is a major reservoir in Mashonaland West, popular for fishing, boating, lodges and weekend escapes from Harare and Chinhoyi. It fills an important gap in the atlas west of the capital.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'manyuchi-dam',
+        name: 'Manyuchi Dam',
+        region: 'Masvingo',
+        weatherLocation: 'Masvingo, Zimbabwe',
+        eventLocationAliases: ['Manyuchi Dam', 'Manyuchi'],
+        coordinates: { latitude: -21.0728, longitude: 30.3807 },
+        creator: 'Southern Lowveld Routes',
+        uploads: '27 tagged clips',
+        liveSignal: 'Mwenezi dam clips',
+        description:
+          'Manyuchi Dam sits on the Mwenezi River in southern Masvingo Province. It is a major irrigation and fishing reservoir for the dry Lowveld between Mwenezi, Mberengwa and Beitbridge routes.',
+        language: 'Karanga Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'osborne-dam',
+        name: 'Osborne Dam',
+        region: 'Manicaland',
+        weatherLocation: 'Mutare, Zimbabwe',
+        eventLocationAliases: ['Osborne Dam', 'Osborne Dam Recreational Park'],
+        coordinates: { latitude: -18.7664, longitude: 32.4856 },
+        creator: 'Manicaland Water Routes',
+        uploads: '33 tagged clips',
+        liveSignal: 'Odzi reservoir clips',
+        description:
+          'Osborne Dam is a large reservoir on the Odzi River north-west of Mutare. It supports irrigation, fishing, boating and Manicaland recreational routes around a broad inland lake landscape.',
+        language: 'Manyika Shona',
+        phrase: 'Maswera sei?',
+        translation: 'How has your day been?',
+      }),
+      createAtlasSpot({
+        id: 'mtshabezi-dam',
+        name: 'Mtshabezi Dam',
+        region: 'Matabeleland South',
+        weatherLocation: 'Gwanda, Zimbabwe',
+        eventLocationAliases: ['Mtshabezi Dam', 'Mtsabezi Dam'],
+        coordinates: { latitude: -20.7289, longitude: 28.8940 },
+        creator: 'Matabeleland South Routes',
+        uploads: '26 tagged clips',
+        liveSignal: 'Dam country clips',
+        description:
+          'Mtshabezi Dam is a major Matabeleland South reservoir near Gwanda, important for water supply and rural landscapes. It adds coverage for the dry southern dam network beyond Umzingwane.',
+        language: 'Ndebele',
+        phrase: 'Linjani?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'zambezi-river',
+        name: 'Zambezi River',
+        region: 'Matabeleland North',
+        weatherLocation: 'Victoria Falls, Zimbabwe',
+        eventLocationAliases: ['Zambezi River', 'Zambezi'],
+        coordinates: { latitude: -16.9503, longitude: 27.8677 },
+        creator: 'Zambezi Creators Guild',
+        uploads: '233 tagged clips',
+        liveSignal: 'River corridor clips',
+        description:
+          "The Zambezi River forms Zimbabwe's northern frontier and anchors Victoria Falls, Lake Kariba, Matusadona, Mana Pools and the great canoe safari corridor. It is the country's defining river landscape.",
+        language: 'Tonga',
+        phrase: 'Mwapona buti',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'limpopo-river',
+        name: 'Limpopo River',
+        region: 'Matabeleland South',
+        weatherLocation: 'Beitbridge, Zimbabwe',
+        eventLocationAliases: ['Limpopo River', 'Vhembe'],
+        coordinates: { latitude: -22.2500, longitude: 31.1667 },
+        creator: 'Southern Border Routes',
+        uploads: '44 tagged clips',
+        liveSignal: 'Border river clips',
+        description:
+          "The Limpopo River forms Zimbabwe's southern border with South Africa through dry Lowveld country. It is tied to Beitbridge, Crooks Corner, floodplain pans and the southern transfrontier conservation corridor.",
+        language: 'Venda',
+        phrase: 'Ndaa',
+        translation: 'Hello.',
+      }),
+      createAtlasSpot({
+        id: 'save-river',
+        name: 'Save River',
+        region: 'Manicaland',
+        weatherLocation: 'Chipinge, Zimbabwe',
+        eventLocationAliases: ['Save River', 'Sabi River'],
+        coordinates: { latitude: -20.5311, longitude: 32.2914 },
+        creator: 'Save Valley Routes',
+        uploads: '51 tagged clips',
+        liveSignal: 'River crossing clips',
+        description:
+          "The Save River drains south-eastern Zimbabwe and shapes the Lowveld around Birchenough Bridge, Save Valley and Chipinge. It is one of the country's most important river corridors.",
+        language: 'Ndau',
+        phrase: 'Mhoroi',
+        translation: 'Hello.',
+      }),
+      createAtlasSpot({
+        id: 'runde-river',
+        name: 'Runde River',
+        region: 'Masvingo',
+        weatherLocation: 'Chiredzi, Zimbabwe',
+        eventLocationAliases: ['Runde River', 'Lundi River'],
+        coordinates: { latitude: -20.9585, longitude: 30.9069 },
+        creator: 'Lowveld Wild Guides',
+        uploads: '48 tagged clips',
+        liveSignal: 'Gonarezhou river clips',
+        description:
+          'The Runde River cuts across the southern Lowveld and through Gonarezhou, carving scenery around Chilojo Cliffs before joining the Save system. It is one of the key wildlife rivers in south-eastern Zimbabwe.',
+        language: 'Shangani',
+        phrase: 'Avuxeni',
+        translation: 'Good morning.',
+      }),
+      createAtlasSpot({
+        id: 'pungwe-river',
+        name: 'Pungwe River',
+        region: 'Manicaland',
+        weatherLocation: 'Nyanga, Zimbabwe',
+        eventLocationAliases: ['Pungwe River', 'Pungwe', 'Pungwe Gorge'],
+        coordinates: { latitude: -18.4215, longitude: 32.7808 },
+        creator: 'Eastern Highlands Explorers',
+        uploads: '39 tagged clips',
+        liveSignal: 'Highland river clips',
+        description:
+          'The Pungwe River rises in the Eastern Highlands below Mount Nyangani before flowing toward Mozambique. Around Nyanga it forms dramatic gorge scenery, waterfalls and highland hiking routes.',
+        language: 'Manyika Shona',
+        phrase: 'Maswera sei?',
+        translation: 'How has your day been?',
+      }),
+      createAtlasSpot({
+        id: 'mazowe-river',
+        name: 'Mazowe River',
+        region: 'Mashonaland Central',
+        weatherLocation: 'Bindura, Zimbabwe',
+        eventLocationAliases: ['Mazowe River', 'Mazoe River'],
+        coordinates: { latitude: -17.5430, longitude: 30.9940 },
+        creator: 'Mazowe Valley Tours',
+        uploads: '41 tagged clips',
+        liveSignal: 'Valley river clips',
+        description:
+          'The Mazowe River flows through the Mazowe Valley north of Harare and continues toward the Zambezi system. It connects Mazowe Dam, citrus estates, Bindura country and northern valley routes.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'manyame-river',
+        name: 'Manyame River',
+        region: 'Harare Metropolitan',
+        weatherLocation: 'Harare, Zimbabwe',
+        eventLocationAliases: ['Manyame River', 'Hunyani River'],
+        coordinates: { latitude: -17.9803, longitude: 31.0469 },
+        creator: 'Urban Pulse Tours',
+        uploads: '37 tagged clips',
+        liveSignal: 'River corridor clips',
+        description:
+          "The Manyame River drains the Harare plateau through Chitungwiza and westward toward Lake Chivero and Lake Manyame. It is one of the capital region's most important watercourses.",
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'sanyati-river',
+        name: 'Sanyati River',
+        region: 'Mashonaland West',
+        weatherLocation: 'Kariba, Zimbabwe',
+        eventLocationAliases: ['Sanyati River', 'Sanyati'],
+        coordinates: { latitude: -17.1131, longitude: 28.9211 },
+        creator: 'Zambezi Valley Routes',
+        uploads: '35 tagged clips',
+        liveSignal: 'Zambezi tributary clips',
+        description:
+          'The Sanyati River is a major Zambezi tributary draining parts of the Midlands and Mashonaland West into Lake Kariba. It shapes remote valley landscapes, fishing spots and wildlife corridors.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'gwayi-river',
+        name: 'Gwayi River',
+        region: 'Matabeleland North',
+        weatherLocation: 'Bulawayo, Zimbabwe',
+        eventLocationAliases: ['Gwayi River', 'Gwai River'],
+        coordinates: { latitude: -19.1048, longitude: 27.6810 },
+        creator: 'Matabeleland North Routes',
+        uploads: '34 tagged clips',
+        liveSignal: 'River plains clips',
+        description:
+          "The Gwayi River is one of Matabeleland North's major rivers, draining cattle country, rural settlements and wildlife areas toward the Zambezi basin. It is an important landmark between Lupane, Nkayi and Hwange routes.",
+        language: 'Ndebele',
+        phrase: 'Salibonani',
+        translation: 'Hello to more than one person.',
+      }),
+      createAtlasSpot({
+        id: 'shangani-river',
+        name: 'Shangani River',
+        region: 'Matabeleland North',
+        weatherLocation: 'Bulawayo, Zimbabwe',
+        eventLocationAliases: ['Shangani River', 'Shangani'],
+        coordinates: { latitude: -18.8155, longitude: 28.2647 },
+        creator: 'Matabeleland North Routes',
+        uploads: '32 tagged clips',
+        liveSignal: 'Historic river clips',
+        description:
+          'The Shangani River is a major watercourse of western Zimbabwe, associated with Matabeleland history, cattle country and seasonal river landscapes. It gives the Explore map a stronger western river layer.',
+        language: 'Ndebele',
+        phrase: 'Salibonani',
+        translation: 'Hello to more than one person.',
+      }),
+      createAtlasSpot({
+        id: 'mzingwane-river',
+        name: 'Mzingwane River',
+        region: 'Matabeleland South',
+        weatherLocation: 'Gwanda, Zimbabwe',
+        eventLocationAliases: ['Mzingwane River', 'Umzingwane River'],
+        coordinates: { latitude: -21.1818, longitude: 29.3610 },
+        creator: 'Matabeleland South Routes',
+        uploads: '31 tagged clips',
+        liveSignal: 'Southern river clips',
+        description:
+          "The Mzingwane River drains Matabeleland South toward the Limpopo basin, linking Gwanda, Umzingwane Dam country and dry southern cattle landscapes. It is one of the region's defining rivers.",
+        language: 'Ndebele',
+        phrase: 'Linjani?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'munyati-river',
+        name: 'Munyati River',
+        region: 'Midlands',
+        weatherLocation: 'Kwekwe, Zimbabwe',
+        eventLocationAliases: ['Munyati River', 'Munyati'],
+        coordinates: { latitude: -18.3056, longitude: 29.4852 },
+        creator: 'Midlands Water Routes',
+        uploads: '30 tagged clips',
+        liveSignal: 'Midlands river clips',
+        description:
+          'The Munyati River drains central Zimbabwe through the Midlands and Mashonaland West, feeding reservoirs and agricultural landscapes. It is an important hydrological link between Kwekwe, Kadoma and the Sanyati system.',
+        language: 'Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'mwenezi-river',
+        name: 'Mwenezi River',
+        region: 'Masvingo',
+        weatherLocation: 'Masvingo, Zimbabwe',
+        eventLocationAliases: ['Mwenezi River', 'Nuanetsi River'],
+        coordinates: { latitude: -21.4188, longitude: 30.7073 },
+        creator: 'Southern Lowveld Routes',
+        uploads: '28 tagged clips',
+        liveSignal: 'Lowveld river clips',
+        description:
+          'The Mwenezi River is a major southern Zimbabwe river flowing through dry Lowveld country toward the Limpopo system. It links Manyuchi Dam, Mwenezi District and the wildlife landscapes around Malapati and Gonarezhou approaches.',
+        language: 'Karanga Shona',
+        phrase: 'Makadii?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'bubi-river',
+        name: 'Bubi River',
+        region: 'Matabeleland South',
+        weatherLocation: 'Beitbridge, Zimbabwe',
+        eventLocationAliases: ['Bubi River', 'Bubi'],
+        coordinates: { latitude: -22.2199, longitude: 31.0179 },
+        creator: 'Southern Border Routes',
+        uploads: '24 tagged clips',
+        liveSignal: 'Limpopo tributary clips',
+        description:
+          'The Bubi River drains Matabeleland South toward the Limpopo basin, passing through dry southern landscapes around Gwanda, Mwenezi and Beitbridge routes. It is one of the key tributaries in the south-west.',
+        language: 'Ndebele',
+        phrase: 'Linjani?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'odzi-river',
+        name: 'Odzi River',
+        region: 'Manicaland',
+        weatherLocation: 'Mutare, Zimbabwe',
+        eventLocationAliases: ['Odzi River', 'Odzi'],
+        coordinates: { latitude: -19.4723, longitude: 32.5172 },
+        creator: 'Manicaland Water Routes',
+        uploads: '25 tagged clips',
+        liveSignal: 'Save tributary clips',
+        description:
+          "The Odzi River is a major Manicaland tributary of the Save system, feeding Osborne Dam and farming landscapes west of Mutare. It anchors a large part of Manicaland's inland water story.",
+        language: 'Manyika Shona',
+        phrase: 'Maswera sei?',
+        translation: 'How has your day been?',
+      }),
+      createAtlasSpot({
+        id: 'upper-ncema-dam',
+        name: 'Upper Ncema Dam',
+        region: 'Matabeleland South',
+        weatherLocation: 'Bulawayo, Zimbabwe',
+        eventLocationAliases: ['Upper Ncema Dam', 'Upper Ncema'],
+        coordinates: { latitude: -20.3023, longitude: 28.9870 },
+        creator: 'Bulawayo Water Routes',
+        uploads: '21 tagged clips',
+        liveSignal: 'Bulawayo supply dam clips',
+        description:
+          "Upper Ncema Dam is part of the Matabeleland South dam network that supports Bulawayo's water supply. It sits in dry granite country south-east of the city, close to other Ncema and Umzingwane catchments.",
+        language: 'Ndebele',
+        phrase: 'Linjani?',
+        translation: 'How are you?',
+      }),
+      createAtlasSpot({
+        id: 'nyangombe-falls',
+        name: 'Nyangombe Falls',
+        region: 'Manicaland',
+        weatherLocation: 'Nyanga, Zimbabwe',
+        eventLocationAliases: ['Nyangombe Falls', 'Nyanga Falls'],
+        coordinates: { latitude: -18.2850, longitude: 32.6788 },
+        creator: 'Nyanga Trail Notes',
+        uploads: '47 tagged clips',
+        liveSignal: 'Waterfall route clips',
+        description:
+          'Nyangombe Falls is a major waterfall stop inside the Nyanga highlands, close to the park roads and trout-country routes. Its cascades and pools are among the most accessible waterfall experiences in Nyanga.',
+        language: 'Manyika Shona',
+        phrase: 'Maswera sei?',
+        translation: 'How has your day been?',
+      }),
     ],
     []
+  );
+
+  const locationFilterOptions = useMemo(
+    () => [
+      { key: 'All', label: 'All' },
+      ...atlasSpots.map(spot => ({ key: spot.name, label: spot.name })),
+    ],
+    [atlasSpots]
   );
 
   const [activeCategory, setActiveCategory] = useState('All');
   const [activeSpotId, setActiveSpotId] = useState('');
   const [mapLoaded, setMapLoaded] = useState(false);
+  const [detailCardVisible, setDetailCardVisible] = useState(false);
+  const detailCardAnim = useRef(new Animated.Value(0)).current;
+  const lastDetailSpot = useRef<AtlasSpot | null>(null);
   const [forecastBySpotId, setForecastBySpotId] = useState<Record<string, WeatherDay[]>>({});
   const [events, setEvents] = useState<EventCardItem[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
@@ -1003,6 +3678,11 @@ export default function ExploreScreen() {
   const selectedSpotId = selectedSpot?.id;
   const selectedWeatherLocation = selectedSpot?.weatherLocation;
   const selectedForecast = selectedSpotId ? forecastBySpotId[selectedSpotId] : undefined;
+  const detailSpot = detailCardVisible ? (selectedSpot ?? lastDetailSpot.current) : null;
+  const detailWildlifeSightings = useMemo(
+    () => (detailSpot ? getWildlifeSightings(detailSpot) : []),
+    [detailSpot]
+  );
   const galleryImages = selectedSpot ? [selectedSpot.image] : [];
   const languagePhraseOptions = useMemo(
     () => (selectedSpot ? getLanguagePhraseOptions(selectedSpot) : []),
@@ -1065,16 +3745,51 @@ export default function ExploreScreen() {
   const mapHtml = useMemo(
     () =>
       buildZimbabweMapHtml(atlasSpots, '', colorScheme === 'dark'),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [colorScheme, atlasSpots] // filteredSpots/activeSpotId intentionally omitted — active state is updated via injectJavaScript
   );
 
   // Reset shimmer whenever the map HTML rebuilds (e.g. theme switch)
   useEffect(() => { setMapLoaded(false); }, [mapHtml]);
 
+  // Enable LayoutAnimation on Android
+  useEffect(() => {
+    if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+      UIManager.setLayoutAnimationEnabledExperimental(true);
+    }
+  }, []);
+
+  // Animate detail card in/out when selected spot changes
+  useEffect(() => {
+    if (selectedSpot) {
+      lastDetailSpot.current = selectedSpot;
+      if (!detailCardVisible) {
+        LayoutAnimation.configureNext({
+          duration: 350,
+          create: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity, duration: 350 },
+          update: { type: LayoutAnimation.Types.spring, springDamping: 0.82 },
+        });
+        setDetailCardVisible(true);
+        detailCardAnim.setValue(0);
+        Animated.spring(detailCardAnim, { toValue: 1, useNativeDriver: true, tension: 72, friction: 9 }).start();
+      }
+    } else if (detailCardVisible) {
+      Animated.timing(detailCardAnim, {
+        toValue: 0, duration: 220, useNativeDriver: true, easing: Easing.out(Easing.ease),
+      }).start(() => {
+        LayoutAnimation.configureNext({
+          duration: 300,
+          update: { type: LayoutAnimation.Types.spring, springDamping: 0.85 },
+        });
+        setDetailCardVisible(false);
+      });
+    }
+  }, [selectedSpot]);
+
   const webViewRef = useRef<InstanceType<typeof WebView>>(null);
 
-  const injectActiveMarker = useCallback((id: string) => {
+  const injectActiveMarker = useCallback((id: string, lat?: number, lng?: number) => {
+    const panJs = (id && lat != null && lng != null)
+      ? `if(window._leafletMap){window._leafletMap.panTo([${lat},${lng}],{animate:true,duration:0.5,easeLinearity:0.25});}` : '';
     const js = `(function(){
       document.querySelectorAll('.map-marker').forEach(function(el){
         el.classList.remove('is-active');
@@ -1095,19 +3810,23 @@ export default function ExploreScreen() {
         var icon = el.parentElement;
         if(icon) icon.style.zIndex = '9999';
       }
+      ${panJs}
       true;
     })();`;
     webViewRef.current?.injectJavaScript(js);
   }, []);
 
   useEffect(() => {
-    injectActiveMarker(selectedSpot?.id ?? '');
+    injectActiveMarker(
+      selectedSpot?.id ?? '',
+      selectedSpot?.coordinates.latitude,
+      selectedSpot?.coordinates.longitude,
+    );
   }, [selectedSpot?.id, injectActiveMarker]);
 
   const handleMapLoad = useCallback(() => {
     setMapLoaded(true);
     injectActiveMarker(selectedSpot?.id ?? '');
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [injectActiveMarker, selectedSpot?.id]);
 
   const cardBackground = useMemo(
@@ -1120,9 +3839,9 @@ export default function ExploreScreen() {
 
   const mutedTextColor = colorScheme === 'dark' ? 'rgba(242,242,247,0.72)' : 'rgba(60,60,67,0.72)';
   const subtleTextColor = colorScheme === 'dark' ? 'rgba(242,242,247,0.58)' : 'rgba(60,60,67,0.58)';
+  const wildlifeIconColor = colorScheme === 'dark' ? '#FFFFFF' : '#111111';
   const atlasBorderColor =
     colorScheme === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(31,31,31,0.08)';
-  const atlasLocationPillColors = getProfileLocationPillColors(colorScheme, 'overlay');
   const weatherPillStyle =
     colorScheme === 'dark' ? styles.weatherDayPillDark : styles.weatherDayPillLight;
   const weatherTextColor = theme.tint;
@@ -1257,7 +3976,10 @@ export default function ExploreScreen() {
     (event: WebViewMessageEvent) => {
       try {
         const payload = JSON.parse(event.nativeEvent.data) as { type?: string; id?: string };
-        if (
+        if (payload.type === 'mapReady') {
+          setMapLoaded(true);
+          injectActiveMarker(selectedSpot?.id ?? '');
+        } else if (
           payload.type === 'selectSpot' &&
           typeof payload.id === 'string'
         ) {
@@ -1271,7 +3993,7 @@ export default function ExploreScreen() {
         // Ignore non-JSON WebView messages.
       }
     },
-    [atlasSpots]
+    [atlasSpots, injectActiveMarker, selectedSpot?.id]
   );
 
   const handleCloseStory = useCallback(() => {
@@ -1502,7 +4224,9 @@ export default function ExploreScreen() {
           />
 
           {atlasSpots.length > 0 ? (
+
             <View style={styles.atlasSection}>
+              {/* Map Card */}
               <View style={[styles.atlasCard, cardBackground, { borderColor: atlasBorderColor }]}>
                 <View style={styles.mapStage}>
                   <View style={styles.mapBackdrop} />
@@ -1528,63 +4252,148 @@ export default function ExploreScreen() {
                     )}
                   </View>
                 </View>
-
-                {selectedSpot ? (
-                <ImageBackground
-                  source={{ uri: selectedSpot.image }}
-                  style={styles.atlasDetailBackground}
-                  imageStyle={styles.atlasDetailImage}
-                  resizeMode="cover"
-                >
-                  <View style={styles.atlasDetailScrim} />
-                  <View style={styles.atlasDetail}>
-                    <View style={styles.atlasHeaderRow}>
-                      <View
-                        style={[
-                          styles.atlasTitlePill,
-                          {
-                            backgroundColor: atlasLocationPillColors.background,
-                            borderColor: atlasLocationPillColors.border,
-                          },
-                        ]}
-                      >
-                        <ThemedText
-                          style={[
-                            styles.atlasTitlePillText,
-                            { color: atlasLocationPillColors.text },
-                          ]}
-                          numberOfLines={1}
-                          ellipsizeMode="tail"
-                        >
-                          {selectedSpot.name}
-                        </ThemedText>
-                      </View>
-                      <View style={styles.atlasMetaRow}>
-                        <ProfileLocationPill
-                          label={selectedSpot.region}
-                          backgroundColor={atlasLocationPillColors.background}
-                          iconBackgroundColor={atlasLocationPillColors.iconBackground}
-                          iconColor={atlasLocationPillColors.icon}
-                          textColor={atlasLocationPillColors.text}
-                          style={styles.atlasRegionPill}
-                        />
-                      </View>
-                    </View>
-
-                    <ThemedText type="default" style={styles.atlasDescription}>
-                      {selectedSpot.description}
-                    </ThemedText>
-                  </View>
-                </ImageBackground>
-                ) : (
-                  <View style={{ alignItems: 'center', justifyContent: 'center', paddingVertical: 20, gap: 6 }}>
-                    <Ionicons name="location-outline" size={24} color={mutedTextColor} />
-                    <ThemedText type="caption" style={{ color: mutedTextColor, textAlign: 'center' }}>
-                      Tap a pin to explore a location
-                    </ThemedText>
-                  </View>
-                )}
               </View>
+
+              {/* Image/Details Card — slides in when a location is selected */}
+              {detailCardVisible && (
+                <Animated.View
+                  style={{
+                    opacity: detailCardAnim,
+                    transform: [{
+                      scale: detailCardAnim.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] }),
+                    }, {
+                      translateY: detailCardAnim.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }),
+                    }],
+                  }}
+                >
+                  <View style={[styles.atlasCard, cardBackground, { borderColor: atlasBorderColor }]}>
+                    {detailSpot && (
+                      <>
+                        <ImageBackground
+                          source={{ uri: detailSpot.image }}
+                          style={styles.atlasDetailHero}
+                          imageStyle={styles.atlasDetailImage}
+                          resizeMode="cover"
+                        >
+                          <View style={styles.atlasDetailScrim} />
+                          <View style={styles.atlasDetailHeroContent}>
+                            <ThemedText
+                              style={styles.atlasHeroTitle}
+                              numberOfLines={2}
+                              adjustsFontSizeToFit
+                              minimumFontScale={0.78}
+                            >
+                              {detailSpot.name}
+                            </ThemedText>
+                            <View style={styles.atlasHeroMetaRow}>
+                              <View style={styles.atlasHeroMetaItem}>
+                                <Ionicons name="location-outline" size={14} color="#FFFFFF" />
+                                <ThemedText style={styles.atlasHeroMetaText}>
+                                  {detailSpot.region}
+                                </ThemedText>
+                              </View>
+                              <View style={styles.atlasHeroMetaItem}>
+                                <Ionicons name="navigate-outline" size={13} color="#FFFFFF" />
+                                <ThemedText style={styles.atlasHeroMetaText}>
+                                  {Math.abs(detailSpot.coordinates.latitude).toFixed(2)}°S · {detailSpot.coordinates.longitude.toFixed(2)}°E
+                                </ThemedText>
+                              </View>
+                            </View>
+                          </View>
+                        </ImageBackground>
+
+                        <View style={styles.atlasDetailPanel}>
+                          <View style={styles.wildlifeSightingsHeader}>
+                            <View>
+                              <ThemedText
+                                type="caption"
+                                style={[styles.wildlifeSightingsEyebrow, { color: subtleTextColor }]}
+                              >
+                                Wildlife sightings
+                              </ThemedText>
+                              <ThemedText
+                                type="bodyBold"
+                                style={[
+                                  styles.wildlifeSightingsTitle,
+                                  { color: colorScheme === 'dark' ? '#FFFFFF' : '#1C1C1E' },
+                                ]}
+                              >
+                                Animals you might see
+                              </ThemedText>
+                            </View>
+                            <Ionicons
+                              name="paw-outline"
+                              size={22}
+                              color={colorScheme === 'dark' ? '#FFFFFF' : '#1C1C1E'}
+                            />
+                          </View>
+
+                          <View style={styles.wildlifeSightingsGrid}>
+                            {detailWildlifeSightings.map((item, index) => (
+                              <Animated.View
+                                key={item.label}
+                                style={[
+                                  styles.wildlifeSightingTile,
+                                  {
+                                    opacity: detailCardAnim,
+                                    transform: [{
+                                      translateY: detailCardAnim.interpolate({
+                                        inputRange: [0, 1],
+                                        outputRange: [10 + index * 3, 0],
+                                      }),
+                                    }],
+                                  },
+                                ]}
+                              >
+                                <View style={styles.wildlifeSightingIcon}>
+                                  <WildlifeIcon
+                                    name={item.icon}
+                                    color={wildlifeIconColor}
+                                  />
+                                </View>
+                                <ThemedText
+                                  type="caption"
+                                  style={[
+                                    styles.wildlifeSightingName,
+                                    { color: wildlifeIconColor },
+                                  ]}
+                                >
+                                  {item.label}
+                                </ThemedText>
+                                <ThemedText
+                                  type="caption"
+                                  style={[styles.wildlifeSightingNote, { color: subtleTextColor }]}
+                                >
+                                  {item.note}
+                                </ThemedText>
+                              </Animated.View>
+                            ))}
+                          </View>
+
+                          <ThemedText
+                            type="default"
+                            style={[
+                              styles.atlasDescription,
+                              { color: colorScheme === 'dark' ? 'rgba(242,242,247,0.84)' : 'rgba(28,28,30,0.78)' },
+                            ]}
+                          >
+                            {detailSpot.description}
+                          </ThemedText>
+
+                          <View style={styles.atlasDetailFooterRow}>
+                            <View style={styles.atlasDetailMiniStat}>
+                              <Ionicons name="language-outline" size={15} color={mutedTextColor} />
+                              <ThemedText type="caption" style={[styles.atlasDetailMiniStatText, { color: mutedTextColor }]}>
+                                {detailSpot.language}
+                              </ThemedText>
+                            </View>
+                          </View>
+                        </View>
+                      </>
+                    )}
+                  </View>
+                </Animated.View>
+              )}
 
               {selectedSpot && (
               <View style={[styles.weatherCard, cardBackground, { borderColor: atlasBorderColor }]}>
@@ -2257,59 +5066,124 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'transparent',
   },
-  atlasDetailBackground: {
+  atlasDetailHero: {
+    minHeight: 230,
+    padding: 16,
     overflow: 'hidden',
+    justifyContent: 'flex-end',
   },
   atlasDetailImage: {
     transform: [{ scale: 1.02 }],
+    borderRadius: 20,
   },
   atlasDetailScrim: {
     ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.54)',
+    backgroundColor: 'rgba(0,0,0,0.38)',
   },
-  atlasDetail: {
-    padding: 16,
-    gap: 12,
+  atlasDetailHeroContent: {
+    gap: 9,
   },
-  atlasHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  atlasMetaRow: {
-    flex: 1,
-    minWidth: 0,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'flex-end',
-    marginLeft: 'auto',
-  },
-  atlasRegionPill: {
-    alignSelf: 'flex-end',
-    flexShrink: 1,
-  },
-  atlasTitlePill: {
-    alignSelf: 'flex-start',
-    flexShrink: 1,
-    borderWidth: StyleSheet.hairlineWidth,
-    borderRadius: 999,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-  },
-  atlasTitlePillText: {
-    fontSize: responsiveFontSize(12),
-    lineHeight: responsiveLineHeight(12),
+  atlasHeroTitle: {
+    color: '#FFFFFF',
+    fontSize: responsiveFontSize(30),
+    lineHeight: responsiveLineHeight(32),
     fontFamily: Fonts.bold,
-    letterSpacing: 2.8,
+    textShadowColor: 'rgba(0,0,0,0.45)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 8,
+  },
+  atlasHeroMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  atlasHeroMetaItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    minHeight: 22,
+  },
+  atlasHeroMetaText: {
+    color: '#FFFFFF',
+    fontSize: responsiveFontSize(10),
+    lineHeight: responsiveLineHeight(10),
+    fontFamily: Fonts.bold,
+  },
+  atlasDetailPanel: {
+    padding: 16,
+    gap: 15,
+  },
+  wildlifeSightingsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 16,
+  },
+  wildlifeSightingsEyebrow: {
+    fontFamily: Fonts.bold,
     textTransform: 'uppercase',
-    flexShrink: 1,
+    letterSpacing: 0,
+  },
+  wildlifeSightingsTitle: {
+    marginTop: 2,
+    fontSize: responsiveFontSize(18),
+    lineHeight: responsiveLineHeight(20),
+  },
+  wildlifeSightingsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    columnGap: 10,
+    rowGap: 16,
+  },
+  wildlifeSightingTile: {
+    width: 72,
+    minHeight: 88,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: 5,
+  },
+  wildlifeSightingIcon: {
+    width: 50,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  wildlifeSightingName: {
+    fontFamily: Fonts.bold,
+    fontSize: responsiveFontSize(10),
+    lineHeight: responsiveLineHeight(11),
+    textAlign: 'center',
+  },
+  wildlifeSightingNote: {
+    fontFamily: Fonts.bold,
+    fontSize: responsiveFontSize(9),
+    lineHeight: responsiveLineHeight(10),
+    textAlign: 'center',
   },
   atlasDescription: {
-    color: '#FFFFFF',
-    lineHeight: responsiveLineHeight(15),
-    textShadowColor: 'rgba(0,0,0,0.38)',
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 2,
+    lineHeight: responsiveLineHeight(18),
+  },
+  atlasDetailFooterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 10,
+    paddingTop: 2,
+  },
+  atlasDetailMiniStat: {
+    minHeight: 32,
+    borderRadius: 999,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    backgroundColor: 'rgba(142,142,147,0.12)',
+  },
+  atlasDetailMiniStatText: {
+    fontFamily: Fonts.bold,
+    lineHeight: responsiveLineHeight(11),
   },
   aiVisitCard: {
     borderRadius: 20,

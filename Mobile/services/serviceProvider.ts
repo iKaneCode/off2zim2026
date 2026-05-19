@@ -42,6 +42,7 @@ type ProviderCompanyRecord = {
     pending: number;
     disputed: number;
   };
+  reviewSubmittedAt?: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -747,7 +748,7 @@ export const contentReviewService = {
         '/api/admin/providers'
       );
 
-      const reviews = payload.providers
+      const reviews: ContentReview[] = payload.providers
         .filter(provider => provider.onboardingStatus === 'submitted')
         .map(provider => ({
           id: provider.id,
@@ -814,7 +815,7 @@ export const contentReviewService = {
   getMyReviews: async (): Promise<ServiceResult<ContentReview[]>> => {
     try {
       const payload = await getCurrentCompany();
-      const reviews = payload.company.verificationReviews.map(review => ({
+      const reviews: ContentReview[] = payload.company.verificationReviews.map(review => ({
         id: review.id,
         content_type: 'provider' as const,
         content_id: payload.company.id,
@@ -863,7 +864,12 @@ export const providerAnalyticsService = {
 
       for (const listing of listingsPayload.listings) {
         const kind = inferListingKind(listing);
-        const bucket = totals[kind];
+        const bucket =
+          kind === 'destination'
+            ? totals.destinations
+            : kind === 'stay'
+              ? totals.stays
+              : totals.events;
         bucket.total += 1;
         if (listing.status === 'active') {
           bucket.approved += 1;

@@ -30,11 +30,34 @@ interface ActivityItem {
   durationHours?: number;
 }
 
+function normalizeActivityLocationValue(value: string) {
+  return value.toLowerCase().replace(/,\s*zimbabwe\b/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function activityMatchesLocationScope(activityLocation: string, scopeLocations: string[]) {
+  const location = normalizeActivityLocationValue(activityLocation);
+
+  return scopeLocations.some(scope =>
+    scope.includes(location) || location.includes(scope)
+  );
+}
+
 export default function ThingsToDoScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const params = useLocalSearchParams();
   const locationParam = typeof params.location === 'string' && params.location.trim().length > 0 ? params.location.trim() : '';
+  const locationsParam = typeof params.locations === 'string' && params.locations.trim().length > 0 ? params.locations.trim() : '';
+  const scopedLocations = useMemo(
+    () => Array.from(
+      new Set(
+        (locationsParam ? locationsParam.split('|') : locationParam ? [locationParam] : [])
+          .map(normalizeActivityLocationValue)
+          .filter(Boolean)
+      )
+    ),
+    [locationParam, locationsParam]
+  );
 
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,11 +96,8 @@ export default function ThingsToDoScreen() {
   // Filter activities to selected location, then by search query
   const filteredActivities = useMemo(() => {
     let result = activities;
-    if (locationParam) {
-      const loc = locationParam.toLowerCase();
-      result = result.filter(
-        a => a.location.toLowerCase().includes(loc) || loc.includes(a.location.toLowerCase())
-      );
+    if (scopedLocations.length > 0) {
+      result = result.filter(a => activityMatchesLocationScope(a.location, scopedLocations));
     }
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
@@ -86,7 +106,7 @@ export default function ThingsToDoScreen() {
       );
     }
     return result;
-  }, [activities, searchQuery, locationParam]);
+  }, [activities, searchQuery, scopedLocations]);
 
   // Collapsible search section (no filters — scoped to selected location)
   const { searchSection, handleScroll, handleMomentumScrollEnd } = useCollapsibleSearchSection({
@@ -253,7 +273,9 @@ export default function ThingsToDoScreen() {
     [favorites, getHeartScale, toggleFavorite, isDark, nowTick]
   );
 
-  const resolvedLocation = locationParam || 'All locations';
+  const resolvedLocation = locationParam || (
+    scopedLocations.length > 0 ? 'Selected locations' : 'All locations'
+  );
   const pillBgHeader = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)';
   const pillTextColorHeader = isDark ? '#FFFFFF' : '#000000';
   const pillIconBgHeader = isDark ? '#1C1C1E' : '#FFFFFF';

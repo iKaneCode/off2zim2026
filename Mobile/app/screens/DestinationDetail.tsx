@@ -41,7 +41,10 @@ import * as Haptics from 'expo-haptics';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { navigateToStayProfile } from '@/utils/navigationUtils';
 import { pickBestImageUrl, normalizeStorageImageUrl } from '@/utils/imageUtils';
-import { isFavorited as isFavoritedUtil, toggleFavorite as toggleFavoriteUtil } from '@/utils/favoritesUtils';
+import {
+  isFavorited as isFavoritedUtil,
+  toggleFavorite as toggleFavoriteUtil,
+} from '@/utils/favoritesUtils';
 import { destinationsService } from '@/services/database';
 import { weatherService } from '@/services/weather';
 import type { BackendDestination } from '@/types/backend';
@@ -681,7 +684,9 @@ export default function DestinationDetail() {
                             pathname: '/gallery',
                             params: {
                               location: destination.name,
-                              title: 'Photo Gallery',
+                              title: destination.name,
+                              galleryType: 'location',
+                              contextImage: galleryImages[0],
                               images: JSON.stringify(galleryImages),
                               destinationId: destinationId,
                             },
@@ -703,7 +708,9 @@ export default function DestinationDetail() {
                               pathname: '/gallery',
                               params: {
                                 location: destination.name,
-                                title: 'Photo Gallery',
+                                title: destination.name,
+                                galleryType: 'location',
+                                contextImage: galleryImages[0],
                                 images: JSON.stringify(galleryImages),
                                 destinationId: destinationId, // Pass the destinationId for returning back
                               },
@@ -729,7 +736,9 @@ export default function DestinationDetail() {
                               pathname: '/gallery',
                               params: {
                                 location: destination.name,
-                                title: 'Photo Gallery',
+                                title: destination.name,
+                                galleryType: 'location',
+                                contextImage: galleryImages[0],
                                 images: JSON.stringify(galleryImages),
                                 destinationId: destinationId, // Pass the destinationId for returning back
                               },
@@ -1284,7 +1293,12 @@ const styles = StyleSheet.create({
     marginLeft: 10,
   },
   titleRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  destinationTitle: { fontSize: responsiveFontSize(28), fontWeight: 'bold', color: '#FFFFFF', marginBottom: 8 },
+  destinationTitle: {
+    fontSize: responsiveFontSize(28),
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 8,
+  },
   pillIcon: { marginRight: 4 },
   weatherContainer: { alignSelf: 'flex-start' },
   weatherText: { fontSize: responsiveFontSize(16), color: '#FFFFFF', opacity: 0.9 },

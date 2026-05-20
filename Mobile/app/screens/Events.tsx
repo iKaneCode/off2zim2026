@@ -19,11 +19,34 @@ import { ListImageCard } from '@/components/ListImageCard';
 import { ListImageCardSkeleton } from '@/components/ListImageCardSkeleton';
 import { isFavorited as isFavoritedUtil, toggleFavorite as toggleFavoriteUtil, subscribeFavorites, getFavoritedIds } from '@/utils/favoritesUtils';
 
+function normalizeEventLocationValue(value: string) {
+  return value.toLowerCase().replace(/,\s*zimbabwe\b/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function eventMatchesLocationScope(eventLocation: string, scopeLocations: string[]) {
+  const location = normalizeEventLocationValue(eventLocation);
+
+  return scopeLocations.some(scope =>
+    scope.includes(location) || location.includes(scope)
+  );
+}
+
 export default function EventsScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const params = useLocalSearchParams();
   const locationParam = typeof params.location === 'string' && params.location.trim().length > 0 ? params.location.trim() : '';
+  const locationsParam = typeof params.locations === 'string' && params.locations.trim().length > 0 ? params.locations.trim() : '';
+  const scopedLocations = useMemo(
+    () => Array.from(
+      new Set(
+        (locationsParam ? locationsParam.split('|') : locationParam ? [locationParam] : [])
+          .map(normalizeEventLocationValue)
+          .filter(Boolean)
+      )
+    ),
+    [locationParam, locationsParam]
+  );
 
   const [events, setEvents] = useState<Event[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -131,11 +154,8 @@ export default function EventsScreen() {
   // Filter events to selected location, then by search query
   const filteredEvents = useMemo(() => {
     let result = events;
-    if (locationParam) {
-      const loc = locationParam.toLowerCase();
-      result = result.filter(
-        e => e.location.toLowerCase().includes(loc) || loc.includes(e.location.toLowerCase())
-      );
+    if (scopedLocations.length > 0) {
+      result = result.filter(e => eventMatchesLocationScope(e.location, scopedLocations));
     }
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
@@ -147,7 +167,7 @@ export default function EventsScreen() {
       );
     }
     return result;
-  }, [events, searchQuery, locationParam]);
+  }, [events, searchQuery, scopedLocations]);
 
   // Collapsible search section (no filters — scoped to selected location)
   const { searchSection, handleScroll, handleMomentumScrollEnd } = useCollapsibleSearchSection({
@@ -310,7 +330,9 @@ export default function EventsScreen() {
     [favorites, getHeartScale, toggleFavorite, isDark]
   );
 
-  const resolvedLocation = locationParam || 'All locations';
+  const resolvedLocation = locationParam || (
+    scopedLocations.length > 0 ? 'Selected locations' : 'All locations'
+  );
   const pillBgHeader = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)';
   const pillTextColorHeader = isDark ? '#FFFFFF' : '#000000';
   const pillIconBgHeader = isDark ? '#1C1C1E' : '#FFFFFF';

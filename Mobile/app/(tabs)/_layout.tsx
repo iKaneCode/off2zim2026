@@ -142,7 +142,7 @@ export default function TabLayout() {
           title: 'Explore',
           headerShown: false, // Use custom header instead of the default tab header
           tabBarIcon: ({ color, focused }) => (
-            <TabBarIcon name="play-circle" focused={focused} color={color} size={24} />
+            <TabBarIcon name="earth" focused={focused} color={color} size={24} />
           ),
           tabBarLabel: ({ focused, color }) => (
             <AnimatedTabLabel focused={focused} color={color}>

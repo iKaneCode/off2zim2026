@@ -22,11 +22,19 @@ import { CustomHeader } from '@/components/CustomHeader';
 import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { responsiveFontSize, Fonts } from '@/constants/Fonts';
-import { FontAwesome6, Ionicons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { faHeart as solidHeart } from '@fortawesome/free-solid-svg-icons';
 import { faHeart as regularHeart, faShareFromSquare } from '@fortawesome/free-regular-svg-icons';
+import { Gesture, GestureDetector } from 'react-native-gesture-handler';
+import Reanimated, {
+  runOnJS,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
+import { Asset } from 'expo-asset';
 import { isFavorited as isFavoritedUtil } from '@/utils/favoritesUtils';
 import {
   PushScreenOptions,
@@ -36,11 +44,40 @@ import {
 } from '@/components';
 
 // Dimensions for layout calculations
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 const SPACING = 2;
 const CONTAINER_PADDING = 16; // Consistent padding for the container
 const THUMBNAIL_WIDTH = (width - CONTAINER_PADDING * 2 - SPACING * 6) / 3; // 3 images per row with even spacing
 const THUMBNAIL_HEIGHT = (THUMBNAIL_WIDTH * 3) / 4; // 4:3 aspect ratio
+const FILMSTRIP_HOLES = Array.from({ length: 6 }, (_, index) => index);
+const FILMSTRIP_FRAME_WIDTH = 78;
+const MIN_FILMSTRIP_FRAMES = 4;
+const MIN_VISIBLE_FILMSTRIP_FRAMES = Math.max(
+  MIN_FILMSTRIP_FRAMES,
+  Math.ceil((width - 28) / FILMSTRIP_FRAME_WIDTH)
+);
+const POLAROID_IMAGE = require('@/assets/images/polaroid.png');
+const POLAROID_ASSET_SIZE = Math.min(width * 1.15, 640);
+const POLAROID_ASSET_SCALE = POLAROID_ASSET_SIZE / 1024;
+const POLAROID_PHOTO_LEFT = 266 * POLAROID_ASSET_SCALE;
+const POLAROID_PHOTO_TOP = 206 * POLAROID_ASSET_SCALE;
+const POLAROID_PHOTO_WIDTH = 538 * POLAROID_ASSET_SCALE;
+const POLAROID_PHOTO_HEIGHT = 480 * POLAROID_ASSET_SCALE;
+// Slot is slightly larger than the opening bounding box so that when rotated by -4.7deg it still covers all 4 corners of the opening
+const POLAROID_SLOT_WIDTH = 600 * POLAROID_ASSET_SCALE;
+const POLAROID_SLOT_HEIGHT = 540 * POLAROID_ASSET_SCALE;
+const POLAROID_SLOT_LEFT = 235 * POLAROID_ASSET_SCALE;  // opening center (535) minus half slot width (300)
+const POLAROID_SLOT_TOP = 176 * POLAROID_ASSET_SCALE;   // opening center (446) minus half slot height (270)
+
+const clampOffset = (value: number, max: number) => {
+  'worklet';
+  return Math.min(Math.max(value, -max), max);
+};
+
+const getParamString = (value: string | string[] | undefined) => {
+  if (Array.isArray(value)) return value[0];
+  return typeof value === 'string' ? value : undefined;
+};
 
 export default function GalleryScreen() {
   const params = useLocalSearchParams();
@@ -49,18 +86,46 @@ export default function GalleryScreen() {
   const isDark = colorScheme === 'dark';
   const resolvedLocation =
     typeof location === 'string' && location.trim().length > 0 ? location : 'All locations';
+  const routeTitle = getParamString(params.title)?.trim();
+  const routeContextImage = (
+    getParamString(params.contextImage) ||
+    getParamString(params.profileImage) ||
+    getParamString(params.heroImage)
+  )?.trim();
+  const galleryType = getParamString(params.galleryType);
+  const isLocationGallery = galleryType === 'location';
+  const viewerContextTitle =
+    routeTitle && !/^(photo|stay|activity|event|flight|bus)?\s*gallery$/i.test(routeTitle)
+      ? routeTitle
+      : resolvedLocation;
 
   // State for gallery
   const [images, setImages] = useState<string[]>([]);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [modalVisible, setModalVisible] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState<number>(0);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const filmstripFillerCells = Array.from(
+    { length: Math.max(0, MIN_VISIBLE_FILMSTRIP_FRAMES - images.length) },
+    (_, index) => index
+  );
 
   // State for favorites
   const [favorites, setFavorites] = useState<Record<string, boolean>>({});
   const [heartScale] = useState(new Animated.Value(1));
   const heartScales = useRef<Record<string, Animated.Value>>({}).current;
+  const modalAnim = useRef(new Animated.Value(0)).current;
+  const imageAnim = useRef(new Animated.Value(1)).current;
+  const filmstripRef = useRef<FlatList<string> | null>(null);
+  const viewerTouchStartRef = useRef<{ x: number; y: number } | null>(null);
+  const lastSwipeActionAtRef = useRef(0);
+  const zoomScale = useSharedValue(1);
+  const savedZoomScale = useSharedValue(1);
+  const zoomTranslateX = useSharedValue(0);
+  const zoomTranslateY = useSharedValue(0);
+  const savedTranslateX = useSharedValue(0);
+  const savedTranslateY = useSharedValue(0);
 
   // Get heart scale for specific image
   const getHeartScale = useCallback(
@@ -71,9 +136,10 @@ export default function GalleryScreen() {
     [heartScales]
   );
 
-  // Create state for swipe gesture handling
-  const [startX, setStartX] = useState(0);
-  const [startY, setStartY] = useState(0);
+  // Preload polaroid PNG so it is decoded before the first photo opens
+  useEffect(() => {
+    Asset.fromModule(POLAROID_IMAGE).downloadAsync().catch(() => {});
+  }, []);
 
   // Get images from navigation params or generate samples if not provided
   useEffect(() => {
@@ -129,15 +195,150 @@ export default function GalleryScreen() {
     }
   };
 
+  const focusFilmstripItem = useCallback((index: number, animated = true) => {
+    requestAnimationFrame(() => {
+      try {
+        filmstripRef.current?.scrollToIndex({
+          index,
+          animated,
+          viewPosition: 0.5,
+        });
+      } catch {
+        // The filmstrip is decorative; ignore scroll misses while it measures.
+      }
+    });
+  }, []);
+
+  const resetZoom = useCallback(() => {
+    zoomScale.value = withTiming(1, { duration: 160 });
+    savedZoomScale.value = 1;
+    zoomTranslateX.value = withTiming(0, { duration: 160 });
+    zoomTranslateY.value = withTiming(0, { duration: 160 });
+    savedTranslateX.value = 0;
+    savedTranslateY.value = 0;
+  }, [savedTranslateX, savedTranslateY, savedZoomScale, zoomScale, zoomTranslateX, zoomTranslateY]);
+
   const openImage = (imageUrl: string) => {
-    const index = images.indexOf(imageUrl);
+    const index = Math.max(0, images.indexOf(imageUrl));
     setCurrentImageIndex(index);
     setSelectedImage(imageUrl);
+    resetZoom();
+    modalAnim.setValue(0);
+    imageAnim.setValue(0);
+    setModalVisible(true);
+    focusFilmstripItem(index, false);
+    Animated.parallel([
+      Animated.timing(modalAnim, {
+        toValue: 1,
+        duration: 220,
+        useNativeDriver: true,
+      }),
+      Animated.spring(imageAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        tension: 72,
+        friction: 9,
+      }),
+    ]).start();
   };
 
-  const closeImage = () => {
-    setSelectedImage(null);
-  };
+  const closeImage = useCallback(() => {
+    Animated.timing(modalAnim, {
+      toValue: 0,
+      duration: 180,
+      useNativeDriver: true,
+    }).start(() => {
+      setSelectedImage(null);
+      setModalVisible(false);
+    });
+  }, [modalAnim]);
+
+  const showImageAt = useCallback(
+    (index: number) => {
+      if (index < 0 || index >= images.length || index === currentImageIndex) {
+        return;
+      }
+
+      Haptics.selectionAsync().catch(() => {});
+      imageAnim.setValue(0);
+      resetZoom();
+      setCurrentImageIndex(index);
+      setSelectedImage(images[index]);
+      focusFilmstripItem(index);
+      Animated.spring(imageAnim, {
+        toValue: 1,
+        useNativeDriver: true,
+        tension: 82,
+        friction: 10,
+      }).start();
+    },
+    [currentImageIndex, focusFilmstripItem, imageAnim, images, resetZoom]
+  );
+
+  const handleSwipeDismiss = useCallback(() => {
+    const now = Date.now();
+    if (now - lastSwipeActionAtRef.current < 220) {
+      return;
+    }
+
+    lastSwipeActionAtRef.current = now;
+    closeImage();
+  }, [closeImage]);
+
+  const handleSwipeNavigate = useCallback(
+    (targetIndex: number) => {
+      if (targetIndex < 0 || targetIndex >= images.length) {
+        return;
+      }
+
+      const now = Date.now();
+      if (now - lastSwipeActionAtRef.current < 220) {
+        return;
+      }
+
+      lastSwipeActionAtRef.current = now;
+      showImageAt(targetIndex);
+    },
+    [images.length, showImageAt]
+  );
+
+  const handleViewerTouchStart = useCallback((event: GestureResponderEvent) => {
+    if (event.nativeEvent.touches.length !== 1) {
+      viewerTouchStartRef.current = null;
+      return;
+    }
+
+    viewerTouchStartRef.current = {
+      x: event.nativeEvent.pageX,
+      y: event.nativeEvent.pageY,
+    };
+  }, []);
+
+  const handleViewerTouchEnd = useCallback(
+    (event: GestureResponderEvent) => {
+      const start = viewerTouchStartRef.current;
+      viewerTouchStartRef.current = null;
+
+      if (!start || event.nativeEvent.touches.length > 0 || zoomScale.value > 1.01) {
+        return;
+      }
+
+      const deltaX = event.nativeEvent.pageX - start.x;
+      const deltaY = event.nativeEvent.pageY - start.y;
+      const absX = Math.abs(deltaX);
+      const absY = Math.abs(deltaY);
+
+      if (deltaY > 90 && absY > absX) {
+        handleSwipeDismiss();
+        return;
+      }
+
+      if (absX > 64 && absX > absY) {
+        handleSwipeNavigate(deltaX < 0 ? currentImageIndex + 1 : currentImageIndex - 1);
+      }
+    },
+    [currentImageIndex, handleSwipeDismiss, handleSwipeNavigate, zoomScale]
+  );
 
   // Handle toggling favorite status for current image
   const handleToggleFavorite = useCallback(() => {
@@ -165,14 +366,14 @@ export default function GalleryScreen() {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
 
       await Share.share({
-        message: `Check out this amazing photo from ${location || 'my trip'}!`,
-        title: `Photo from ${location || 'my trip'}`,
+        message: `Check out this amazing photo from ${viewerContextTitle}!`,
+        title: `Photo from ${viewerContextTitle}`,
         url: selectedImage || '',
       });
     } catch {
       // ignore errors
     }
-  }, [selectedImage, location]);
+  }, [selectedImage, viewerContextTitle]);
 
   // Toggle favorite for thumbnail images
   const toggleImageFavorite = useCallback(
@@ -255,7 +456,136 @@ export default function GalleryScreen() {
     );
   };
 
-  // Dynamic pill colors (slightly translucent on both modes) - matching DestinationDetail
+  const selectedImageIsFavorited =
+    !!selectedImage && (!!favorites[selectedImage] || isFavoritedUtil(selectedImage));
+  const viewerBackground = isDark ? '#050505' : '#F2F2F7';
+  const viewerSurface = isDark ? 'rgba(28,28,30,0.82)' : 'rgba(255,255,255,0.88)';
+  const viewerButtonBackground = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(28,28,30,0.06)';
+  const viewerTextColor = isDark ? '#FFFFFF' : '#1C1C1E';
+  const viewerMutedColor = isDark ? 'rgba(242,242,247,0.62)' : 'rgba(60,60,67,0.62)';
+  const viewerDisabledColor = isDark ? 'rgba(242,242,247,0.28)' : 'rgba(60,60,67,0.26)';
+  const viewerImageBackground = isDark ? '#050505' : '#E5E5EA';
+  const filmstripBackground = '#171719';
+  const filmstripHoleColor = '#F2F2F7';
+  const viewerContextImage = routeContextImage || images[0] || selectedImage;
+  const controlsTranslateY = modalAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-12, 0],
+  });
+  const footerTranslateY = modalAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [18, 0],
+  });
+  const imageScale = imageAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.965, 1],
+  });
+  const imageTranslateY = imageAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [10, 0],
+  });
+  const pinchGesture = Gesture.Pinch()
+    .onUpdate(event => {
+      const nextScale = Math.min(Math.max(savedZoomScale.value * event.scale, 1), 4);
+      const scaleChange = nextScale / savedZoomScale.value;
+      const originX = event.focalX - POLAROID_PHOTO_WIDTH / 2;
+      const originY = event.focalY - POLAROID_PHOTO_HEIGHT / 2;
+      const maxX = (POLAROID_PHOTO_WIDTH * (nextScale - 1)) / 2;
+      const maxY = (POLAROID_PHOTO_HEIGHT * (nextScale - 1)) / 2;
+
+      zoomScale.value = nextScale;
+      zoomTranslateX.value = clampOffset(
+        originX - (originX - savedTranslateX.value) * scaleChange,
+        maxX
+      );
+      zoomTranslateY.value = clampOffset(
+        originY - (originY - savedTranslateY.value) * scaleChange,
+        maxY
+      );
+    })
+    .onEnd(() => {
+      if (zoomScale.value <= 1.01) {
+        zoomScale.value = withTiming(1, { duration: 140 });
+        savedZoomScale.value = 1;
+        zoomTranslateX.value = withTiming(0, { duration: 140 });
+        zoomTranslateY.value = withTiming(0, { duration: 140 });
+        savedTranslateX.value = 0;
+        savedTranslateY.value = 0;
+        return;
+      }
+
+      savedZoomScale.value = zoomScale.value;
+      savedTranslateX.value = zoomTranslateX.value;
+      savedTranslateY.value = zoomTranslateY.value;
+    });
+  const panGesture = Gesture.Pan()
+    .onUpdate(event => {
+      if (zoomScale.value <= 1.01) {
+        zoomTranslateX.value = event.translationX * 0.72;
+        zoomTranslateY.value =
+          event.translationY > 0 ? event.translationY : event.translationY * 0.22;
+        return;
+      }
+
+      const maxX = (POLAROID_PHOTO_WIDTH * (zoomScale.value - 1)) / 2;
+      const maxY = (POLAROID_PHOTO_HEIGHT * (zoomScale.value - 1)) / 2;
+      zoomTranslateX.value = clampOffset(savedTranslateX.value + event.translationX, maxX);
+      zoomTranslateY.value = clampOffset(savedTranslateY.value + event.translationY, maxY);
+    })
+    .onEnd(event => {
+      if (zoomScale.value <= 1.01) {
+        const absX = Math.abs(event.translationX);
+        const absY = Math.abs(event.translationY);
+
+        if (event.translationY > 90 && absY > absX) {
+          runOnJS(handleSwipeDismiss)();
+          return;
+        }
+
+        if (absX > 72 && absX > absY) {
+          const targetIndex =
+            event.translationX < 0 ? currentImageIndex + 1 : currentImageIndex - 1;
+
+          if (targetIndex >= 0 && targetIndex < images.length) {
+            runOnJS(handleSwipeNavigate)(targetIndex);
+            return;
+          }
+        }
+
+        zoomTranslateX.value = withTiming(0, { duration: 160 });
+        zoomTranslateY.value = withTiming(0, { duration: 160 });
+        savedTranslateX.value = 0;
+        savedTranslateY.value = 0;
+        return;
+      }
+
+      savedTranslateX.value = zoomTranslateX.value;
+      savedTranslateY.value = zoomTranslateY.value;
+    });
+  const doubleTapGesture = Gesture.Tap()
+    .numberOfTaps(2)
+    .onEnd((_event, success) => {
+      if (!success) {
+        return;
+      }
+
+      const nextScale = zoomScale.value > 1 ? 1 : 2;
+      zoomScale.value = withTiming(nextScale, { duration: 180 });
+      savedZoomScale.value = nextScale;
+      zoomTranslateX.value = withTiming(0, { duration: 180 });
+      zoomTranslateY.value = withTiming(0, { duration: 180 });
+      savedTranslateX.value = 0;
+      savedTranslateY.value = 0;
+    });
+  const imageGesture = Gesture.Simultaneous(pinchGesture, panGesture, doubleTapGesture);
+  const zoomedImageStyle = useAnimatedStyle(() => ({
+    transform: [
+      { translateX: zoomTranslateX.value },
+      { translateY: zoomTranslateY.value },
+      { scale: zoomScale.value },
+    ],
+  }));
+
   return (
     <>
       <PushScreenOptions />
@@ -342,143 +672,323 @@ export default function GalleryScreen() {
               />
             )}
 
-            {/* Full Screen Image Modal with touch handlers for iOS-like swipe */}
+            {/* Full Screen Image Modal */}
             <Modal
-              visible={!!selectedImage}
+              visible={modalVisible}
               transparent={true}
-              animationType="fade"
+              animationType="none"
               onRequestClose={closeImage}
+              statusBarTranslucent
             >
-              <View
+              <Animated.View
                 style={[
                   styles.modalContainer,
-                  {
-                    backgroundColor:
-                      colorScheme === 'dark' ? 'rgba(0, 0, 0, 0.95)' : 'rgba(0, 0, 0, 0.85)',
-                  },
+                  { backgroundColor: viewerBackground, opacity: modalAnim },
                 ]}
               >
-                {/* Close button (top right) */}
-                <TouchableOpacity style={styles.closeButton} onPress={closeImage}>
-                  <Ionicons name="close" size={24} color="#FF3B30" />
-                </TouchableOpacity>
+                <Animated.View
+                  style={[
+                    styles.viewerTopBar,
+                    {
+                      backgroundColor: viewerSurface,
+                      opacity: modalAnim,
+                      transform: [{ translateY: controlsTranslateY }],
+                    },
+                  ]}
+                >
+                  <TouchableOpacity
+                    style={[styles.viewerIconButton, { backgroundColor: viewerButtonBackground }]}
+                    onPress={closeImage}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
+                    <Ionicons name="close" size={22} color={viewerTextColor} />
+                  </TouchableOpacity>
 
-                {/* Top left action buttons */}
-                <View style={styles.topLeftButtons}>
-                  {/* Heart/Favorite button */}
-                  <TouchableOpacity style={styles.topActionButton} onPress={handleToggleFavorite}>
+                  {viewerContextImage && (
+                    <Image
+                      source={{ uri: viewerContextImage }}
+                      style={styles.viewerContextImage}
+                      resizeMode="cover"
+                    />
+                  )}
+
+                  <View style={styles.viewerTitleStack}>
+                    {isLocationGallery ? (
+                      <View
+                        style={[
+                          styles.viewerLocationPill,
+                          { backgroundColor: viewerButtonBackground },
+                        ]}
+                      >
+                        <Ionicons name="location" size={13} color={viewerTextColor} />
+                        <ThemedText
+                          style={[styles.viewerLocationPillText, { color: viewerTextColor }]}
+                          numberOfLines={1}
+                        >
+                          {resolvedLocation}
+                        </ThemedText>
+                      </View>
+                    ) : (
+                      <>
+                        <ThemedText
+                          style={[styles.viewerTitle, { color: viewerTextColor }]}
+                          numberOfLines={1}
+                        >
+                          {viewerContextTitle}
+                        </ThemedText>
+                        {resolvedLocation !== viewerContextTitle && (
+                          <ThemedText
+                            style={[styles.viewerLocation, { color: viewerMutedColor }]}
+                            numberOfLines={1}
+                          >
+                            {resolvedLocation}
+                          </ThemedText>
+                        )}
+                      </>
+                    )}
+                  </View>
+                </Animated.View>
+
+                <View
+                  style={styles.imageViewerContainer}
+                  onTouchStart={handleViewerTouchStart}
+                  onTouchEnd={handleViewerTouchEnd}
+                >
+                  <View style={styles.fullImageFrame}>
+                    {selectedImage && (
+                      <View style={[styles.polaroidAssetFrame, { backgroundColor: viewerBackground }]}>
+                        <View style={styles.polaroidAssetPhotoSlot}>
+                          <GestureDetector gesture={imageGesture}>
+                            <Animated.View
+                              style={[
+                                styles.polaroidAssetPhotoSurface,
+                                {
+                                  opacity: imageAnim,
+                                  transform: [{ translateY: imageTranslateY }, { scale: imageScale }],
+                                },
+                              ]}
+                            >
+                              <Reanimated.Image
+                                key={selectedImage}
+                                source={{ uri: selectedImage }}
+                                style={[styles.polaroidAssetPhoto, zoomedImageStyle]}
+                                resizeMode="cover"
+                              />
+                            </Animated.View>
+                          </GestureDetector>
+                        </View>
+                        <View pointerEvents="none" style={styles.polaroidAssetOverlay}>
+                          <Image
+                            source={POLAROID_IMAGE}
+                            style={styles.polaroidAssetImage}
+                            resizeMode="contain"
+                          />
+                        </View>
+                      </View>
+                    )}
+                  </View>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.navButton,
+                      styles.prevButton,
+                      { backgroundColor: viewerSurface },
+                    ]}
+                    onPressIn={handleViewerTouchStart}
+                    onPressOut={handleViewerTouchEnd}
+                    onPress={() => showImageAt(currentImageIndex - 1)}
+                    disabled={currentImageIndex <= 0}
+                  >
+                    <Ionicons
+                      name="chevron-back"
+                      size={22}
+                      color={currentImageIndex > 0 ? viewerTextColor : viewerDisabledColor}
+                    />
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[
+                      styles.navButton,
+                      styles.nextButton,
+                      { backgroundColor: viewerSurface },
+                    ]}
+                    onPressIn={handleViewerTouchStart}
+                    onPressOut={handleViewerTouchEnd}
+                    onPress={() => showImageAt(currentImageIndex + 1)}
+                    disabled={currentImageIndex >= images.length - 1}
+                  >
+                    <Ionicons
+                      name="chevron-forward"
+                      size={22}
+                      color={
+                        currentImageIndex < images.length - 1
+                          ? viewerTextColor
+                          : viewerDisabledColor
+                      }
+                    />
+                  </TouchableOpacity>
+                </View>
+
+                <Animated.View
+                  style={[
+                    styles.viewerFloatingCounter,
+                    {
+                      backgroundColor: viewerSurface,
+                      opacity: modalAnim,
+                      transform: [{ translateY: footerTranslateY }],
+                    },
+                  ]}
+                >
+                  <ThemedText style={[styles.viewerCounterText, { color: viewerTextColor }]}>
+                    {currentImageIndex + 1} / {images.length}
+                  </ThemedText>
+                </Animated.View>
+
+                <Animated.View
+                  style={[
+                    styles.viewerFloatingActions,
+                    {
+                      opacity: modalAnim,
+                      transform: [{ translateY: footerTranslateY }],
+                    },
+                  ]}
+                >
+                  <TouchableOpacity
+                    style={[styles.viewerIconButton, { backgroundColor: viewerSurface }]}
+                    onPress={handleToggleFavorite}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                  >
                     <Animated.View style={{ transform: [{ scale: heartScale }] }}>
                       <FontAwesomeIcon
-                        icon={selectedImage && (!!favorites[selectedImage] || isFavoritedUtil(selectedImage)) ? solidHeart : regularHeart}
-                        size={24}
-                        color={selectedImage && (!!favorites[selectedImage] || isFavoritedUtil(selectedImage)) ? '#FF4757' : '#FF3B30'}
+                        icon={selectedImageIsFavorited ? solidHeart : regularHeart}
+                        size={20}
+                        color={selectedImageIsFavorited ? '#FF4757' : viewerTextColor}
                       />
                     </Animated.View>
                   </TouchableOpacity>
 
-                  {/* Share button */}
-                  <TouchableOpacity style={styles.topActionButton} onPress={handleShare}>
-                    <FontAwesomeIcon icon={faShareFromSquare} size={22} color="#FF3B30" />
-                  </TouchableOpacity>
-                </View>
-
-                {selectedImage && (
-                  <View
-                    style={styles.imageViewerContainer}
-                    onTouchStart={e => {
-                      // Record the starting touch position
-                      setStartX(e.nativeEvent.pageX);
-                      setStartY(e.nativeEvent.pageY);
-                    }}
-                    onTouchEnd={e => {
-                      // Calculate the distance moved
-                      const endX = e.nativeEvent.pageX;
-                      const endY = e.nativeEvent.pageY;
-
-                      const deltaX = endX - startX;
-                      const deltaY = endY - startY;
-
-                      // Minimum distance to be considered a swipe
-                      const minDistance = 40; // Reduced for better responsiveness
-
-                      // Check if we have a significant swipe
-                      if (Math.abs(deltaX) > minDistance || Math.abs(deltaY) > minDistance) {
-                        // If horizontal swipe is more significant than vertical swipe
-                        if (Math.abs(deltaX) > Math.abs(deltaY)) {
-                          if (deltaX > 0) {
-                            // Right swipe - go to previous image (like iOS Photos)
-                            if (currentImageIndex > 0) {
-                              setCurrentImageIndex(currentImageIndex - 1);
-                              setSelectedImage(images[currentImageIndex - 1]);
-                            }
-                          } else {
-                            // Left swipe - go to next image (like iOS Photos)
-                            if (currentImageIndex < images.length - 1) {
-                              setCurrentImageIndex(currentImageIndex + 1);
-                              setSelectedImage(images[currentImageIndex + 1]);
-                            }
-                          }
-                        } else {
-                          // If vertical swipe is more significant
-                          if (deltaY > 0) {
-                            // Down swipe - dismiss modal (like iOS Photos)
-                            closeImage();
-                          }
-                        }
-                      }
-                    }}
+                  <TouchableOpacity
+                    style={[styles.viewerIconButton, { backgroundColor: viewerSurface }]}
+                    onPress={handleShare}
+                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                   >
-                    <Image
-                      source={{ uri: selectedImage }}
-                      style={styles.fullImage}
-                      resizeMode="contain"
-                    />
+                    <FontAwesomeIcon icon={faShareFromSquare} size={19} color={viewerTextColor} />
+                  </TouchableOpacity>
+                </Animated.View>
 
-                    {/* Navigation buttons for better UX - in addition to swipe */}
-                    <TouchableOpacity
-                      style={[styles.navButton, styles.prevButton]}
-                      onPress={() => {
-                        if (currentImageIndex > 0) {
-                          setCurrentImageIndex(currentImageIndex - 1);
-                          setSelectedImage(images[currentImageIndex - 1]);
-                        }
-                      }}
-                      disabled={currentImageIndex <= 0}
+                <Animated.View
+                  style={[
+                    styles.viewerBottomPanel,
+                    {
+                      opacity: modalAnim,
+                      transform: [{ translateY: footerTranslateY }],
+                    },
+                  ]}
+                >
+                  {images.length > 0 && (
+                    <View
+                      style={[
+                        styles.viewerFilmstripFrame,
+                        { backgroundColor: filmstripBackground },
+                      ]}
                     >
-                      <FontAwesome6
-                        name="chevron-left"
-                        size={20}
-                        color={currentImageIndex > 0 ? '#FF3B30' : '#555555'}
-                      />
-                    </TouchableOpacity>
-
-                    <TouchableOpacity
-                      style={[styles.navButton, styles.nextButton]}
-                      onPress={() => {
-                        if (currentImageIndex < images.length - 1) {
-                          setCurrentImageIndex(currentImageIndex + 1);
-                          setSelectedImage(images[currentImageIndex + 1]);
+                      <FlatList
+                        ref={filmstripRef}
+                        data={images}
+                        horizontal
+                        keyExtractor={(item, index) => `${item}-${index}`}
+                        showsHorizontalScrollIndicator={false}
+                        style={styles.viewerFilmstrip}
+                        contentContainerStyle={[
+                          styles.viewerFilmstripContent,
+                          { backgroundColor: filmstripBackground },
+                        ]}
+                        onScrollToIndexFailed={() => {}}
+                        ListFooterComponent={
+                          filmstripFillerCells.length > 0 ? (
+                            <View style={styles.filmstripFillerRow}>
+                              {filmstripFillerCells.map(fillerIndex => (
+                                <View
+                                  key={`filler-${fillerIndex}`}
+                                  style={styles.filmstripFillerCell}
+                                >
+                                  <View style={styles.filmstripHoleRow} pointerEvents="none">
+                                    {FILMSTRIP_HOLES.map(holeIndex => (
+                                      <View
+                                        key={`top-filler-${fillerIndex}-${holeIndex}`}
+                                        style={[
+                                          styles.filmstripHole,
+                                          { backgroundColor: filmstripHoleColor },
+                                        ]}
+                                      />
+                                    ))}
+                                  </View>
+                                  <View style={styles.filmstripBlankFrame} />
+                                  <View style={styles.filmstripHoleRow} pointerEvents="none">
+                                    {FILMSTRIP_HOLES.map(holeIndex => (
+                                      <View
+                                        key={`bottom-filler-${fillerIndex}-${holeIndex}`}
+                                        style={[
+                                          styles.filmstripHole,
+                                          { backgroundColor: filmstripHoleColor },
+                                        ]}
+                                      />
+                                    ))}
+                                  </View>
+                                </View>
+                              ))}
+                            </View>
+                          ) : null
                         }
-                      }}
-                      disabled={currentImageIndex >= images.length - 1}
-                    >
-                      <FontAwesome6
-                        name="chevron-right"
-                        size={20}
-                        color={currentImageIndex < images.length - 1 ? '#FF3B30' : '#555555'}
-                      />
-                    </TouchableOpacity>
-                  </View>
-                )}
+                        renderItem={({ item, index }) => {
+                          const isActive = index === currentImageIndex;
 
-                <View style={styles.modalFooter}>
-                  <View style={styles.imageCounter}>
-                    <ThemedText style={styles.imageCounterText}>
-                      {currentImageIndex + 1} / {images.length}
-                    </ThemedText>
-                  </View>
-                </View>
-              </View>
+                          return (
+                            <TouchableOpacity
+                              activeOpacity={0.82}
+                              onPress={() => showImageAt(index)}
+                              style={styles.viewerThumbButton}
+                            >
+                              <View style={styles.filmstripHoleRow} pointerEvents="none">
+                                {FILMSTRIP_HOLES.map(holeIndex => (
+                                  <View
+                                    key={`top-${index}-${holeIndex}`}
+                                    style={[
+                                      styles.filmstripHole,
+                                      { backgroundColor: filmstripHoleColor },
+                                    ]}
+                                  />
+                                ))}
+                              </View>
+                              <View style={styles.viewerThumbImageFrame}>
+                                <Image
+                                  source={{ uri: item }}
+                                  style={[
+                                    styles.viewerThumbImage,
+                                    { opacity: isActive ? 1 : 0.62 },
+                                  ]}
+                                  resizeMode="cover"
+                                />
+                              </View>
+                              <View style={styles.filmstripHoleRow} pointerEvents="none">
+                                {FILMSTRIP_HOLES.map(holeIndex => (
+                                  <View
+                                    key={`bottom-${index}-${holeIndex}`}
+                                    style={[
+                                      styles.filmstripHole,
+                                      { backgroundColor: filmstripHoleColor },
+                                    ]}
+                                  />
+                                ))}
+                              </View>
+                            </TouchableOpacity>
+                          );
+                        }}
+                      />
+                    </View>
+                  )}
+                </Animated.View>
+              </Animated.View>
             </Modal>
           </ThemedView>
         </WebSlideTransition>
@@ -621,9 +1131,63 @@ const styles = StyleSheet.create({
   },
   modalContainer: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.85)',
+  },
+  viewerTopBar: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 54 : 28,
+    left: 16,
+    right: 16,
+    zIndex: 20,
+    minHeight: 64,
+    borderRadius: 20,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  viewerIconButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  viewerContextImage: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+  },
+  viewerTitleStack: {
+    flex: 1,
+    minWidth: 0,
+  },
+  viewerTitle: {
+    fontSize: responsiveFontSize(20),
+    lineHeight: 23,
+    fontFamily: Fonts.bold,
+  },
+  viewerLocation: {
+    marginTop: 2,
+    fontSize: responsiveFontSize(12),
+    lineHeight: 14,
+    fontFamily: Fonts.medium,
+  },
+  viewerLocationPill: {
+    alignSelf: 'flex-start',
+    flexDirection: 'row',
+    alignItems: 'center',
+    maxWidth: '100%',
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 7,
+    gap: 5,
+  },
+  viewerLocationPillText: {
+    flexShrink: 1,
+    fontSize: responsiveFontSize(14),
+    lineHeight: 16,
+    fontFamily: Fonts.bold,
   },
   imageViewerContainer: {
     flex: 1,
@@ -632,121 +1196,157 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     position: 'relative',
   },
+  fullImageFrame: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 0,
+    overflow: 'hidden',
+  },
+  polaroidAssetFrame: {
+    width: POLAROID_ASSET_SIZE,
+    height: POLAROID_ASSET_SIZE,
+    position: 'relative',
+  },
+  polaroidAssetPhotoSlot: {
+    position: 'absolute',
+    left: POLAROID_SLOT_LEFT,
+    top: POLAROID_SLOT_TOP,
+    width: POLAROID_SLOT_WIDTH,
+    height: POLAROID_SLOT_HEIGHT,
+    overflow: 'hidden',
+    backgroundColor: 'transparent',
+    zIndex: 1,
+    transform: [{ rotate: '-4.7deg' }],
+  },
+  polaroidAssetPhotoSurface: {
+    width: '100%',
+    height: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  polaroidAssetPhoto: {
+    width: '100%',
+    height: '100%',
+  },
+  polaroidAssetOverlay: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    bottom: 0,
+    left: 0,
+    zIndex: 2,
+  },
+  polaroidAssetImage: {
+    width: '100%',
+    height: '100%',
+  },
   navButton: {
-    width: 40,
-    height: 40,
+    position: 'absolute',
+    top: '50%',
+    width: 44,
+    height: 44,
+    marginTop: -22,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 59, 48, 0.15)',
-    borderRadius: 20,
+    borderRadius: 22,
     zIndex: 10,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.14,
+    shadowRadius: 10,
     elevation: 0,
   },
   prevButton: {
-    position: 'absolute',
-    left: 15,
-    top: '50%',
-    marginTop: -25,
+    left: 14,
   },
   nextButton: {
+    right: 14,
+  },
+  viewerFloatingCounter: {
     position: 'absolute',
-    right: 15,
-    top: '50%',
-    marginTop: -25,
+    bottom: Platform.OS === 'ios' ? 116 : 110,
+    alignSelf: 'center',
+    zIndex: 20,
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 7,
   },
-  closeButton: {
+  viewerFloatingActions: {
     position: 'absolute',
-    top: 40,
-    right: 20,
-    zIndex: 10,
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 59, 48, 0.15)',
-    borderRadius: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 0,
-  },
-  modalFooter: {
-    position: 'absolute',
-    bottom: 0,
-    left: 0,
-    right: 0,
-    height: 80,
-    flexDirection: 'row',
-    justifyContent: 'space-between', // Space between counter and buttons
-    alignItems: 'center',
-    paddingHorizontal: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    zIndex: 10,
-  },
-  imageCounter: {
-    padding: 8,
-    backgroundColor: 'rgba(25, 25, 25, 0.8)',
-    borderRadius: 12,
-    marginLeft: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 0,
-  },
-  imageCounterText: {
-    color: '#FFFFFF',
-    fontSize: responsiveFontSize(16),
-  },
-  shareButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    borderRadius: 20,
-  },
-  actionButtons: {
+    right: 16,
+    bottom: Platform.OS === 'ios' ? 106 : 100,
+    zIndex: 20,
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
   },
-  actionButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    borderRadius: 20,
-    marginLeft: 10,
-  },
-  topLeftButtons: {
+  viewerBottomPanel: {
     position: 'absolute',
-    top: 40,
-    left: 20, // Position at left edge
-    flexDirection: 'row',
-    zIndex: 10,
+    left: 14,
+    right: 14,
+    bottom: Platform.OS === 'ios' ? 24 : 18,
+    zIndex: 20,
   },
-  topActionButton: {
-    width: 40,
-    height: 40,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(25, 25, 25, 0.8)',
-    borderRadius: 20,
-    marginRight: 10,
+  viewerCounterText: {
+    fontSize: responsiveFontSize(13),
+    lineHeight: 15,
+    fontFamily: Fonts.bold,
+  },
+  viewerFilmstrip: {
+    maxHeight: 86,
+  },
+  viewerFilmstripContent: {
+    paddingHorizontal: 0,
+    paddingVertical: 0,
+  },
+  viewerFilmstripFrame: {
+    borderRadius: 4,
+    overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    shadowOffset: { width: 0, height: 8 },
     shadowOpacity: 0.2,
-    shadowRadius: 2,
+    shadowRadius: 16,
     elevation: 0,
   },
-  fullImage: {
+  filmstripHoleRow: {
+    height: 13,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    gap: 6,
+    paddingHorizontal: 3,
+  },
+  filmstripHole: {
+    width: 7,
+    height: 5,
+    borderRadius: 1.5,
+  },
+  filmstripFillerRow: {
+    flexDirection: 'row',
+  },
+  filmstripFillerCell: {
+    width: 78,
+    height: 78,
+    overflow: 'hidden',
+  },
+  filmstripBlankFrame: {
+    height: 52,
+  },
+  viewerThumbButton: {
+    width: 78,
+    height: 78,
+    overflow: 'hidden',
+  },
+  viewerThumbImageFrame: {
+    height: 52,
+    paddingHorizontal: 2,
+    paddingVertical: 2,
+  },
+  viewerThumbImage: {
     width: '100%',
     height: '100%',
+    borderRadius: 1.5,
   },
 });

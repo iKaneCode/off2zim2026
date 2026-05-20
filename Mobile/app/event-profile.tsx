@@ -437,7 +437,17 @@ export default function EventProfileScreen() {
                 }}
               >
                 {/* Wallpaper Pattern Background */}
-                <View style={[StyleSheet.absoluteFillObject, { height: 2000, borderTopLeftRadius: 32, borderTopRightRadius: 32, overflow: 'hidden' }]}>
+                <View
+                  style={[
+                    StyleSheet.absoluteFillObject,
+                    {
+                      height: 2000,
+                      borderTopLeftRadius: 32,
+                      borderTopRightRadius: 32,
+                      overflow: 'hidden',
+                    },
+                  ]}
+                >
                   <WallpaperPattern offsetTop={0} unlimited={true} height={2000} />
                 </View>
 
@@ -563,8 +573,10 @@ export default function EventProfileScreen() {
                           router.push({
                             pathname: '/gallery',
                             params: {
-                              location: event.name,
-                              title: 'Event Gallery',
+                              location: event.location,
+                              title: event.name,
+                              galleryType: 'provider',
+                              contextImage: event.images[0] || galleryImages[0],
                               images: JSON.stringify(galleryImages),
                               eventId: eventName,
                             },
@@ -585,8 +597,10 @@ export default function EventProfileScreen() {
                             router.push({
                               pathname: '/gallery',
                               params: {
-                                location: event.name,
-                                title: 'Event Gallery',
+                                location: event.location,
+                                title: event.name,
+                                galleryType: 'provider',
+                                contextImage: event.images[0] || galleryImages[0],
                                 images: JSON.stringify(galleryImages),
                                 eventId: eventName,
                               },
@@ -611,8 +625,10 @@ export default function EventProfileScreen() {
                             router.push({
                               pathname: '/gallery',
                               params: {
-                                location: event.name,
-                                title: 'Event Gallery',
+                                location: event.location,
+                                title: event.name,
+                                galleryType: 'provider',
+                                contextImage: event.images[0] || galleryImages[0],
                                 images: JSON.stringify(galleryImages),
                                 eventId: eventName,
                               },

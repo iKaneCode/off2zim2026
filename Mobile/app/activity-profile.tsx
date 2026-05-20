@@ -607,7 +607,17 @@ export default function ActivityProfileScreen() {
                 }}
               >
                 {/* Wallpaper Pattern Background */}
-                <View style={[StyleSheet.absoluteFillObject, { height: 4000, borderTopLeftRadius: 32, borderTopRightRadius: 32, overflow: 'hidden' }]}>
+                <View
+                  style={[
+                    StyleSheet.absoluteFillObject,
+                    {
+                      height: 4000,
+                      borderTopLeftRadius: 32,
+                      borderTopRightRadius: 32,
+                      overflow: 'hidden',
+                    },
+                  ]}
+                >
                   <WallpaperPattern offsetTop={0} unlimited={true} height={4000} />
                 </View>
 
@@ -740,8 +750,10 @@ export default function ActivityProfileScreen() {
                           router.push({
                             pathname: '/gallery',
                             params: {
-                              location: activity.name,
-                              title: 'Activity Gallery',
+                              location: activity.location,
+                              title: activity.name,
+                              galleryType: 'provider',
+                              contextImage: activity.images[0] || galleryImages[0],
                               images: JSON.stringify(galleryImages),
                               activityId: activityName,
                             },
@@ -762,8 +774,10 @@ export default function ActivityProfileScreen() {
                             router.push({
                               pathname: '/gallery',
                               params: {
-                                location: activity.name,
-                                title: 'Activity Gallery',
+                                location: activity.location,
+                                title: activity.name,
+                                galleryType: 'provider',
+                                contextImage: activity.images[0] || galleryImages[0],
                                 images: JSON.stringify(galleryImages),
                                 activityId: activityName,
                               },
@@ -788,8 +802,10 @@ export default function ActivityProfileScreen() {
                             router.push({
                               pathname: '/gallery',
                               params: {
-                                location: activity.name,
-                                title: 'Activity Gallery',
+                                location: activity.location,
+                                title: activity.name,
+                                galleryType: 'provider',
+                                contextImage: activity.images[0] || galleryImages[0],
                                 images: JSON.stringify(galleryImages),
                                 activityId: activityName,
                               },

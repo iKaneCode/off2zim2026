@@ -1,4 +1,4 @@
-﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { responsiveFontSize, responsiveLineHeight, responsiveSize, Fonts } from '@/constants/Fonts';
 import type { ComponentProps } from 'react';
 import { StatusBar } from 'expo-status-bar';
@@ -25,7 +25,19 @@ import {
 import WebView, { type WebViewMessageEvent } from 'react-native-webview';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
-import { CustomHeader, EventCard, FilterBar, ListImageCard, LocationPill, RatingPill, ShimmerPlaceholder, StatusPill, StayCard, ViewAllButton } from '@/components';
+import {
+  CustomHeader,
+  EventCard,
+  FilterBar,
+  ListImageCard,
+  LocationPill,
+  RatingPill,
+  SearchBar,
+  ShimmerPlaceholder,
+  StatusPill,
+  StayCard,
+  ViewAllButton,
+} from '@/components';
 import { EVENT_CARD_SPACING, EVENT_CARD_WIDTH } from '@/components/EventCard';
 import { Colors } from '@/constants/Colors';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -35,19 +47,20 @@ import { eventsService, staysService } from '@/services/database';
 import { thingsToDoData } from '@/constants/FeaturedData';
 import { getActivityStatus, activityStatusColor, type ActivityStatus } from '@/utils/timeStatus';
 import type { Stay } from '@/types/Stay';
-import {
-  eventMatchesLocation,
-  mapEventRecordToEvent,
-  type EventCardItem,
-} from '@/utils/eventUtils';
+import { mapEventRecordToEvent, type EventCardItem } from '@/utils/eventUtils';
 import {
   isFavorited as isFavoritedUtil,
+  subscribeFavorites,
   toggleFavorite as toggleFavoriteUtil,
 } from '@/utils/favoritesUtils';
 import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SvgUri } from 'react-native-svg';
 import { Asset } from 'expo-asset';
+import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
+import { faHeart as solidHeart } from '@fortawesome/free-solid-svg-icons';
+import { faHeart as regularHeart } from '@fortawesome/free-regular-svg-icons';
+import * as Haptics from 'expo-haptics';
 
 type StorySlide = {
   id: string;
@@ -110,24 +123,21 @@ type WildlifeSightingRule = WildlifeSightingItem & {
 
 const SAFARI_DEFAULT_SIGHTINGS: WildlifeSightingItem[] = [
   { label: 'Elephant', icon: 'elephant', note: 'Common' },
-  { label: 'Lion', icon: 'lion', note: 'Possible' },
   { label: 'Buffalo', icon: 'buffalo', note: 'Common' },
+  { label: 'Lion', icon: 'lion', note: 'Possible' },
+  { label: 'Leopard', icon: 'leopard', note: 'Rare' },
+  { label: 'Wild dog', icon: 'wild-dog', note: 'Rare' },
+  { label: 'Spotted Hyena', icon: 'hyena', note: 'Possible' },
   { label: 'Zebra', icon: 'zebra', note: 'Possible' },
   { label: 'Giraffe', icon: 'giraffe', note: 'Possible' },
-  { label: 'Leopard', icon: 'leopard', note: 'Rare' },
+  { label: 'Sable antelope', icon: 'sable', note: 'Possible' },
+  { label: 'Wildebeest', icon: 'wildebeest', note: 'Possible' },
+  { label: 'Eland', icon: 'eland', note: 'Possible' },
 ];
 
 const WATER_DEFAULT_SIGHTINGS: WildlifeSightingItem[] = [
   { label: 'Hippo', icon: 'hippo', note: 'Common' },
   { label: 'Crocodile', icon: 'crocodile', note: 'Common' },
-  { label: 'Elephant', icon: 'elephant', note: 'Waterways' },
-  { label: 'Buffalo', icon: 'buffalo', note: 'Possible' },
-];
-
-const QUIET_WILDLIFE_SIGHTINGS: WildlifeSightingItem[] = [
-  { label: 'Sable antelope', icon: 'sable', note: 'Possible' },
-  { label: 'Eland', icon: 'eland', note: 'Possible' },
-  { label: 'Zebra', icon: 'zebra', note: 'Possible' },
 ];
 
 const WILDLIFE_SIGHTING_RULES: WildlifeSightingRule[] = [
@@ -189,7 +199,7 @@ const WILDLIFE_SIGHTING_RULES: WildlifeSightingRule[] = [
     label: 'Hippo',
     icon: 'hippo',
     note: 'Common',
-    keywords: ['hippo', 'hippos', 'zambezi', 'lake', 'river', 'pool', 'floodplain'],
+    keywords: ['hippo', 'hippos'],
   },
   {
     label: 'Crocodile',
@@ -201,7 +211,7 @@ const WILDLIFE_SIGHTING_RULES: WildlifeSightingRule[] = [
     label: 'Sable antelope',
     icon: 'sable',
     note: 'Possible',
-    keywords: ['sable', 'antelope', 'kudu', 'nyala'],
+    keywords: ['sable', 'sable antelope'],
   },
   {
     label: 'Spotted Hyena',
@@ -235,6 +245,214 @@ const WILDLIFE_SIGHTING_RULES: WildlifeSightingRule[] = [
   },
 ];
 
+function wildlifeItems(...labels: string[]): WildlifeSightingItem[] {
+  return labels
+    .map(label => WILDLIFE_SIGHTING_RULES.find(rule => rule.label === label))
+    .filter((item): item is WildlifeSightingRule => Boolean(item))
+    .map(({ label, icon, note }) => ({ label, icon, note }));
+}
+
+const ALL_ZIMBABWE_SIGHTINGS = wildlifeItems(
+  'Elephant',
+  'Buffalo',
+  'Lion',
+  'Leopard',
+  'Cheetah',
+  'Wild dog',
+  'Spotted Hyena',
+  'Brown Hyena',
+  'Hippo',
+  'Crocodile',
+  'Rhino',
+  'Giraffe',
+  'Zebra',
+  'Sable antelope',
+  'Wildebeest',
+  'Eland',
+  'Aardvark'
+);
+
+const HWANGE_AREA_SIGHTINGS = wildlifeItems(
+  'Elephant',
+  'Buffalo',
+  'Lion',
+  'Leopard',
+  'Cheetah',
+  'Wild dog',
+  'Spotted Hyena',
+  'Giraffe',
+  'Zebra',
+  'Sable antelope',
+  'Wildebeest',
+  'Eland',
+  'Aardvark'
+);
+
+const ZAMBEZI_VALLEY_SIGHTINGS = wildlifeItems(
+  'Elephant',
+  'Buffalo',
+  'Lion',
+  'Leopard',
+  'Wild dog',
+  'Spotted Hyena',
+  'Hippo',
+  'Crocodile',
+  'Zebra',
+  'Sable antelope',
+  'Eland'
+);
+
+const LOWVELD_SIGHTINGS = wildlifeItems(
+  'Elephant',
+  'Buffalo',
+  'Lion',
+  'Leopard',
+  'Cheetah',
+  'Wild dog',
+  'Spotted Hyena',
+  'Hippo',
+  'Crocodile',
+  'Rhino',
+  'Giraffe',
+  'Zebra',
+  'Sable antelope',
+  'Wildebeest',
+  'Eland'
+);
+
+const GONAREZHOU_SIGHTINGS = wildlifeItems(
+  'Elephant',
+  'Buffalo',
+  'Lion',
+  'Leopard',
+  'Cheetah',
+  'Wild dog',
+  'Spotted Hyena',
+  'Hippo',
+  'Crocodile',
+  'Giraffe',
+  'Zebra',
+  'Sable antelope',
+  'Wildebeest',
+  'Eland'
+);
+
+const MATOBO_AREA_SIGHTINGS = wildlifeItems(
+  'Rhino',
+  'Leopard',
+  'Brown Hyena',
+  'Giraffe',
+  'Zebra',
+  'Sable antelope',
+  'Wildebeest',
+  'Eland'
+);
+
+const RECREATIONAL_PARK_SIGHTINGS = wildlifeItems(
+  'Rhino',
+  'Giraffe',
+  'Zebra',
+  'Sable antelope',
+  'Wildebeest',
+  'Eland',
+  'Hippo',
+  'Crocodile'
+);
+
+const URBAN_SANCTUARY_SIGHTINGS = wildlifeItems(
+  'Elephant',
+  'Rhino',
+  'Giraffe',
+  'Zebra',
+  'Sable antelope',
+  'Wildebeest',
+  'Eland'
+);
+
+const BIG_CAT_SANCTUARY_SIGHTINGS = wildlifeItems(
+  'Lion',
+  'Cheetah',
+  'Leopard',
+  'Wild dog',
+  'Spotted Hyena'
+);
+
+function getAreaSpecificWildlifeSightings(
+  searchText: string,
+  actualWildlifePlace: boolean,
+  majorWildWaterLocation: boolean
+): WildlifeSightingItem[] {
+  if (!actualWildlifePlace && !majorWildWaterLocation) {
+    return [];
+  }
+
+  if (/\b(lion and cheetah park|chipangali|orphanage)\b/.test(searchText)) {
+    return BIG_CAT_SANCTUARY_SIGHTINGS;
+  }
+
+  if (
+    /\b(wild is life|mukuvisi|mbizi|gosho|imire|pamuzinda|chengeta|tshabalala)\b/.test(searchText)
+  ) {
+    return URBAN_SANCTUARY_SIGHTINGS;
+  }
+
+  if (
+    /\b(hwange|main camp|sinamatella|robins|mandavu|masuma|ngweshla|deteema|shumba|kennedy|jambili|sian simba|insiza|gwango|katshetsheti|tuskers|camp silwane)\b/.test(
+      searchText
+    )
+  ) {
+    return HWANGE_AREA_SIGHTINGS;
+  }
+
+  if (
+    /\b(mana pools|sapi|chewore|chitake|nyamepi|nyakasanga|zambezi national park|chundu|victoria falls national park|zambezi floodplain)\b/.test(
+      searchText
+    )
+  ) {
+    return ZAMBEZI_VALLEY_SIGHTINGS;
+  }
+
+  if (
+    /\b(matusadona|charara|chete|chirisa|hurungwe|dande|doma|phundundu|karinyanga|mbire|makuti|rengwe|sengwa|lake kariba|kariba shoreline)\b/.test(
+      searchText
+    )
+  ) {
+    return ZAMBEZI_VALLEY_SIGHTINGS;
+  }
+
+  if (
+    /\b(gonarezhou|chilojo|chitove|bhenji|malapati|chilo gorge|runde gorge|crooks' corner|crooks corner)\b/.test(
+      searchText
+    )
+  ) {
+    return GONAREZHOU_SIGHTINGS;
+  }
+
+  if (/\b(save valley|malilangwe|bubye|bubiana|tuli|lowveld|mwenezi|nuanetsi)\b/.test(searchText)) {
+    return LOWVELD_SIGHTINGS;
+  }
+
+  if (
+    /\b(matobo|matopos|maleme|big cave|worlds view|world's view|burkes|shalom)\b/.test(searchText)
+  ) {
+    return MATOBO_AREA_SIGHTINGS;
+  }
+
+  if (
+    /\b(lake chivero|lake macilwane|lake mutirikwi|mushandike|ngezi|sebakwe|shebakwe|manjirenji)\b/.test(
+      searchText
+    )
+  ) {
+    return RECREATIONAL_PARK_SIGHTINGS;
+  }
+
+  if (majorWildWaterLocation) {
+    return WATER_DEFAULT_SIGHTINGS;
+  }
+
+  return [];
+}
+
 function mergeWildlifeSightings(...groups: WildlifeSightingItem[][]): WildlifeSightingItem[] {
   const merged: WildlifeSightingItem[] = [];
   groups.flat().forEach(item => {
@@ -245,16 +463,64 @@ function mergeWildlifeSightings(...groups: WildlifeSightingItem[][]): WildlifeSi
   return merged;
 }
 
+function textHasKeyword(text: string, keyword: string) {
+  const pattern = keyword.replace(/[.*+?^${}()|[\]\\]/g, '\\$&').replace(/\s+/g, '\\s+');
+  return new RegExp(`\\b${pattern}\\b`).test(text);
+}
+
 function getWildlifeSightings(spot: AtlasSpot): WildlifeSightingItem[] {
-  const searchText = `${spot.name} ${spot.region} ${spot.description} ${spot.liveSignal}`.toLowerCase();
+  const nameText = spot.name.toLowerCase();
+  const searchText =
+    `${spot.name} ${spot.region} ${spot.description} ${spot.liveSignal}`.toLowerCase();
+  const nonWildlifePlace =
+    /\b(botanical garden|gardens|gallery|museum|square|ruins|rocks|hotel|golf|city|town|village|estate|monument|market|cave|church|cathedral|university)\b/.test(
+      nameText
+    );
+  const wildlifePlaceName =
+    /\b(national park|safari area|game park|game reserve|wildlife area|wildlife conservancy|wildlife sanctuary|conservancy|sanctuary|orphanage|crocodile farm|recreational park|woodlands|camp|campsite|camping site)\b/.test(
+      nameText
+    );
+  const namedWildlifePlace =
+    /\b(mana pools area|antelope park|lion and cheetah park|wild is life|mukuvisi woodlands|save valley|malilangwe|charara|sapi|chewore|phundundu|karinyanga|sengwa)\b/.test(
+      nameText
+    );
+  const majorWildWaterLocation =
+    /\b(zambezi river|lake kariba|limpopo river|runde river|save river|mwenezi river|gwayi river|sanyati river|shangani river)\b/.test(
+      nameText
+    );
+  const actualWildlifePlace = !nonWildlifePlace && (wildlifePlaceName || namedWildlifePlace);
+  const canShowWildlife = actualWildlifePlace || majorWildWaterLocation;
+
+  if (!canShowWildlife) {
+    return [];
+  }
+
   const matches = WILDLIFE_SIGHTING_RULES.filter(rule =>
-    rule.keywords.some(keyword => searchText.includes(keyword))
+    rule.keywords.some(keyword => textHasKeyword(searchText, keyword))
   ).map(({ label, icon, note }) => ({ label, icon, note }));
 
-  const safariArea = /\b(national park|safari|game park|game reserve|reserve|conservancy|sanctuary|wildlife|waterhole|lowveld|savanna|bush)\b/.test(searchText);
-  const waterArea = /\b(zambezi|lake|river|dam|reservoir|pool|floodplain|wetland|waterway|shoreline|falls)\b/.test(searchText);
-  const rhinoArea = /\b(matobo|matopos|rhino)\b/.test(searchText);
-  const predatorArea = /\b(hwange|mana pools|gonarezhou|matusadona|chizarira|zambezi national park|save|sapi|chewore)\b/.test(searchText);
+  const areaSpecificSightings = getAreaSpecificWildlifeSightings(
+    searchText,
+    actualWildlifePlace,
+    majorWildWaterLocation
+  );
+  const safariArea =
+    actualWildlifePlace &&
+    /\b(hwange|mana pools|gonarezhou|matusadona|chizarira|zambezi national park|save valley|malilangwe|sapi|chewore|charara|hurungwe|dande|doma|phundundu|karinyanga|mbire|sengwa|umfurudzi|tuli|bubye|bubiana|antelope park)\b/.test(
+      searchText
+    );
+  const waterArea =
+    majorWildWaterLocation ||
+    (actualWildlifePlace &&
+      /\b(mana pools|lake kariba|zambezi|matusadona|charara|sapi|chewore|limpopo|floodplain|crocodile farm)\b/.test(
+        searchText
+      ));
+  const rhinoArea = actualWildlifePlace && /\b(matobo|matopos|rhino)\b/.test(searchText);
+  const predatorArea =
+    actualWildlifePlace &&
+    /\b(hwange|mana pools|gonarezhou|matusadona|chizarira|zambezi national park|save valley|malilangwe|sapi|chewore|lion and cheetah park)\b/.test(
+      searchText
+    );
   const specialistSightings: WildlifeSightingItem[] = [];
 
   if (rhinoArea) {
@@ -265,19 +531,19 @@ function getWildlifeSightings(spot: AtlasSpot): WildlifeSightingItem[] {
     specialistSightings.push(
       { label: 'Lion', icon: 'lion', note: 'Possible' },
       { label: 'Leopard', icon: 'leopard', note: 'Rare' },
-      { label: 'Wild dog', icon: 'wild-dog', note: 'Rare' },
+      { label: 'Wild dog', icon: 'wild-dog', note: 'Rare' }
     );
   }
 
   const sightings = mergeWildlifeSightings(
     matches,
+    areaSpecificSightings,
     specialistSightings,
     safariArea ? SAFARI_DEFAULT_SIGHTINGS : [],
-    waterArea ? WATER_DEFAULT_SIGHTINGS : [],
-    QUIET_WILDLIFE_SIGHTINGS,
+    waterArea ? WATER_DEFAULT_SIGHTINGS : []
   );
 
-  return sightings.slice(0, 8);
+  return sightings;
 }
 
 const WILDLIFE_ICON_ASSETS: Record<WildlifeIconName, number> = {
@@ -299,6 +565,17 @@ const WILDLIFE_ICON_ASSETS: Record<WildlifeIconName, number> = {
   crocodile: require('@/assets/images/wildlife/crocodile.svg'),
   rhino: require('@/assets/images/wildlife/rhino.svg'),
 };
+
+const ACCOMMODATION_ICON_ASSET = require('@/assets/icons/accommodation.svg');
+const GALLERY_ICON_ASSET = require('@/assets/icons/gallery.svg');
+const EVENTS_ICON_ASSET = require('@/assets/icons/events.svg');
+const THINGS_ICON_ASSET = require('@/assets/icons/things.svg');
+const BINOCULARS_ICON_ASSET = require('@/assets/icons/binoculars.svg');
+const WEATHER_ICON_ASSET = require('@/assets/icons/weather.svg');
+
+const WILDLIFE_SIGHTING_TILE_WIDTH = 72;
+const WILDLIFE_SIGHTING_TILE_GAP = 10;
+const WILDLIFE_SIGHTING_ITEM_INTERVAL = WILDLIFE_SIGHTING_TILE_WIDTH + WILDLIFE_SIGHTING_TILE_GAP;
 
 function WildlifeIcon({
   name,
@@ -338,14 +615,269 @@ function WildlifeIcon({
     return <View style={{ width: size, height: size }} />;
   }
 
+  return <SvgUri uri={uri} width={size} height={size} color={color} fill={color} />;
+}
+
+function SvgAssetIcon({
+  asset,
+  color,
+  size = 18,
+}: {
+  asset: ReturnType<typeof Asset.fromModule>;
+  color: string;
+  size?: number;
+}) {
+  const [uri, setUri] = useState<string | null>(
+    asset.localUri ?? (asset.downloaded ? asset.uri : null)
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const prepareAsset = async () => {
+      if (!asset.localUri && !asset.downloaded) {
+        await asset.downloadAsync();
+      }
+
+      if (isMounted) {
+        setUri(asset.localUri ?? asset.uri);
+      }
+    };
+
+    prepareAsset();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [asset]);
+
+  if (!uri) {
+    return <View style={{ width: size, height: size }} />;
+  }
+
+  return <SvgUri uri={uri} width={size} height={size} color={color} fill={color} />;
+}
+
+function AccommodationIcon({ color, size = 18 }: { color: string; size?: number }) {
+  const asset = useMemo(() => Asset.fromModule(ACCOMMODATION_ICON_ASSET), []);
+  return <SvgAssetIcon asset={asset} color={color} size={size} />;
+}
+
+function GalleryIcon({ color, size = 18 }: { color: string; size?: number }) {
+  const asset = useMemo(() => Asset.fromModule(GALLERY_ICON_ASSET), []);
+  return <SvgAssetIcon asset={asset} color={color} size={size} />;
+}
+
+function EventsIcon({ color, size = 18 }: { color: string; size?: number }) {
+  const asset = useMemo(() => Asset.fromModule(EVENTS_ICON_ASSET), []);
+  return <SvgAssetIcon asset={asset} color={color} size={size} />;
+}
+
+function ThingsIcon({ color, size = 18 }: { color: string; size?: number }) {
+  const asset = useMemo(() => Asset.fromModule(THINGS_ICON_ASSET), []);
+  return <SvgAssetIcon asset={asset} color={color} size={size} />;
+}
+
+function BinocularsIcon({ color, size = 18 }: { color: string; size?: number }) {
+  const asset = useMemo(() => Asset.fromModule(BINOCULARS_ICON_ASSET), []);
+  return <SvgAssetIcon asset={asset} color={color} size={size} />;
+}
+
+function WeatherIcon({ color, size = 18 }: { color: string; size?: number }) {
+  const asset = useMemo(() => Asset.fromModule(WEATHER_ICON_ASSET), []);
+  return <SvgAssetIcon asset={asset} color={color} size={size} />;
+}
+
+function SectionTitle({ children, color }: { children: React.ReactNode; color: string }) {
   return (
-    <SvgUri
-      uri={uri}
-      width={size}
-      height={size}
-      color={color}
-      fill={color}
-    />
+    <ThemedText type="caption" style={[styles.sectionTitleText, { color }]}>
+      {children}
+    </ThemedText>
+  );
+}
+
+function WildlifeSightingsScrollRow({
+  items,
+  iconColor,
+  noteColor,
+  animation,
+  itemKeyPrefix,
+}: {
+  items: WildlifeSightingItem[];
+  iconColor: string;
+  noteColor: string;
+  animation?: Animated.Value;
+  itemKeyPrefix: string;
+}) {
+  const scrollX = useRef(new Animated.Value(0)).current;
+  const revealAnim = useRef(new Animated.Value(1)).current;
+  const scrollActiveAnim = useRef(new Animated.Value(0)).current;
+  const [layoutWidth, setLayoutWidth] = useState(0);
+  const [contentWidth, setContentWidth] = useState(0);
+  const canScroll = contentWidth > layoutWidth + 1;
+  const maxScrollX = Math.max(0, contentWidth - layoutWidth);
+  const trackWidth = Math.max(0, layoutWidth - 8);
+  const thumbWidth = canScroll
+    ? Math.max(34, (layoutWidth / contentWidth) * trackWidth)
+    : trackWidth;
+  const translateX = scrollX.interpolate({
+    inputRange: [0, Math.max(1, maxScrollX)],
+    outputRange: [0, Math.max(0, trackWidth - thumbWidth)],
+    extrapolate: 'clamp',
+  });
+  const trackOpacity = scrollActiveAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.58, 0.92],
+  });
+  const trackScaleY = scrollActiveAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.18],
+  });
+  const thumbOpacity = scrollActiveAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.62, 0.95],
+  });
+  const thumbScaleY = scrollActiveAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.35],
+  });
+
+  useEffect(() => {
+    revealAnim.setValue(0);
+    Animated.spring(revealAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      tension: 74,
+      friction: 9,
+    }).start();
+  }, [itemKeyPrefix, items.length, revealAnim]);
+
+  const activateScroller = useCallback(() => {
+    Animated.spring(scrollActiveAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      tension: 90,
+      friction: 10,
+    }).start();
+  }, [scrollActiveAnim]);
+
+  const settleScroller = useCallback(() => {
+    Animated.timing(scrollActiveAnim, {
+      toValue: 0,
+      duration: 420,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }, [scrollActiveAnim]);
+
+  return (
+    <View style={styles.wildlifeSightingsScrollWrap}>
+      <Animated.ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.wildlifeSightingsScroller}
+        contentContainerStyle={styles.wildlifeSightingsGrid}
+        scrollEventThrottle={16}
+        onLayout={event => setLayoutWidth(event.nativeEvent.layout.width)}
+        onContentSizeChange={width => setContentWidth(width)}
+        onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX } } }], {
+          useNativeDriver: false,
+        })}
+        onScrollBeginDrag={activateScroller}
+        onMomentumScrollBegin={activateScroller}
+        onScrollEndDrag={settleScroller}
+        onMomentumScrollEnd={settleScroller}
+      >
+        {items.map((item, index) => {
+          const focusStep = items.length > 1 ? maxScrollX / (items.length - 1) : 0;
+          const itemFocusX = focusStep * index;
+          const focusRadius = Math.max(WILDLIFE_SIGHTING_ITEM_INTERVAL * 0.85, focusStep * 1.1);
+          const focusInputRange = [itemFocusX - focusRadius, itemFocusX, itemFocusX + focusRadius];
+          const focusTranslateY = scrollX.interpolate({
+            inputRange: focusInputRange,
+            outputRange: [5, 0, 5],
+            extrapolate: 'clamp',
+          });
+          const focusScale = scrollX.interpolate({
+            inputRange: focusInputRange,
+            outputRange: [0.94, 1.04, 0.94],
+            extrapolate: 'clamp',
+          });
+          const focusOpacity = scrollX.interpolate({
+            inputRange: focusInputRange,
+            outputRange: [0.74, 1, 0.74],
+            extrapolate: 'clamp',
+          });
+          const entranceAnim = animation ?? revealAnim;
+          const entranceTranslateY = entranceAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [8 + index * 2, 0],
+          });
+          const entranceScale = entranceAnim.interpolate({
+            inputRange: [0, 1],
+            outputRange: [0.96, 1],
+          });
+
+          return (
+            <Animated.View
+              key={`${itemKeyPrefix}-${item.label}`}
+              style={[
+                styles.wildlifeSightingTile,
+                {
+                  opacity: Animated.multiply(focusOpacity, entranceAnim),
+                  transform: [
+                    { translateY: focusTranslateY },
+                    { translateY: entranceTranslateY },
+                    { scale: focusScale },
+                    { scale: entranceScale },
+                  ],
+                },
+              ]}
+            >
+              <View style={styles.wildlifeSightingIcon}>
+                <WildlifeIcon name={item.icon} color={iconColor} />
+              </View>
+              <ThemedText
+                type="caption"
+                style={[styles.wildlifeSightingName, { color: iconColor }]}
+              >
+                {item.label}
+              </ThemedText>
+              <ThemedText
+                type="caption"
+                style={[styles.wildlifeSightingNote, { color: noteColor }]}
+              >
+                {item.note}
+              </ThemedText>
+            </Animated.View>
+          );
+        })}
+      </Animated.ScrollView>
+
+      {canScroll ? (
+        <Animated.View
+          style={[
+            styles.wildlifeScrollTrack,
+            {
+              opacity: trackOpacity,
+              transform: [{ scaleY: trackScaleY }],
+            },
+          ]}
+        >
+          <Animated.View
+            style={[
+              styles.wildlifeScrollThumb,
+              {
+                width: thumbWidth,
+                backgroundColor: iconColor,
+                opacity: thumbOpacity,
+                transform: [{ translateX }, { scaleY: thumbScaleY }],
+              },
+            ]}
+          />
+        </Animated.View>
+      ) : null}
+    </View>
   );
 }
 
@@ -381,6 +913,15 @@ type LanguagePhrase = {
   phrase: string;
 };
 
+type MapOverviewInfo = {
+  title: string;
+  regionLabel: string;
+  description: string;
+  footerLabel: string;
+  image: string;
+  sightings: WildlifeSightingItem[];
+};
+
 const DEFAULT_ATLAS_IMAGE =
   'https://images.unsplash.com/photo-1500530855697-b586d89ba3ee?auto=format&fit=crop&w=1200&q=80';
 
@@ -399,41 +940,37 @@ const LANGUAGE_POPULARITY_RANK: Record<string, number> = {
 };
 
 const REGION_LANGUAGE_PHRASES: Record<string, LanguagePhrase[]> = {
+  Bulawayo: [
+    { language: 'Ndebele', phrase: 'Kunjani?' },
+    { language: 'Kalanga', phrase: 'Dumilani' },
+  ],
+  Harare: [
+    { language: 'Shona', phrase: 'Makadii?' },
+    { language: 'Zezuru', phrase: 'Mhoro!' },
+  ],
   'Matabeleland North': [
     { language: 'Ndebele', phrase: 'Kunjani?' },
     { language: 'Tonga', phrase: 'Mwapona buti?' },
     { language: 'Nambya', phrase: 'Mwabonwa' },
   ],
-  'Bulawayo Metropolitan': [
-    { language: 'Ndebele', phrase: 'Kunjani?' },
-    { language: 'Kalanga', phrase: 'Dumilani' },
-  ],
-  'Bulawayo': [
-    { language: 'Ndebele', phrase: 'Kunjani?' },
-    { language: 'Kalanga', phrase: 'Dumilani' },
-  ],
   'Mashonaland West': [
     { language: 'Shona', phrase: 'Makadii?' },
     { language: 'Tonga', phrase: 'Mwapona buti?' },
   ],
-  'Manicaland': [
+  Manicaland: [
     { language: 'Manyika Shona', phrase: 'Maswera sei?' },
     { language: 'Ndau', phrase: 'Maswera sei?' },
   ],
-  'Masvingo': [
+  Masvingo: [
     { language: 'Karanga Shona', phrase: 'Makadii?' },
     { language: 'Shangani', phrase: 'Avuxeni' },
-  ],
-  'Harare Metropolitan': [
-    { language: 'Shona', phrase: 'Makadii?' },
-    { language: 'Zezuru', phrase: 'Mhoro!' },
   ],
   'Matabeleland South': [
     { language: 'Ndebele', phrase: 'Linjani?' },
     { language: 'Kalanga', phrase: 'Dumilani' },
     { language: 'Venda', phrase: 'Ndaa' },
   ],
-  'Midlands': [
+  Midlands: [
     { language: 'Shona', phrase: 'Makadii?' },
     { language: 'Ndebele', phrase: 'Kunjani?' },
   ],
@@ -446,6 +983,869 @@ const REGION_LANGUAGE_PHRASES: Record<string, LanguagePhrase[]> = {
     { language: 'Zezuru', phrase: 'Mhoro!' },
   ],
 };
+
+type MapProviderLocationKind = 'camp' | 'campsite' | 'recreational-park';
+
+type MapProviderLocationSeed = {
+  id: string;
+  name: string;
+  region: string;
+  weatherLocation: string;
+  aliases?: string[];
+  coordinates: {
+    latitude: number;
+    longitude: number;
+  };
+  kind: MapProviderLocationKind;
+  context: string;
+  description?: string;
+};
+
+const PHRASE_TRANSLATIONS: Record<string, string> = {
+  'Makadii?': 'How are you?',
+  'Kunjani?': 'How are you?',
+  'Linjani?': 'How are you?',
+  'Maswera sei?': 'How has your day been?',
+  'Mwapona buti?': 'How are you?',
+  Mubotu: 'Good day.',
+  Mwabonwa: 'A warm greeting used around Hwange and Victoria Falls.',
+  Avuxeni: 'Good morning.',
+};
+
+function getPrimaryLanguagePhrase(region: string): LanguagePhrase & { translation: string } {
+  const [primaryPhrase] = REGION_LANGUAGE_PHRASES[region] ?? [
+    { language: 'Shona', phrase: 'Makadii?' },
+  ];
+
+  return {
+    ...primaryPhrase,
+    translation: PHRASE_TRANSLATIONS[primaryPhrase.phrase] ?? 'How are you?',
+  };
+}
+
+function getMapProviderDescription(seed: MapProviderLocationSeed) {
+  if (seed.description) {
+    return seed.description;
+  }
+
+  if (seed.kind === 'recreational-park') {
+    return `${seed.name} is a recreational park in ${seed.context}, useful for outdoor stops, local road-trip planning, waterside recreation and regional travel planning.`;
+  }
+
+  return `${seed.name} is a ${seed.kind} in ${seed.context}, useful for overnight planning, road-trip routing and regional travel planning.`;
+}
+
+function createMapProviderSpotSeed(seed: MapProviderLocationSeed): AtlasSpotSeed {
+  const phrase = getPrimaryLanguagePhrase(seed.region);
+
+  return {
+    id: seed.id,
+    name: seed.name,
+    region: seed.region,
+    weatherLocation: seed.weatherLocation,
+    eventLocationAliases: [seed.name, ...(seed.aliases ?? [])],
+    coordinates: seed.coordinates,
+    creator: 'Map Provider Places',
+    uploads: seed.kind === 'recreational-park' ? 'Recreation stop' : 'Campsite stop',
+    liveSignal: seed.kind === 'recreational-park' ? 'Recreation clips' : 'Campsite clips',
+    description: getMapProviderDescription(seed),
+    language: phrase.language,
+    phrase: phrase.phrase,
+    translation: phrase.translation,
+  };
+}
+
+const MAP_PROVIDER_LOCATION_SPOTS = [
+  createMapProviderSpotSeed({
+    id: 'lasting-impressions',
+    name: 'Lasting Impressions',
+    region: 'Mashonaland West',
+    weatherLocation: 'Kadoma, Zimbabwe',
+    aliases: [
+      'Lasting Impressions Camp',
+      'Lasting Impressions Campsite',
+      'Claw Dam',
+      'John Mack Lake',
+    ],
+    coordinates: { latitude: -18.4677, longitude: 29.8936 },
+    kind: 'camp',
+    context: 'the Claw Dam area near Kadoma',
+    description:
+      'Lasting Impressions is a camp and retreat location near Claw Dam outside Kadoma. It is known for youth camps, leadership retreats, outdoor activities and a quiet lakeside setting in the Mashonaland West countryside.',
+  }),
+  createMapProviderSpotSeed({
+    id: 'lake-macilwane-recreational-park',
+    name: 'Lake Macilwane Recreational Park',
+    region: 'Mashonaland West',
+    weatherLocation: 'Harare, Zimbabwe',
+    aliases: ['Lake Macilwane', 'South Bank Game Park', 'Lake Chivero South Bank'],
+    coordinates: { latitude: -17.9191, longitude: 30.8191 },
+    kind: 'recreational-park',
+    context: 'the south bank of the Lake Chivero and Manyame lake system',
+    description:
+      'Lake Macilwane Recreational Park, also associated with South Bank Game Park, sits on the southern side of the Lake Chivero and Manyame water landscape. It is useful for game viewing, birding, picnics and short nature trips from Harare.',
+  }),
+  createMapProviderSpotSeed({
+    id: 'madrugada-lodge-campsite',
+    name: 'Madrugada Lodge Campsite',
+    region: 'Manicaland',
+    weatherLocation: 'Mutare, Zimbabwe',
+    aliases: ['Madrugada Campsite', 'Madrugada Lodge'],
+    coordinates: { latitude: -19.0953, longitude: 32.7597 },
+    kind: 'campsite',
+    context: 'the Bvumba highlands south of Mutare',
+  }),
+  createMapProviderSpotSeed({
+    id: 'hillside-golf-campsite',
+    name: 'Campsite Hillside Golf',
+    region: 'Manicaland',
+    weatherLocation: 'Mutare, Zimbabwe',
+    aliases: ['Hillside Golf Campsite'],
+    coordinates: { latitude: -18.9565, longitude: 32.6699 },
+    kind: 'campsite',
+    context: 'Mutare near Jason Moyo Drive',
+  }),
+  createMapProviderSpotSeed({
+    id: 'bushmaid-campsite',
+    name: 'Bushmaid Campsite',
+    region: 'Masvingo',
+    weatherLocation: 'Masvingo, Zimbabwe',
+    aliases: ['Bushmaid Camp'],
+    coordinates: { latitude: -20.1964, longitude: 30.8765 },
+    kind: 'campsite',
+    context: 'Masvingo near the Great Zimbabwe route',
+  }),
+  createMapProviderSpotSeed({
+    id: 'chinhoyi-cave-national-park-campsite',
+    name: 'Chinhoyi Cave National Park Campsite',
+    region: 'Mashonaland West',
+    weatherLocation: 'Chinhoyi, Zimbabwe',
+    aliases: ['Chinhoyi Caves Campsite', 'Chinhoyi Caves Recreational Park Campsite'],
+    coordinates: { latitude: -17.357, longitude: 30.1307 },
+    kind: 'campsite',
+    context: 'Chinhoyi Caves Recreational Park',
+  }),
+  createMapProviderSpotSeed({
+    id: 'orange-grove-motel-campsite',
+    name: 'Orange Grove Motel Campsite',
+    region: 'Mashonaland West',
+    weatherLocation: 'Chinhoyi, Zimbabwe',
+    aliases: ['Orange Grove Campsite'],
+    coordinates: { latitude: -17.3579, longitude: 30.1861 },
+    kind: 'campsite',
+    context: 'Orange Grove outside Chinhoyi',
+  }),
+  createMapProviderSpotSeed({
+    id: 'muzarazi-campsite',
+    name: 'Muzarazi Campsite',
+    region: 'Manicaland',
+    weatherLocation: 'Nyanga, Zimbabwe',
+    aliases: ['Mutarazi Campsite', 'Mtarazi Campsite', 'Mutarazi Skywalk Campsite'],
+    coordinates: { latitude: -18.4792, longitude: 32.7932 },
+    kind: 'campsite',
+    context: 'the Mutarazi Falls and Skywalk area in Nyanga',
+  }),
+  createMapProviderSpotSeed({
+    id: 'main-camp-campsite',
+    name: 'Main Camp Campsite',
+    region: 'Matabeleland North',
+    weatherLocation: 'Hwange, Zimbabwe',
+    aliases: ['Hwange Main Camp Campsite', 'Main Camp'],
+    coordinates: { latitude: -18.7324, longitude: 26.9522 },
+    kind: 'campsite',
+    context: 'Hwange National Park Main Camp',
+  }),
+  createMapProviderSpotSeed({
+    id: 'great-zimbabwe-ruins-campsite',
+    name: 'Campsite Great Zimbabwe Ruins',
+    region: 'Masvingo',
+    weatherLocation: 'Masvingo, Zimbabwe',
+    aliases: ['Great Zimbabwe Ruins Campsite', 'Great Zimbabwe Campsite'],
+    coordinates: { latitude: -20.2713, longitude: 30.9305 },
+    kind: 'campsite',
+    context: 'the Great Zimbabwe monument area near Masvingo',
+  }),
+  createMapProviderSpotSeed({
+    id: 'chundu-campsite',
+    name: 'Chundu Campsite',
+    region: 'Matabeleland North',
+    weatherLocation: 'Victoria Falls, Zimbabwe',
+    aliases: ['Chundu Picnic Sites', 'Chundu Camp'],
+    coordinates: { latitude: -17.8144, longitude: 25.6937 },
+    kind: 'campsite',
+    context: 'the Zambezi National Park corridor upstream of Victoria Falls',
+  }),
+  createMapProviderSpotSeed({
+    id: 'robins-camp-campsite',
+    name: 'Robins Camp Campsite',
+    region: 'Matabeleland North',
+    weatherLocation: 'Hwange, Zimbabwe',
+    aliases: ['Robins Camp campsite', 'Robins Camp'],
+    coordinates: { latitude: -18.6297, longitude: 25.9881 },
+    kind: 'campsite',
+    context: 'the western Robins sector of Hwange National Park',
+  }),
+  createMapProviderSpotSeed({
+    id: 'spring-lodge-waterfront-campsite',
+    name: 'Spring Lodge Waterfront Chalets and Campsite',
+    region: 'Mashonaland West',
+    weatherLocation: 'Karoi, Zimbabwe',
+    aliases: ['Spring Lodge Waterfront Campsite', 'Spring Lodge Chalets and Campsite'],
+    coordinates: { latitude: -16.7669, longitude: 29.6718 },
+    kind: 'campsite',
+    context: 'the Hurungwe and Karoi route',
+  }),
+  createMapProviderSpotSeed({
+    id: 'spring-lodge-campsite',
+    name: 'Spring Lodge Campsite',
+    region: 'Mashonaland West',
+    weatherLocation: 'Karoi, Zimbabwe',
+    aliases: ['Spring Lodge campsite'],
+    coordinates: { latitude: -16.7918, longitude: 29.6511 },
+    kind: 'campsite',
+    context: 'the Hurungwe and Karoi route',
+  }),
+  createMapProviderSpotSeed({
+    id: 'mandavu-dam-exclusive-campsite',
+    name: 'Mandavu Dam Exclusive Campsite',
+    region: 'Matabeleland North',
+    weatherLocation: 'Hwange, Zimbabwe',
+    aliases: ['Mandavu Dam (Exclusive Campsite)', 'Mandavu Dam Campsite'],
+    coordinates: { latitude: -18.6426, longitude: 26.2712 },
+    kind: 'campsite',
+    context: 'Mandavu Dam in northern Hwange National Park',
+  }),
+  createMapProviderSpotSeed({
+    id: 'chitake-springs-campsite',
+    name: 'Chitake Springs Campsite',
+    region: 'Mashonaland West',
+    weatherLocation: 'Kariba, Zimbabwe',
+    aliases: ['Campsite Chitake Springs', 'Chitake Springs'],
+    coordinates: { latitude: -16.1026, longitude: 29.4878 },
+    kind: 'campsite',
+    context: 'Mana Pools National Park and the Chitake Springs wilderness area',
+  }),
+  createMapProviderSpotSeed({
+    id: 'maleme-dam-campsite',
+    name: 'Maleme Dam Campsite',
+    region: 'Matabeleland South',
+    weatherLocation: 'Bulawayo, Zimbabwe',
+    aliases: ['Maleme Campsite', 'Maleme Dam'],
+    coordinates: { latitude: -20.5428, longitude: 28.5019 },
+    kind: 'campsite',
+    context: 'Matobo National Park near Maleme Dam',
+  }),
+  createMapProviderSpotSeed({
+    id: 'shalom-campsite',
+    name: 'Shalom Campsite',
+    region: 'Matabeleland South',
+    weatherLocation: 'Bulawayo, Zimbabwe',
+    aliases: ['Shalom campsite'],
+    coordinates: { latitude: -20.6879, longitude: 28.57 },
+    kind: 'campsite',
+    context: 'the Matobo district south of Bulawayo',
+  }),
+  createMapProviderSpotSeed({
+    id: 'katshetsheti-campsite',
+    name: 'Katshetsheti Campsite',
+    region: 'Matabeleland North',
+    weatherLocation: 'Hwange, Zimbabwe',
+    aliases: ['Katshetsheti Camp'],
+    coordinates: { latitude: -18.2773, longitude: 25.7266 },
+    kind: 'campsite',
+    context: 'the western Hwange and Victoria Falls safari corridor',
+  }),
+  createMapProviderSpotSeed({
+    id: 'worlds-view-campsite',
+    name: 'Worlds View Campsite',
+    region: 'Matabeleland South',
+    weatherLocation: 'Bulawayo, Zimbabwe',
+    aliases: ["World's View Campsite", 'Big Cave Camp Access Campsite'],
+    coordinates: { latitude: -20.5023, longitude: 28.4265 },
+    kind: 'campsite',
+    context: 'the Big Cave and Matobo Hills area',
+  }),
+  createMapProviderSpotSeed({
+    id: 'jambili-campsite',
+    name: 'Jambili Campsite',
+    region: 'Matabeleland North',
+    weatherLocation: 'Hwange, Zimbabwe',
+    aliases: ['Jambile Picnic Site', 'Jambili Camp'],
+    coordinates: { latitude: -18.923, longitude: 26.887 },
+    kind: 'campsite',
+    context: 'Hwange National Park near the Jambile picnic area',
+  }),
+  createMapProviderSpotSeed({
+    id: 'track-shack-campsite',
+    name: 'The Track Shack Campsite',
+    region: 'Matabeleland North',
+    weatherLocation: 'Hwange, Zimbabwe',
+    aliases: ['Track Shack Campsite', 'The Track Shack'],
+    coordinates: { latitude: -18.6807, longitude: 26.9342 },
+    kind: 'campsite',
+    context: 'Dete on the Hwange gateway road',
+  }),
+  createMapProviderSpotSeed({
+    id: 'masuma-dam-campsite',
+    name: 'Masuma Dam Campsite',
+    region: 'Matabeleland North',
+    weatherLocation: 'Hwange, Zimbabwe',
+    aliases: ['Masuma Dam Campsite (exclusive camp)', 'Masuma Dam'],
+    coordinates: { latitude: -18.7306, longitude: 26.2809 },
+    kind: 'campsite',
+    context: 'the Sinamatella sector of Hwange National Park',
+  }),
+  createMapProviderSpotSeed({
+    id: 'insiza-campsite',
+    name: 'Insiza Campsite',
+    region: 'Matabeleland North',
+    weatherLocation: 'Hwange, Zimbabwe',
+    aliases: ['Insiza Pan Campsite', 'Insiza Pan'],
+    coordinates: { latitude: -18.3301, longitude: 25.5212 },
+    kind: 'campsite',
+    context: 'the western Hwange wilderness',
+  }),
+  createMapProviderSpotSeed({
+    id: 'sian-simba-campsite',
+    name: 'Sian Simba Campsite',
+    region: 'Matabeleland North',
+    weatherLocation: 'Victoria Falls, Zimbabwe',
+    aliases: ['Sian Simba Camp'],
+    coordinates: { latitude: -17.8437, longitude: 25.6144 },
+    kind: 'campsite',
+    context: 'the Zambezi National Park and Victoria Falls safari corridor',
+  }),
+  createMapProviderSpotSeed({
+    id: 'gwango-campsite',
+    name: 'Campsite Gwango',
+    region: 'Matabeleland North',
+    weatherLocation: 'Hwange, Zimbabwe',
+    aliases: ['Gwango Campsite', 'Gwango'],
+    coordinates: { latitude: -18.678, longitude: 26.9391 },
+    kind: 'campsite',
+    context: 'Dete on the Hwange gateway road',
+  }),
+  createMapProviderSpotSeed({
+    id: 'norma-jeane-campsite',
+    name: 'Norma Jeane Campsite',
+    region: 'Masvingo',
+    weatherLocation: 'Masvingo, Zimbabwe',
+    aliases: ['Norma Jeane Camp', 'Norma Jeane Lakeview Resort Campsite'],
+    coordinates: { latitude: -20.2514, longitude: 31.0018 },
+    kind: 'campsite',
+    context: 'the Lake Mutirikwi and Great Zimbabwe area',
+  }),
+  createMapProviderSpotSeed({
+    id: 'chitove-exclusive-campsite',
+    name: 'Chitove Exclusive Campsite',
+    region: 'Masvingo',
+    weatherLocation: 'Chiredzi, Zimbabwe',
+    aliases: ['Chitove Campsite', 'Chitove Access'],
+    coordinates: { latitude: -21.3085, longitude: 32.2689 },
+    kind: 'campsite',
+    context: 'Gonarezhou National Park near Chitove',
+  }),
+  createMapProviderSpotSeed({
+    id: 'botanic-garden-campsite-caravan-park',
+    name: 'Botanic Garden Campsite and Caravan Park',
+    region: 'Manicaland',
+    weatherLocation: 'Mutare, Zimbabwe',
+    aliases: ['Botanic Garden Campsite & Caravan Park', 'Vumba Botanic Garden Campsite'],
+    coordinates: { latitude: -19.1138, longitude: 32.7833 },
+    kind: 'campsite',
+    context: 'the Bvumba botanical gardens area',
+  }),
+  createMapProviderSpotSeed({
+    id: 'chimanimani-corner-campsite',
+    name: 'The Corner Campsite',
+    region: 'Manicaland',
+    weatherLocation: 'Chimanimani, Zimbabwe',
+    aliases: ['Chimanimani National Park, The Corner, campsite', 'Chimanimani Corner Campsite'],
+    coordinates: { latitude: -19.7017, longitude: 32.9611 },
+    kind: 'campsite',
+    context: 'Chimanimani National Park',
+  }),
+  createMapProviderSpotSeed({
+    id: 'bhenji-weir-exclusive-campsite',
+    name: 'Bhenji Weir Exclusive Campsite',
+    region: 'Masvingo',
+    weatherLocation: 'Chiredzi, Zimbabwe',
+    aliases: ['Bhenji Weir Exclisuve Campsite', 'Bhenji Weir Campsite'],
+    coordinates: { latitude: -21.4415, longitude: 31.9239 },
+    kind: 'campsite',
+    context: 'Gonarezhou National Park near the Runde River system',
+  }),
+  createMapProviderSpotSeed({
+    id: 'lake-mutirikwi-campsite',
+    name: 'Lake Mutirikwi Campsite',
+    region: 'Masvingo',
+    weatherLocation: 'Masvingo, Zimbabwe',
+    aliases: ['Lake Kyle Campsite', 'Mutirikwi Campsite'],
+    coordinates: { latitude: -20.2195, longitude: 31.0037 },
+    kind: 'campsite',
+    context: 'Lake Mutirikwi Recreational Park',
+  }),
+  createMapProviderSpotSeed({
+    id: 'shannah-campsite',
+    name: 'Campsite Shannah',
+    region: 'Mashonaland West',
+    weatherLocation: 'Chinhoyi, Zimbabwe',
+    aliases: ['Shannah Campsite', 'Camp Shannah'],
+    coordinates: { latitude: -17.1849, longitude: 29.9723 },
+    kind: 'campsite',
+    context: 'the Makonde and Chinhoyi route',
+  }),
+  createMapProviderSpotSeed({
+    id: 'shebakwe-campsite',
+    name: 'Shebakwe Campsite',
+    region: 'Midlands',
+    weatherLocation: 'Kwekwe, Zimbabwe',
+    aliases: ['Sebakwe Campsite', 'Shebakwe Camp Site'],
+    coordinates: { latitude: -18.975, longitude: 30.1097 },
+    kind: 'campsite',
+    context: 'the Kwekwe to Mvuma road corridor',
+  }),
+  createMapProviderSpotSeed({
+    id: 'ngezi-recreational-park-campsites',
+    name: 'Ngezi Recreational Park Campsites',
+    region: 'Mashonaland West',
+    weatherLocation: 'Kadoma, Zimbabwe',
+    aliases: [
+      'Caravanpark Ngezi Recreational Park',
+      'Campsite #3',
+      'Campsite #4',
+      'Campsite #5',
+      'Campsite #6',
+      'Campsite #7',
+    ],
+    coordinates: { latitude: -18.7123, longitude: 30.3892 },
+    kind: 'campsite',
+    context: 'Ngezi Recreational Park near Kadoma',
+  }),
+  createMapProviderSpotSeed({
+    id: 'rengwe-conservancy-campsite',
+    name: 'Rengwe Conservancy Campsite',
+    region: 'Mashonaland West',
+    weatherLocation: 'Kariba, Zimbabwe',
+    aliases: ['Rengwe Campsite', 'Rengwe Conservancy'],
+    coordinates: { latitude: -17.1104, longitude: 28.9234 },
+    kind: 'campsite',
+    context: 'the Hurungwe and Zambezi Valley conservation corridor',
+  }),
+  createMapProviderSpotSeed({
+    id: 'jenje-wilderness-campsite',
+    name: 'Jenje Wilderness Campsite',
+    region: 'Mashonaland West',
+    weatherLocation: 'Kariba, Zimbabwe',
+    aliases: ['Jenje Campsite', 'Sanyati West Camp access'],
+    coordinates: { latitude: -16.8409, longitude: 28.5829 },
+    kind: 'campsite',
+    context: 'the Lake Kariba and Sanyati west wilderness route',
+  }),
+  createMapProviderSpotSeed({
+    id: 'afm-national-conference-centre',
+    name: 'AFM in Zimbabwe National Conference Centre',
+    region: 'Masvingo',
+    weatherLocation: 'Gutu, Zimbabwe',
+    aliases: ['AFM National Conference Centre', 'Rufaro Mission Camp Site'],
+    coordinates: { latitude: -19.5969, longitude: 30.825 },
+    kind: 'camp',
+    context: 'Rufaro Mission in Gutu',
+  }),
+  createMapProviderSpotSeed({
+    id: 'linos-camp-site',
+    name: 'Linos Camp Site',
+    region: 'Mashonaland West',
+    weatherLocation: 'Kariba, Zimbabwe',
+    aliases: ['Linos Campsite', 'Linos Camp'],
+    coordinates: { latitude: -16.5329, longitude: 28.7672 },
+    kind: 'campsite',
+    context: 'Kariba town near Hotel Road',
+  }),
+  createMapProviderSpotSeed({
+    id: 'kennedy-camp-site',
+    name: 'Kennedy Camp Site',
+    region: 'Matabeleland North',
+    weatherLocation: 'Hwange, Zimbabwe',
+    aliases: ['Kennedy Campsite', 'Kennedy Camp'],
+    coordinates: { latitude: -18.8691, longitude: 27.1412 },
+    kind: 'campsite',
+    context: 'Hwange National Park',
+  }),
+  createMapProviderSpotSeed({
+    id: 'chilojo-camp-site-2',
+    name: 'Chilojo Camp Site 2',
+    region: 'Masvingo',
+    weatherLocation: 'Chiredzi, Zimbabwe',
+    aliases: ['chilojo camp site 2', 'Chilojo Campsite 2'],
+    coordinates: { latitude: -21.4368, longitude: 32.0914 },
+    kind: 'campsite',
+    context: 'Gonarezhou National Park near the Chilojo Cliffs',
+  }),
+  createMapProviderSpotSeed({
+    id: 'big-cave-camp-site-ndebele-village',
+    name: 'Big Cave Camp Site and Ndebele Village',
+    region: 'Matabeleland South',
+    weatherLocation: 'Bulawayo, Zimbabwe',
+    aliases: ['Big Cave Camp Site & Ndebele Village', 'Big Cave Campsite', 'Big Cave Camp'],
+    coordinates: { latitude: -20.5049, longitude: 28.4415 },
+    kind: 'campsite',
+    context: 'the Matobo Hills and Big Cave area',
+  }),
+  createMapProviderSpotSeed({
+    id: 'city-of-bulawayo-caravan-park',
+    name: 'City of Bulawayo Caravan Park',
+    region: 'Bulawayo',
+    weatherLocation: 'Bulawayo, Zimbabwe',
+    aliases: ['Bulawayo Caravan Park', 'City Caravan Park'],
+    coordinates: { latitude: -20.1585, longitude: 28.5938 },
+    kind: 'campsite',
+    context: 'central Bulawayo',
+  }),
+  createMapProviderSpotSeed({
+    id: 'nyamepi-camping-site',
+    name: 'Nyamepi Camping Site',
+    region: 'Mashonaland West',
+    weatherLocation: 'Kariba, Zimbabwe',
+    aliases: ['Nyamepi Camp Site', 'Nyamepi Camp', 'Mana Pools Nyamepi'],
+    coordinates: { latitude: -15.7201, longitude: 29.3664 },
+    kind: 'campsite',
+    context: 'Mana Pools National Park on the Zambezi floodplain',
+  }),
+  createMapProviderSpotSeed({
+    id: 'nyakasanga-fishing-camp',
+    name: 'Nyakasanga Fishing Camp',
+    region: 'Mashonaland West',
+    weatherLocation: 'Kariba, Zimbabwe',
+    aliases: ['Nyakasanga Fishing camp', 'Nyakasanga Camp'],
+    coordinates: { latitude: -15.8684, longitude: 29.1009 },
+    kind: 'camp',
+    context: 'the Nyakasanga and Mana Pools fishing corridor',
+  }),
+  createMapProviderSpotSeed({
+    id: 'ngweshla-camp',
+    name: 'Ngweshla Camp',
+    region: 'Matabeleland North',
+    weatherLocation: 'Hwange, Zimbabwe',
+    aliases: ['Ngweshla Camp (Exclusive Camp)', 'Ngweshla'],
+    coordinates: { latitude: -19.0257, longitude: 27.1066 },
+    kind: 'camp',
+    context: 'Hwange National Park near Ngweshla Pan',
+  }),
+  createMapProviderSpotSeed({
+    id: 'deteema-dam-camp',
+    name: 'Deteema Dam Camp',
+    region: 'Matabeleland North',
+    weatherLocation: 'Hwange, Zimbabwe',
+    aliases: ['Deteema Dam Camp (exclusiv Camp)', 'Deteema Dam Exclusive Camp'],
+    coordinates: { latitude: -18.6737, longitude: 26.1466 },
+    kind: 'camp',
+    context: 'the Sinamatella and western Hwange dam network',
+  }),
+  createMapProviderSpotSeed({
+    id: 'shumba-camp',
+    name: 'Shumba Camp',
+    region: 'Matabeleland North',
+    weatherLocation: 'Hwange, Zimbabwe',
+    aliases: ['Shumba Camp (exclusive camp)', 'Shumba'],
+    coordinates: { latitude: -18.8093, longitude: 26.3473 },
+    kind: 'camp',
+    context: 'Hwange National Park',
+  }),
+  createMapProviderSpotSeed({
+    id: 'tuskers-camp',
+    name: 'Tuskers Camp',
+    region: 'Matabeleland North',
+    weatherLocation: 'Hwange, Zimbabwe',
+    aliases: ['Tuskers Camp Ivory Lodge', 'Ivory Lodge Tuskers Camp'],
+    coordinates: { latitude: -18.6172, longitude: 27.0582 },
+    kind: 'camp',
+    context: 'the Dete and Hwange gateway area',
+  }),
+  createMapProviderSpotSeed({
+    id: 'warthogs-bush-camp',
+    name: 'Warthogs Bush Camp',
+    region: 'Mashonaland West',
+    weatherLocation: 'Kariba, Zimbabwe',
+    aliases: ['Warthogs Bush Camp Kariba', 'Warthogs Camp'],
+    coordinates: { latitude: -16.529, longitude: 28.8305 },
+    kind: 'camp',
+    context: 'Kariba town and the Lake Kariba shoreline',
+  }),
+  createMapProviderSpotSeed({
+    id: 'burkes-paradise',
+    name: "Burkes' Paradise",
+    region: 'Matabeleland South',
+    weatherLocation: 'Bulawayo, Zimbabwe',
+    aliases: ["Burkes' Paradise Campsite", 'Burkes Paradise'],
+    coordinates: { latitude: -20.2143, longitude: 28.6012 },
+    kind: 'campsite',
+    context: 'the Matobo and Bulawayo southern approaches',
+  }),
+];
+
+const ZIMBABWE_PROVINCES = [
+  'Bulawayo',
+  'Harare',
+  'Manicaland',
+  'Mashonaland Central',
+  'Mashonaland East',
+  'Mashonaland West',
+  'Masvingo',
+  'Matabeleland North',
+  'Matabeleland South',
+  'Midlands',
+] as const;
+
+const ATLAS_TOWN_CITY_NAMES = new Set([
+  'Beitbridge',
+  'Binga',
+  'Bindura',
+  'Bulawayo',
+  'Chegutu',
+  'Chimanimani',
+  'Chinhoyi',
+  'Chipinge',
+  'Chiredzi',
+  'Gokwe',
+  'Guruve',
+  'Gutu',
+  'Gwanda',
+  'Gweru',
+  'Harare',
+  'Hwange',
+  'Kadoma',
+  'Kariba',
+  'Karoi',
+  'Kwekwe',
+  'Marondera',
+  'Masvingo',
+  'Mutare',
+  'Nyanga',
+  'Plumtree',
+  'Rusape',
+  'Victoria Falls',
+  'Zvishavane',
+]);
+
+const ZIMBABWE_OVERVIEW_SIGHTINGS: WildlifeSightingItem[] = ALL_ZIMBABWE_SIGHTINGS;
+
+const ZIMBABWE_MAP_OVERVIEW: MapOverviewInfo = {
+  title: 'Zimbabwe',
+  regionLabel: 'All provinces',
+  image: DEFAULT_ATLAS_IMAGE,
+  footerLabel: 'Country guide',
+  description:
+    "Zimbabwe is a landlocked country in southern Africa shaped by the Zambezi River to the north and the Limpopo to the south. It holds some of the continent's most remarkable landscapes — Victoria Falls, the Mana Pools floodplains, Hwange's elephant herds, Matobo's ancient rock art, the ruins of Great Zimbabwe and the mist-covered peaks of the Eastern Highlands. From vast safari wilderness to granite hill country, sugar lowveld and warm mid-sized cities, Zimbabwe packs exceptional variety into a single journey.",
+  sightings: ZIMBABWE_OVERVIEW_SIGHTINGS,
+};
+
+const PROVINCE_MAP_OVERVIEWS: Record<(typeof ZIMBABWE_PROVINCES)[number], MapOverviewInfo> = {
+  Bulawayo: {
+    title: 'Bulawayo',
+    regionLabel: 'Province guide',
+    image: DEFAULT_ATLAS_IMAGE,
+    footerLabel: 'Urban heritage and nearby wildlife',
+    description:
+      "Bulawayo is Zimbabwe's second city and a strong base for museums, galleries, Khami Ruins, railway heritage and day trips toward Matobo country. The city mixes Ndebele history, wide avenues and accessible wildlife stops on the southern edge of town.",
+    sightings: wildlifeItems('Giraffe', 'Zebra', 'Sable antelope', 'Wildebeest', 'Eland'),
+  },
+  Harare: {
+    title: 'Harare',
+    regionLabel: 'Province guide',
+    image: DEFAULT_ATLAS_IMAGE,
+    footerLabel: 'Capital green spaces',
+    description:
+      'Harare is the capital and a natural starting point for galleries, markets, gardens, city walks and nearby nature reserves. Its green spaces, wetlands and wildlife sanctuaries give visitors a softer introduction before longer road trips across Zimbabwe.',
+    sightings: wildlifeItems(
+      'Elephant',
+      'Rhino',
+      'Giraffe',
+      'Zebra',
+      'Sable antelope',
+      'Wildebeest',
+      'Eland',
+      'Crocodile'
+    ),
+  },
+  Manicaland: {
+    title: 'Manicaland',
+    regionLabel: 'Province guide',
+    image: DEFAULT_ATLAS_IMAGE,
+    footerLabel: 'Highlands, forests and rivers',
+    description:
+      "Manicaland is Zimbabwe's mountain province, covering Nyanga, Vumba, Chimanimani, Mutare, waterfalls, forests, tea estates and eastern river valleys. It is best known for hiking, cool weather, scenic drives and dramatic borderland landscapes.",
+    sightings: wildlifeItems(
+      'Elephant',
+      'Buffalo',
+      'Leopard',
+      'Sable antelope',
+      'Eland',
+      'Hippo',
+      'Crocodile'
+    ),
+  },
+  'Mashonaland Central': {
+    title: 'Mashonaland Central',
+    regionLabel: 'Province guide',
+    image: DEFAULT_ATLAS_IMAGE,
+    footerLabel: 'Escarpment and northern safari routes',
+    description:
+      'Mashonaland Central stretches from Bindura and Mazowe into Mavuradonha, Guruve, Mbire and the Zambezi escarpment. It is a strong province for wilderness routes, safari areas, dams and rugged northern landscapes.',
+    sightings: wildlifeItems(
+      'Elephant',
+      'Buffalo',
+      'Lion',
+      'Leopard',
+      'Wild dog',
+      'Sable antelope',
+      'Eland',
+      'Hippo',
+      'Crocodile'
+    ),
+  },
+  'Mashonaland East': {
+    title: 'Mashonaland East',
+    regionLabel: 'Province guide',
+    image: DEFAULT_ATLAS_IMAGE,
+    footerLabel: 'Granite hills and conservation stops',
+    description:
+      'Mashonaland East links Marondera, Goromonzi, Domboshava, Murehwa and Mutoko with granite hills, rural markets, botanical gardens and conservation estates. It works well for short trips from Harare and quieter heritage stops.',
+    sightings: wildlifeItems('Rhino', 'Giraffe', 'Zebra', 'Sable antelope', 'Wildebeest', 'Eland'),
+  },
+  'Mashonaland West': {
+    title: 'Mashonaland West',
+    regionLabel: 'Province guide',
+    image: DEFAULT_ATLAS_IMAGE,
+    footerLabel: 'Kariba, Mana Pools and the Zambezi Valley',
+    description:
+      "Mashonaland West carries some of Zimbabwe's biggest water and safari landscapes, from Lake Kariba and Matusadona to Mana Pools, Sapi, Chewore, Chinhoyi and the Zambezi escarpment. It is one of the country's richest wildlife and lake-travel corridors.",
+    sightings: wildlifeItems(
+      'Elephant',
+      'Buffalo',
+      'Lion',
+      'Leopard',
+      'Wild dog',
+      'Spotted Hyena',
+      'Hippo',
+      'Crocodile',
+      'Zebra',
+      'Sable antelope',
+      'Eland'
+    ),
+  },
+  Masvingo: {
+    title: 'Masvingo',
+    regionLabel: 'Province guide',
+    image: DEFAULT_ATLAS_IMAGE,
+    footerLabel: 'Heritage, lowveld and Gonarezhou',
+    description:
+      'Masvingo combines Great Zimbabwe, Lake Mutirikwi, Tokwe-Mukorsi, Chiredzi, Save Valley, Malilangwe and Gonarezhou. It is one of the best province filters for mixing ancient stone heritage with serious lowveld wildlife.',
+    sightings: wildlifeItems(
+      'Elephant',
+      'Buffalo',
+      'Lion',
+      'Leopard',
+      'Cheetah',
+      'Wild dog',
+      'Spotted Hyena',
+      'Hippo',
+      'Crocodile',
+      'Rhino',
+      'Giraffe',
+      'Zebra',
+      'Sable antelope',
+      'Wildebeest',
+      'Eland'
+    ),
+  },
+  'Matabeleland North': {
+    title: 'Matabeleland North',
+    regionLabel: 'Province guide',
+    image: DEFAULT_ATLAS_IMAGE,
+    footerLabel: 'Falls, Hwange and western wilderness',
+    description:
+      "Matabeleland North covers Victoria Falls, Hwange, Binga, Chizarira, Matetsi, Zambezi National Park and the western Lake Kariba shoreline. It is Zimbabwe's classic big-safari and adventure province.",
+    sightings: wildlifeItems(
+      'Elephant',
+      'Buffalo',
+      'Lion',
+      'Leopard',
+      'Cheetah',
+      'Wild dog',
+      'Spotted Hyena',
+      'Hippo',
+      'Crocodile',
+      'Giraffe',
+      'Zebra',
+      'Sable antelope',
+      'Wildebeest',
+      'Eland',
+      'Aardvark'
+    ),
+  },
+  'Matabeleland South': {
+    title: 'Matabeleland South',
+    regionLabel: 'Province guide',
+    image: DEFAULT_ATLAS_IMAGE,
+    footerLabel: 'Matobo, Tuli and southern lowveld',
+    description:
+      'Matabeleland South brings together Matobo, Gwanda, Plumtree, Beitbridge, Tuli and the Limpopo corridor. The province is known for rock art, rhino country, dry savanna and borderland safari landscapes.',
+    sightings: wildlifeItems(
+      'Elephant',
+      'Buffalo',
+      'Lion',
+      'Leopard',
+      'Cheetah',
+      'Wild dog',
+      'Spotted Hyena',
+      'Brown Hyena',
+      'Rhino',
+      'Giraffe',
+      'Zebra',
+      'Sable antelope',
+      'Wildebeest',
+      'Eland',
+      'Crocodile'
+    ),
+  },
+  Midlands: {
+    title: 'Midlands',
+    regionLabel: 'Province guide',
+    image: DEFAULT_ATLAS_IMAGE,
+    footerLabel: 'Central towns and wildlife stops',
+    description:
+      'Midlands sits at the centre of Zimbabwe, linking Gweru, Kwekwe, Shurugwi, Zvishavane, Gokwe and the Sebakwe and Munyati catchments. It is useful for road-trip stopovers, museums, ruins, dams and accessible wildlife activities.',
+    sightings: wildlifeItems(
+      'Elephant',
+      'Buffalo',
+      'Lion',
+      'Leopard',
+      'Wild dog',
+      'Spotted Hyena',
+      'Giraffe',
+      'Zebra',
+      'Sable antelope',
+      'Wildebeest',
+      'Eland',
+      'Hippo',
+      'Crocodile'
+    ),
+  },
+};
+
+const PROVINCE_ALIASES: Record<string, (typeof ZIMBABWE_PROVINCES)[number]> = {
+  'Bulawayo Metropolitan': 'Bulawayo',
+  'Harare Metropolitan': 'Harare',
+};
+
+function isZimbabweProvince(value: string): value is (typeof ZIMBABWE_PROVINCES)[number] {
+  return (ZIMBABWE_PROVINCES as readonly string[]).includes(value);
+}
+
+function normalizeProvince(region: string): string {
+  return PROVINCE_ALIASES[region] ?? region;
+}
 
 function normalizePhraseValue(value: string) {
   return value.trim().toLowerCase();
@@ -481,8 +1881,11 @@ function getLanguagePhraseOptions(spot: AtlasSpot): LanguagePhrase[] {
 }
 
 function createAtlasSpot(seed: AtlasSpotSeed): AtlasSpot {
+  const region = normalizeProvince(seed.region);
+
   return {
     ...seed,
+    region,
     image: seed.image ?? DEFAULT_ATLAS_IMAGE,
     eventLocationAliases: seed.eventLocationAliases ?? [seed.name],
     aiPrompt: `AI turns creator clips around ${seed.name} into a virtual preview with map context, best timing, local tips, and trip ideas.`,
@@ -519,10 +1922,63 @@ function getForecastIconName(iconName?: string): ComponentProps<typeof Ionicons>
   }
 }
 
+function normalizeLocationSearchValue(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/,\s*zimbabwe\b/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+function spotMatchesLocationSearch(spot: AtlasSpot, searchTerms: string[]) {
+  if (searchTerms.length === 0) {
+    return true;
+  }
+
+  const searchableValues = [
+    spot.name,
+    spot.region,
+    spot.weatherLocation,
+    ...spot.eventLocationAliases,
+  ].map(normalizeLocationSearchValue);
+
+  return searchTerms.every(term => searchableValues.some(value => value.includes(term)));
+}
+
+function buildLocationScope(spots: AtlasSpot[], includeAliases = true) {
+  const values = spots.flatMap(spot =>
+    includeAliases ? [spot.name, ...spot.eventLocationAliases] : [spot.name]
+  );
+
+  return Array.from(new Set(values.map(normalizeLocationSearchValue).filter(Boolean)));
+}
+
+function getWeatherLocationForSpot(spot: AtlasSpot) {
+  if (ATLAS_TOWN_CITY_NAMES.has(spot.name)) {
+    return `${spot.name}, Zimbabwe`;
+  }
+
+  return spot.weatherLocation;
+}
+
+function buildGalleryImagesForScope(spots: AtlasSpot[], fallbackImage: string) {
+  const images = spots.map(spot => spot.image).filter((image): image is string => Boolean(image));
+  const uniqueImages = Array.from(new Set(images));
+
+  return (uniqueImages.length > 0 ? uniqueImages : [fallbackImage]).slice(0, 24);
+}
+
+function itemMatchesLocationScope(itemLocation: string, scopeLocations: string[]) {
+  const location = normalizeLocationSearchValue(itemLocation);
+
+  return scopeLocations.some(scope => scope.includes(location) || location.includes(scope));
+}
+
 function buildZimbabweMapHtml(spots: AtlasSpot[], activeSpotId: string, isDark: boolean) {
   const markerPayload = spots.map(spot => ({
     id: spot.id,
     name: spot.name,
+    region: spot.region,
     uploads: spot.uploads,
     liveSignal: spot.liveSignal,
     latitude: spot.coordinates.latitude,
@@ -678,6 +2134,8 @@ function buildZimbabweMapHtml(spots: AtlasSpot[], activeSpotId: string, isDark: 
         }).addTo(map);
 
         window._leafletMap = map;
+        window._markers = {};
+        window._zimbabweBounds = zimbabweBounds;
         map.fitBounds(zimbabweBounds, { padding: [14, 14], animate: false });
         L.control.zoom({ position: 'bottomright' }).addTo(map);
 
@@ -703,6 +2161,7 @@ function buildZimbabweMapHtml(spots: AtlasSpot[], activeSpotId: string, isDark: 
             }),
             riseOnHover: true
           }).addTo(map);
+          window._markers[spot.id] = { marker: marker, region: spot.region };
 
           marker.on('click', function () {
             var el = document.getElementById('mpin-' + spot.id);
@@ -753,12 +2212,14 @@ const GALLERY_CONTAINER_PADDING = 8;
 const FEATURED_DESTINATION_HORIZONTAL_PADDING = responsiveSize(16);
 const FEATURED_DESTINATION_CARD_SPACING = responsiveSize(16);
 const FEATURED_DESTINATION_CARD_WIDTH =
-  (screenWidth - FEATURED_DESTINATION_HORIZONTAL_PADDING * 2 - FEATURED_DESTINATION_CARD_SPACING) / 2;
+  (screenWidth - FEATURED_DESTINATION_HORIZONTAL_PADDING * 2 - FEATURED_DESTINATION_CARD_SPACING) /
+  2;
 const FEATURED_DESTINATION_CARD_HEIGHT = responsiveSize(200, 176, 224);
 const FEATURED_DESTINATION_CARD_RADIUS = responsiveSize(12, 10, 16);
 const FEATURED_DESTINATION_CARD_INSET = responsiveSize(10, 8, 12);
 const FEATURED_DESTINATION_OVERLAY_PADDING = responsiveSize(8, 7, 10);
 const FEATURED_DESTINATION_ACTION_SIZE = responsiveSize(36, 32, 42);
+const EXPLORE_SECTION_GAP = responsiveSize(16, 14, 18);
 
 export default function ExploreScreen() {
   const colorScheme = useColorScheme();
@@ -975,7 +2436,7 @@ export default function ExploreScreen() {
       createAtlasSpot({
         id: 'bulawayo',
         name: 'Bulawayo',
-        region: 'Bulawayo Metropolitan',
+        region: 'Bulawayo',
         weatherLocation: 'Bulawayo, Zimbabwe',
         coordinates: { latitude: -20.1561, longitude: 28.5887 },
         creator: 'City of Kings Creators',
@@ -992,8 +2453,14 @@ export default function ExploreScreen() {
         name: 'Chinhoyi Caves',
         region: 'Mashonaland West',
         weatherLocation: 'Chinhoyi, Zimbabwe',
-        eventLocationAliases: ['Chinhoyi Caves', 'Chinhoyi'],
-        coordinates: { latitude: -17.3571, longitude: 30.1290 },
+        eventLocationAliases: [
+          'Chinhoyi Caves',
+          'Chinhoyi Caves Recreational Park',
+          'Chinhoyi Cave National Park Campsite',
+          'Camp site accomodation',
+          'Chinhoyi',
+        ],
+        coordinates: { latitude: -17.3571, longitude: 30.129 },
         creator: 'Caves & Karst Collective',
         uploads: '132 tagged clips',
         liveSignal: 'Pool depth clips',
@@ -1069,7 +2536,7 @@ export default function ExploreScreen() {
       createAtlasSpot({
         id: 'harare',
         name: 'Harare',
-        region: 'Harare Metropolitan',
+        region: 'Harare',
         weatherLocation: 'Harare, Zimbabwe',
         coordinates: { latitude: -17.8252, longitude: 31.0335 },
         creator: 'Urban Pulse Tours',
@@ -1087,7 +2554,7 @@ export default function ExploreScreen() {
         region: 'Matabeleland North',
         weatherLocation: 'Hwange, Zimbabwe',
         eventLocationAliases: ['Hwange National Park', 'Hwange'],
-        coordinates: { latitude: -19.1890, longitude: 26.7401 },
+        coordinates: { latitude: -19.189, longitude: 26.7401 },
         creator: 'Savanna Trails',
         uploads: '391 tagged clips',
         liveSignal: 'Waterhole watch',
@@ -1133,8 +2600,13 @@ export default function ExploreScreen() {
         name: 'Mana Pools Area',
         region: 'Mashonaland West',
         weatherLocation: 'Kariba, Zimbabwe',
-        eventLocationAliases: ['Mana Pools Area', 'Mana Pools', 'Mana Pools floodplain', 'Mana Pools World Heritage Area'],
-        coordinates: { latitude: -15.7220, longitude: 29.3637 },
+        eventLocationAliases: [
+          'Mana Pools Area',
+          'Mana Pools',
+          'Mana Pools floodplain',
+          'Mana Pools World Heritage Area',
+        ],
+        coordinates: { latitude: -15.722, longitude: 29.3637 },
         creator: 'Zambezi Wild Stories',
         uploads: '263 tagged clips',
         liveSignal: 'Canoe route clips',
@@ -1257,7 +2729,7 @@ export default function ExploreScreen() {
         region: 'Matabeleland North',
         weatherLocation: 'Binga, Zimbabwe',
         eventLocationAliases: ['Chizarira', 'Chizarira National Park'],
-        coordinates: { latitude: -17.7714, longitude: 27.8460 },
+        coordinates: { latitude: -17.7714, longitude: 27.846 },
         creator: 'Escarpment Wild Guides',
         uploads: '89 tagged clips',
         liveSignal: 'Gorge trail clips',
@@ -1294,7 +2766,7 @@ export default function ExploreScreen() {
         uploads: '67 tagged clips',
         liveSignal: 'Pan elephant watch',
         description:
-          'Kazuma Pan is a quiet national park on the Botswana border known for vast seasonal pans that attract elephant, roan antelope and migratory birds. One of Zimbabwe\'s most peaceful and least-visited wilderness areas.',
+          "Kazuma Pan is a quiet national park on the Botswana border known for vast seasonal pans that attract elephant, roan antelope and migratory birds. One of Zimbabwe's most peaceful and least-visited wilderness areas.",
         language: 'Ndebele',
         phrase: 'Salibonani',
         translation: 'Hello to more than one person.',
@@ -1390,7 +2862,7 @@ export default function ExploreScreen() {
         uploads: '74 tagged clips',
         liveSignal: 'Shoreline game watch',
         description:
-          'Charara Safari Area lies along Lake Kariba\'s eastern shore and is known for elephant, hippo, buffalo and crocodile. Its combination of lake frontage and woodland supports prolific wildlife close to Kariba town.',
+          "Charara Safari Area lies along Lake Kariba's eastern shore and is known for elephant, hippo, buffalo and crocodile. Its combination of lake frontage and woodland supports prolific wildlife close to Kariba town.",
         language: 'Tonga',
         phrase: 'Mwapona buti',
         translation: 'How are you?',
@@ -1406,7 +2878,7 @@ export default function ExploreScreen() {
         uploads: '61 tagged clips',
         liveSignal: 'Island shore clips',
         description:
-          'Chete Safari Area encompasses Chete Island and mainland shores on the western arm of Lake Kariba. Known for dramatic lake scenery, elephant, buffalo, lion and excellent tiger fishing in one of Zimbabwe\'s most remote settings.',
+          "Chete Safari Area encompasses Chete Island and mainland shores on the western arm of Lake Kariba. Known for dramatic lake scenery, elephant, buffalo, lion and excellent tiger fishing in one of Zimbabwe's most remote settings.",
         language: 'Tonga',
         phrase: 'Mwapona buti',
         translation: 'How are you?',
@@ -1433,7 +2905,7 @@ export default function ExploreScreen() {
         region: 'Manicaland',
         weatherLocation: 'Chipinge, Zimbabwe',
         eventLocationAliases: ['Chipinge Safari Area', 'Chipinge'],
-        coordinates: { latitude: -20.20, longitude: 32.65 },
+        coordinates: { latitude: -20.2, longitude: 32.65 },
         creator: 'Eastern Highlands Collective',
         uploads: '55 tagged clips',
         liveSignal: 'Forest edge clips',
@@ -1449,7 +2921,7 @@ export default function ExploreScreen() {
         region: 'Midlands',
         weatherLocation: 'Gokwe, Zimbabwe',
         eventLocationAliases: ['Chirisa Safari Area', 'Chirisa'],
-        coordinates: { latitude: -17.9350, longitude: 28.2422 },
+        coordinates: { latitude: -17.935, longitude: 28.2422 },
         creator: 'Midlands Roadtrippers',
         uploads: '49 tagged clips',
         liveSignal: 'Bush trail clips',
@@ -1518,7 +2990,7 @@ export default function ExploreScreen() {
         uploads: '92 tagged clips',
         liveSignal: 'Wild dog sighting clips',
         description:
-          'Hurungwe Safari Area is one of Zimbabwe\'s largest wildlife areas, stretching north of Kariba into the Zambezi Valley. It supports elephant, lion, wild dog and buffalo across extensive jesse bush, mopane and riverine forest.',
+          "Hurungwe Safari Area is one of Zimbabwe's largest wildlife areas, stretching north of Kariba into the Zambezi Valley. It supports elephant, lion, wild dog and buffalo across extensive jesse bush, mopane and riverine forest.",
         language: 'Shona',
         phrase: 'Makadii?',
         translation: 'How are you?',
@@ -1529,7 +3001,7 @@ export default function ExploreScreen() {
         region: 'Masvingo',
         weatherLocation: 'Chiredzi, Zimbabwe',
         eventLocationAliases: ['Malapati Safari Area', 'Malapati'],
-        coordinates: { latitude: -22.0640, longitude: 31.4363 },
+        coordinates: { latitude: -22.064, longitude: 31.4363 },
         creator: 'Lowveld Wild Guides',
         uploads: '52 tagged clips',
         liveSignal: 'Limpopo border clips',
@@ -1566,7 +3038,7 @@ export default function ExploreScreen() {
         uploads: '38 tagged clips',
         liveSignal: 'Escarpment edge clips',
         description:
-          'Mbona Safari Area occupies rugged eastern escarpment terrain south of Chipinge, bordering Mozambique. It is one of Zimbabwe\'s least-visited wildlife areas, known for sable antelope, buffalo and exceptional forest birdlife.',
+          "Mbona Safari Area occupies rugged eastern escarpment terrain south of Chipinge, bordering Mozambique. It is one of Zimbabwe's least-visited wildlife areas, known for sable antelope, buffalo and exceptional forest birdlife.",
         language: 'Ndau',
         phrase: 'Maswera sei?',
         translation: 'How has your day been?',
@@ -1577,7 +3049,7 @@ export default function ExploreScreen() {
         region: 'Mashonaland West',
         weatherLocation: 'Kariba, Zimbabwe',
         eventLocationAliases: ['Sapi Safari Area', 'Sapi'],
-        coordinates: { latitude: -15.8372, longitude: 29.6970 },
+        coordinates: { latitude: -15.8372, longitude: 29.697 },
         creator: 'Zambezi Wild Stories',
         uploads: '107 tagged clips',
         liveSignal: 'Canoe trail clips',
@@ -1609,7 +3081,7 @@ export default function ExploreScreen() {
         region: 'Mashonaland Central',
         weatherLocation: 'Bindura, Zimbabwe',
         eventLocationAliases: ['Umfurudzi Safari Area', 'Umfurudzi'],
-        coordinates: { latitude: -17.0165, longitude: 31.8060 },
+        coordinates: { latitude: -17.0165, longitude: 31.806 },
         creator: 'Conservation Connect',
         uploads: '67 tagged clips',
         liveSignal: 'Sable sighting clips',
@@ -1630,7 +3102,7 @@ export default function ExploreScreen() {
         uploads: '138 tagged clips',
         liveSignal: 'Shoreline game watch',
         description:
-          'Matusadona National Park lines the southern shore of Lake Kariba and is one of Zimbabwe\'s most scenic national parks. Known for large elephant herds, lion, buffalo, Nile crocodile and tiger fishing, it is best explored by houseboat or walking safari along the lake shore.',
+          "Matusadona National Park lines the southern shore of Lake Kariba and is one of Zimbabwe's most scenic national parks. Known for large elephant herds, lion, buffalo, Nile crocodile and tiger fishing, it is best explored by houseboat or walking safari along the lake shore.",
         language: 'Tonga',
         phrase: 'Mwapona buti',
         translation: 'How are you?',
@@ -1641,7 +3113,7 @@ export default function ExploreScreen() {
         region: 'Manicaland',
         weatherLocation: 'Nyanga, Zimbabwe',
         eventLocationAliases: ['Nyanga National Park', 'Nyanga'],
-        coordinates: { latitude: -18.3070, longitude: 32.7774 },
+        coordinates: { latitude: -18.307, longitude: 32.7774 },
         creator: 'Nyanga Trail Notes',
         uploads: '171 tagged clips',
         liveSignal: 'Summit trail clips',
@@ -1673,7 +3145,7 @@ export default function ExploreScreen() {
         region: 'Mashonaland Central',
         weatherLocation: 'Kariba, Zimbabwe',
         eventLocationAliases: ['Mbire Wildlife Area', 'Mbire'],
-        coordinates: { latitude: -16.0620, longitude: 30.2237 },
+        coordinates: { latitude: -16.062, longitude: 30.2237 },
         creator: 'Zambezi Wild Stories',
         uploads: '46 tagged clips',
         liveSignal: 'Valley plains clips',
@@ -1705,7 +3177,7 @@ export default function ExploreScreen() {
         region: 'Masvingo',
         weatherLocation: 'Masvingo, Zimbabwe',
         eventLocationAliases: ['Lake Mutirikwi Recreational Park', 'Lake Mutirikwi', 'Lake Kyle'],
-        coordinates: { latitude: -20.1904, longitude: 31.0320 },
+        coordinates: { latitude: -20.1904, longitude: 31.032 },
         creator: 'Masvingo Makers',
         uploads: '84 tagged clips',
         liveSignal: 'Lakeside game clips',
@@ -1733,16 +3205,21 @@ export default function ExploreScreen() {
       }),
       createAtlasSpot({
         id: 'sebakwe',
-        name: 'Sebakwe Recreational Park',
+        name: 'Sebakwe Dam Recreational Park',
         region: 'Midlands',
         weatherLocation: 'Kwekwe, Zimbabwe',
-        eventLocationAliases: ['Sebakwe Recreational Park', 'Sebakwe'],
-        coordinates: { latitude: -19.0318, longitude: 30.2247 },
+        eventLocationAliases: [
+          'Sebakwe Dam Recreational Park',
+          'Sebakwe Recreational Park',
+          'Sebakwe Dam',
+          'Sebakwe',
+        ],
+        coordinates: { latitude: -19.0318, longitude: 30.2683 },
         creator: 'Midlands Roadtrippers',
         uploads: '41 tagged clips',
         liveSignal: 'Lakeside clips',
         description:
-          'Sebakwe Recreational Park protects the Sebakwe dam near Kwekwe, offering fishing, birding, game viewing and camping in a quiet bushveld setting. It is a valued green space for the Midlands region and a peaceful escape from nearby mining towns.',
+          'Sebakwe Dam Recreational Park protects the Sebakwe dam near Kwekwe, offering fishing, birding, game viewing and camping in a quiet bushveld setting. It is a valued green space for the Midlands region and a peaceful escape from nearby mining towns.',
         language: 'Shona',
         phrase: 'Masikati',
         translation: 'Good afternoon.',
@@ -1750,7 +3227,7 @@ export default function ExploreScreen() {
       createAtlasSpot({
         id: 'mukuvisi-woodlands',
         name: 'Mukuvisi Woodlands',
-        region: 'Harare Metropolitan',
+        region: 'Harare',
         weatherLocation: 'Harare, Zimbabwe',
         eventLocationAliases: ['Mukuvisi Woodlands', 'Harare'],
         coordinates: { latitude: -17.8438, longitude: 31.0883 },
@@ -1782,7 +3259,7 @@ export default function ExploreScreen() {
       createAtlasSpot({
         id: 'mbizi-game-park',
         name: 'Mbizi Game Park',
-        region: 'Harare Metropolitan',
+        region: 'Harare',
         weatherLocation: 'Harare, Zimbabwe',
         eventLocationAliases: ['Mbizi Game Park', 'Harare', 'Chitungwiza'],
         coordinates: { latitude: -17.9116, longitude: 31.0967 },
@@ -1790,7 +3267,7 @@ export default function ExploreScreen() {
         uploads: '54 tagged clips',
         liveSignal: 'Game viewing clips',
         description:
-          "Mbizi Game Park near Harare is an accessible private wildlife estate for day visits, team outings, game drives, picnics and overnight stays. The park is known for relaxed family-friendly encounters with plains game close to the capital.",
+          'Mbizi Game Park near Harare is an accessible private wildlife estate for day visits, team outings, game drives, picnics and overnight stays. The park is known for relaxed family-friendly encounters with plains game close to the capital.',
         language: 'Shona',
         phrase: 'Makadii?',
         translation: 'How are you?',
@@ -1814,7 +3291,7 @@ export default function ExploreScreen() {
       createAtlasSpot({
         id: 'harare-botanical-garden',
         name: 'National Botanical Garden',
-        region: 'Harare Metropolitan',
+        region: 'Harare',
         weatherLocation: 'Harare, Zimbabwe',
         eventLocationAliases: ['National Botanical Garden', 'Harare Botanical Garden'],
         coordinates: { latitude: -17.8009, longitude: 31.0519 },
@@ -1830,15 +3307,15 @@ export default function ExploreScreen() {
       createAtlasSpot({
         id: 'ewanrigg',
         name: 'Ewanrigg Botanical Garden',
-        region: 'Mashonaland Central',
-        weatherLocation: 'Bindura, Zimbabwe',
+        region: 'Mashonaland East',
+        weatherLocation: 'Harare, Zimbabwe',
         eventLocationAliases: ['Ewanrigg Botanical Garden', 'Ewanrigg'],
         coordinates: { latitude: -17.6948, longitude: 31.3342 },
         creator: 'Mashonaland Botanicals',
         uploads: '44 tagged clips',
         liveSignal: 'Aloe garden clips',
         description:
-          'Ewanrigg Botanical Garden north of Harare is renowned for its spectacular aloe and cycad collection, with over 150 aloe species in full bloom during winter. The garden sits on a kopje hillside with scenic views across Mashonaland Central.',
+          'Ewanrigg Botanical Garden northeast of Harare is renowned for its spectacular aloe and cycad collection, with over 150 aloe species in full bloom during winter. The garden sits on a kopje hillside with scenic views across Mashonaland East.',
         language: 'Shona',
         phrase: 'Makadii?',
         translation: 'How are you?',
@@ -1862,10 +3339,10 @@ export default function ExploreScreen() {
       createAtlasSpot({
         id: 'domboshava',
         name: 'Domboshava',
-        region: 'Mashonaland Central',
+        region: 'Mashonaland East',
         weatherLocation: 'Harare, Zimbabwe',
         eventLocationAliases: ['Domboshava', 'Domboshava Cave', 'Domboshava Rock Art'],
-        coordinates: { latitude: -17.6100, longitude: 31.1747 },
+        coordinates: { latitude: -17.61, longitude: 31.1747 },
         creator: 'Mashonaland Heritage',
         uploads: '62 tagged clips',
         liveSignal: 'Cave art clips',
@@ -1878,7 +3355,7 @@ export default function ExploreScreen() {
       createAtlasSpot({
         id: 'epworth-balancing-rocks',
         name: 'Epworth Balancing Rocks',
-        region: 'Harare Metropolitan',
+        region: 'Harare',
         weatherLocation: 'Harare, Zimbabwe',
         eventLocationAliases: ['Epworth Balancing Rocks', 'Balancing Rocks'],
         coordinates: { latitude: -17.8851, longitude: 31.1277 },
@@ -1974,10 +3451,10 @@ export default function ExploreScreen() {
       createAtlasSpot({
         id: 'cleveland-dam',
         name: 'Cleveland Dam',
-        region: 'Harare Metropolitan',
+        region: 'Harare',
         weatherLocation: 'Harare, Zimbabwe',
         eventLocationAliases: ['Cleveland Dam', 'Cleveland Dam Recreational Park'],
-        coordinates: { latitude: -17.8401, longitude: 31.1510 },
+        coordinates: { latitude: -17.8401, longitude: 31.151 },
         creator: 'Harare Outdoors',
         uploads: '28 tagged clips',
         liveSignal: 'Waterside clips',
@@ -2045,7 +3522,7 @@ export default function ExploreScreen() {
         uploads: '82 tagged clips',
         liveSignal: 'City live',
         description:
-          "Gweru is the capital of the Midlands province and a central hub for industry and heritage. The city is home to the Zimbabwe Military Museum, Antelope Park and the historic Naletale Ruins, and is positioned at the geographical heart of Zimbabwe.",
+          'Gweru is the capital of the Midlands province and a central hub for industry and heritage. The city is home to the Zimbabwe Military Museum, Antelope Park and the historic Naletale Ruins, and is positioned at the geographical heart of Zimbabwe.',
         language: 'Shona',
         phrase: 'Makadii?',
         translation: 'How are you?',
@@ -2060,7 +3537,7 @@ export default function ExploreScreen() {
         uploads: '71 tagged clips',
         liveSignal: 'City live',
         description:
-          "Kwekwe is Zimbabwe's steelmaking capital, home to ZISCO steel works and the National Gold Mining Museum. The surrounding area includes Sebakwe Recreational Park and several gold-panning sites with longstanding historical significance.",
+          "Kwekwe is Zimbabwe's steelmaking capital, home to ZISCO steel works and the National Gold Mining Museum. The surrounding area includes Sebakwe Dam Recreational Park and several gold-panning sites with longstanding historical significance.",
         language: 'Shona',
         phrase: 'Makadii?',
         translation: 'How are you?',
@@ -2115,7 +3592,7 @@ export default function ExploreScreen() {
         name: 'Marondera',
         region: 'Mashonaland East',
         weatherLocation: 'Marondera, Zimbabwe',
-        coordinates: { latitude: -18.1885, longitude: 31.5540 },
+        coordinates: { latitude: -18.1885, longitude: 31.554 },
         creator: 'Mashonaland East Trails',
         uploads: '44 tagged clips',
         liveSignal: 'Town clips',
@@ -2145,7 +3622,7 @@ export default function ExploreScreen() {
         name: 'Kadoma',
         region: 'Mashonaland West',
         weatherLocation: 'Kadoma, Zimbabwe',
-        coordinates: { latitude: -18.3400, longitude: 29.9150 },
+        coordinates: { latitude: -18.34, longitude: 29.915 },
         creator: 'Cotton Country Lens',
         uploads: '38 tagged clips',
         liveSignal: 'Town clips',
@@ -2196,7 +3673,7 @@ export default function ExploreScreen() {
         uploads: '45 tagged clips',
         liveSignal: 'Town clips',
         description:
-          "Hwange Town is a coal-mining centre built around the Hwange Colliery, which has powered Zimbabwe for over a century. The town is the main services gateway for Hwange National Park visitors arriving from Bulawayo.",
+          'Hwange Town is a coal-mining centre built around the Hwange Colliery, which has powered Zimbabwe for over a century. The town is the main services gateway for Hwange National Park visitors arriving from Bulawayo.',
         language: 'Ndebele',
         phrase: 'Salibonani',
         translation: 'Hello to more than one person.',
@@ -2219,7 +3696,7 @@ export default function ExploreScreen() {
       createAtlasSpot({
         id: 'national-heroes-acre',
         name: 'National Heroes Acre',
-        region: 'Harare Metropolitan',
+        region: 'Harare',
         weatherLocation: 'Harare, Zimbabwe',
         eventLocationAliases: ['National Heroes Acre', 'Heroes Acre'],
         coordinates: { latitude: -17.8345, longitude: 30.9874 },
@@ -2235,9 +3712,13 @@ export default function ExploreScreen() {
       createAtlasSpot({
         id: 'museum-human-sciences',
         name: 'Museum of Human Sciences',
-        region: 'Harare Metropolitan',
+        region: 'Harare',
         weatherLocation: 'Harare, Zimbabwe',
-        eventLocationAliases: ['Museum of Human Sciences', 'Zimbabwe Museum', 'Queen Victoria Museum'],
+        eventLocationAliases: [
+          'Museum of Human Sciences',
+          'Zimbabwe Museum',
+          'Queen Victoria Museum',
+        ],
         coordinates: { latitude: -17.8289, longitude: 31.0439 },
         creator: 'Harare Cultural Routes',
         uploads: '41 tagged clips',
@@ -2251,7 +3732,7 @@ export default function ExploreScreen() {
       createAtlasSpot({
         id: 'natural-history-museum',
         name: 'Natural History Museum of Zimbabwe',
-        region: 'Bulawayo Metropolitan',
+        region: 'Bulawayo',
         weatherLocation: 'Bulawayo, Zimbabwe',
         eventLocationAliases: ['Natural History Museum', 'Natural History Museum of Zimbabwe'],
         coordinates: { latitude: -20.1558, longitude: 28.5964 },
@@ -2331,10 +3812,14 @@ export default function ExploreScreen() {
       createAtlasSpot({
         id: 'wild-is-life',
         name: 'Wild Is Life Sanctuary',
-        region: 'Harare Metropolitan',
+        region: 'Harare',
         weatherLocation: 'Harare, Zimbabwe',
-        eventLocationAliases: ['Wild Is Life', 'Zimbabwe Elephant Nursery', 'Wild Is Life Sanctuary'],
-        coordinates: { latitude: -17.9410, longitude: 31.1103 },
+        eventLocationAliases: [
+          'Wild Is Life',
+          'Zimbabwe Elephant Nursery',
+          'Wild Is Life Sanctuary',
+        ],
+        coordinates: { latitude: -17.941, longitude: 31.1103 },
         creator: 'Harare Wildlife Trails',
         uploads: '88 tagged clips',
         liveSignal: 'Elephant nursery live',
@@ -2347,7 +3832,7 @@ export default function ExploreScreen() {
       createAtlasSpot({
         id: 'tshabalala',
         name: 'Tshabalala Wildlife Sanctuary',
-        region: 'Bulawayo Metropolitan',
+        region: 'Bulawayo',
         weatherLocation: 'Bulawayo, Zimbabwe',
         eventLocationAliases: ['Tshabalala', 'Tshabalala Wildlife Sanctuary'],
         coordinates: { latitude: -20.2451, longitude: 28.5597 },
@@ -2397,8 +3882,13 @@ export default function ExploreScreen() {
         name: 'Sinamatella',
         region: 'Matabeleland North',
         weatherLocation: 'Hwange, Zimbabwe',
-        eventLocationAliases: ['Sinamatella', 'Sinamatella Camp', 'Hwange Sinamatella'],
-        coordinates: { latitude: -18.5858, longitude: 26.3157 },
+        eventLocationAliases: [
+          'Sinamatella',
+          'Sinamatella Camp',
+          'Sinamatella Campsite',
+          'Hwange Sinamatella',
+        ],
+        coordinates: { latitude: -18.5854, longitude: 26.318 },
         creator: 'Hwange Wilderness',
         uploads: '66 tagged clips',
         liveSignal: 'Waterhole watch',
@@ -2419,7 +3909,7 @@ export default function ExploreScreen() {
         uploads: '71 tagged clips',
         liveSignal: 'Gorge safari clips',
         description:
-          'Chilo Gorge Safari Lodge sits on the edge of Gonarezhou National Park overlooking the Save-Runde confluence, with panoramic views into one of Africa\'s wildest landscapes. The surrounding wilderness is home to huge elephant herds and the rare Lichtenstein\'s hartebeest.',
+          "Chilo Gorge Safari Lodge sits on the edge of Gonarezhou National Park overlooking the Save-Runde confluence, with panoramic views into one of Africa's wildest landscapes. The surrounding wilderness is home to huge elephant herds and the rare Lichtenstein's hartebeest.",
         language: 'Karanga Shona',
         phrase: 'Makadii?',
         translation: 'How are you?',
@@ -2435,7 +3925,7 @@ export default function ExploreScreen() {
         uploads: '67 tagged clips',
         liveSignal: 'Waterfall clips',
         description:
-          'Pungwe Falls in Nyanga National Park plunges into the spectacular Pungwe Gorge, with hiking trails leading through montane grassland and protea forest to dramatic viewpoints. The Pungwe River originates on the Nyangani slopes and carves one of the Eastern Highlands\' finest gorges.',
+          "Pungwe Falls in Nyanga National Park plunges into the spectacular Pungwe Gorge, with hiking trails leading through montane grassland and protea forest to dramatic viewpoints. The Pungwe River originates on the Nyangani slopes and carves one of the Eastern Highlands' finest gorges.",
         language: 'Manyika Shona',
         phrase: 'Maswera sei?',
         translation: 'How are you?',
@@ -2446,12 +3936,12 @@ export default function ExploreScreen() {
         region: 'Mashonaland Central',
         weatherLocation: 'Bindura, Zimbabwe',
         eventLocationAliases: ['Mavuradonha', 'Mavuradonha Wilderness Area'],
-        coordinates: { latitude: -16.5000, longitude: 31.1667 },
+        coordinates: { latitude: -16.5, longitude: 31.1667 },
         creator: 'Zimbabwe Wilderness Trails',
         uploads: '43 tagged clips',
         liveSignal: 'Wilderness hike clips',
         description:
-          'Mavuradonha Wilderness Area in northern Mashonaland Central is a remote and pristine highland wilderness known for rugged escarpment walks, natural pools and untouched miombo woodland. It is one of Zimbabwe\'s best kept secrets for hiking and adventure camping.',
+          "Mavuradonha Wilderness Area in northern Mashonaland Central is a remote and pristine highland wilderness known for rugged escarpment walks, natural pools and untouched miombo woodland. It is one of Zimbabwe's best kept secrets for hiking and adventure camping.",
         language: 'Shona',
         phrase: 'Makadii?',
         translation: 'How are you?',
@@ -2499,7 +3989,7 @@ export default function ExploreScreen() {
         uploads: '38 tagged clips',
         liveSignal: 'Croc farm clips',
         description:
-          'The Kariba Crocodile Farm in Kariba town breeds Nile crocodiles from egg through to adulthood, offering guided tours that give visitors close-up views of hundreds of crocodiles at different life stages. It is one of the top town attractions at Zimbabwe\'s famous inland sea.',
+          "The Kariba Crocodile Farm in Kariba town breeds Nile crocodiles from egg through to adulthood, offering guided tours that give visitors close-up views of hundreds of crocodiles at different life stages. It is one of the top town attractions at Zimbabwe's famous inland sea.",
         language: 'Shona',
         phrase: 'Makadii?',
         translation: 'How are you?',
@@ -2574,7 +4064,7 @@ export default function ExploreScreen() {
         region: 'Matabeleland North',
         weatherLocation: 'Binga, Zimbabwe',
         eventLocationAliases: ['Nyaminyami', 'Nyamaneche', 'Binga Cultural Village'],
-        coordinates: { latitude: -17.6270, longitude: 27.3440 },
+        coordinates: { latitude: -17.627, longitude: 27.344 },
         creator: 'Tonga Cultural Routes',
         uploads: '44 tagged clips',
         liveSignal: 'Tonga ceremony clips',
@@ -2622,7 +4112,7 @@ export default function ExploreScreen() {
         region: 'Manicaland',
         weatherLocation: 'Chipinge, Zimbabwe',
         eventLocationAliases: ['Birchenough Bridge', 'Save River Bridge'],
-        coordinates: { latitude: -19.9620, longitude: 32.3443 },
+        coordinates: { latitude: -19.962, longitude: 32.3443 },
         creator: 'Save Valley Trails',
         uploads: '39 tagged clips',
         liveSignal: 'Bridge & river clips',
@@ -2659,7 +4149,7 @@ export default function ExploreScreen() {
         uploads: '28 tagged clips',
         liveSignal: 'Tri-border confluence clips',
         description:
-          "The remote tri-border point where Zimbabwe, Mozambique and South Africa meet at the confluence of the Limpopo and Luvuvhu rivers. Historically a refuge for ivory poachers who could slip between jurisdictions, it now sits within Gonarezhou NP and is reached by 4WD through pristine bushveld.",
+          'The remote tri-border point where Zimbabwe, Mozambique and South Africa meet at the confluence of the Limpopo and Luvuvhu rivers. Historically a refuge for ivory poachers who could slip between jurisdictions, it now sits within Gonarezhou NP and is reached by 4WD through pristine bushveld.',
         language: 'Shangani',
         phrase: 'Avuxeni',
         translation: 'Good morning.',
@@ -2670,7 +4160,7 @@ export default function ExploreScreen() {
         region: 'Masvingo',
         weatherLocation: 'Chiredzi, Zimbabwe',
         eventLocationAliases: ['Hippo Valley', 'Hippo Valley Estate', 'Triangle Estate'],
-        coordinates: { latitude: -21.0710, longitude: 31.6457 },
+        coordinates: { latitude: -21.071, longitude: 31.6457 },
         creator: 'Lowveld Sugar Routes',
         uploads: '35 tagged clips',
         liveSignal: 'Sugar estate clips',
@@ -2734,7 +4224,7 @@ export default function ExploreScreen() {
         region: 'Mashonaland West',
         weatherLocation: 'Kariba, Zimbabwe',
         eventLocationAliases: ['Kariba Dam Wall', 'Kariba Wall', 'Kariba Dam Viewpoint'],
-        coordinates: { latitude: -16.5200, longitude: 28.7700 },
+        coordinates: { latitude: -16.52, longitude: 28.77 },
         creator: 'Zambezi Engineering Tours',
         uploads: '68 tagged clips',
         liveSignal: 'Dam wall viewpoint clips',
@@ -2755,7 +4245,7 @@ export default function ExploreScreen() {
         uploads: '37 tagged clips',
         liveSignal: 'Safari gateway clips',
         description:
-          "Dete is the small railway village and safari hub on the doorstep of Hwange National Park, serving the major camps at Ngamo, Linkwasha and Main Camp. The town has a station, curio stalls and a wildlife art gallery, and the bush begins immediately at the village edge.",
+          'Dete is the small railway village and safari hub on the doorstep of Hwange National Park, serving the major camps at Ngamo, Linkwasha and Main Camp. The town has a station, curio stalls and a wildlife art gallery, and the bush begins immediately at the village edge.',
         language: 'Ndebele',
         phrase: 'Salibonani',
         translation: 'Hello to more than one person.',
@@ -2827,10 +4317,10 @@ export default function ExploreScreen() {
       createAtlasSpot({
         id: 'ruwa',
         name: 'Ruwa',
-        region: 'Harare Metropolitan',
+        region: 'Mashonaland East',
         weatherLocation: 'Harare, Zimbabwe',
         eventLocationAliases: ['Ruwa', 'Ruwa Town'],
-        coordinates: { latitude: -17.8830, longitude: 31.2480 },
+        coordinates: { latitude: -17.883, longitude: 31.248 },
         creator: 'Harare Outskirts Routes',
         uploads: '36 tagged clips',
         liveSignal: 'Town clips',
@@ -2859,10 +4349,10 @@ export default function ExploreScreen() {
       createAtlasSpot({
         id: 'africa-unity-square',
         name: 'Africa Unity Square',
-        region: 'Harare Metropolitan',
+        region: 'Harare',
         weatherLocation: 'Harare, Zimbabwe',
         eventLocationAliases: ['Africa Unity Square', 'Cecil Square', 'Harare City Park'],
-        coordinates: { latitude: -17.8286, longitude: 31.0490 },
+        coordinates: { latitude: -17.8286, longitude: 31.049 },
         creator: 'Harare City Walks',
         uploads: '72 tagged clips',
         liveSignal: 'City square clips',
@@ -2878,7 +4368,7 @@ export default function ExploreScreen() {
         region: 'Midlands',
         weatherLocation: 'Gweru, Zimbabwe',
         eventLocationAliases: ['Zimbabwe Military Museum', 'Gweru Military Museum'],
-        coordinates: { latitude: -19.4500, longitude: 29.8167 },
+        coordinates: { latitude: -19.45, longitude: 29.8167 },
         creator: 'Gweru Heritage Routes',
         uploads: '33 tagged clips',
         liveSignal: 'Museum clips',
@@ -2926,7 +4416,7 @@ export default function ExploreScreen() {
         region: 'Midlands',
         weatherLocation: 'Kwekwe, Zimbabwe',
         eventLocationAliases: ['Gokwe', 'Gokwe Town', 'Gokwe North'],
-        coordinates: { latitude: -18.2250, longitude: 28.9539 },
+        coordinates: { latitude: -18.225, longitude: 28.9539 },
         creator: 'Midlands Cotton Routes',
         uploads: '32 tagged clips',
         liveSignal: 'Cotton country clips',
@@ -2942,7 +4432,7 @@ export default function ExploreScreen() {
         region: 'Matabeleland North',
         weatherLocation: 'Bulawayo, Zimbabwe',
         eventLocationAliases: ['Nkayi', 'Nkayi District', 'Nkai'],
-        coordinates: { latitude: -19.0100, longitude: 28.8969 },
+        coordinates: { latitude: -19.01, longitude: 28.8969 },
         creator: 'Matabeleland North Routes',
         uploads: '26 tagged clips',
         liveSignal: 'Rural district clips',
@@ -2963,7 +4453,7 @@ export default function ExploreScreen() {
         uploads: '24 tagged clips',
         liveSignal: 'Steel town clips',
         description:
-          "Redcliff is an industrial town adjacent to Kwekwe, home to the Zimbabwe Iron and Steel Company (ZISCO), once one of Africa's largest integrated steel mills. The red kopje hills gave it its name and the area offers industrial heritage tourism and proximity to Sebakwe Recreational Park.",
+          "Redcliff is an industrial town adjacent to Kwekwe, home to the Zimbabwe Iron and Steel Company (ZISCO), once one of Africa's largest integrated steel mills. The red kopje hills gave it its name and the area offers industrial heritage tourism and proximity to Sebakwe Dam Recreational Park.",
         language: 'Shona',
         phrase: 'Makadii?',
         translation: 'How are you?',
@@ -3019,7 +4509,7 @@ export default function ExploreScreen() {
       createAtlasSpot({
         id: 'harare-gardens',
         name: 'Harare Gardens',
-        region: 'Harare Metropolitan',
+        region: 'Harare',
         weatherLocation: 'Harare, Zimbabwe',
         eventLocationAliases: ['Harare Gardens', 'Harare City Gardens'],
         coordinates: { latitude: -17.8248, longitude: 31.0453 },
@@ -3035,7 +4525,7 @@ export default function ExploreScreen() {
       createAtlasSpot({
         id: 'bulawayo-art-gallery',
         name: 'Bulawayo Art Gallery',
-        region: 'Bulawayo Metropolitan',
+        region: 'Bulawayo',
         weatherLocation: 'Bulawayo, Zimbabwe',
         eventLocationAliases: ['Bulawayo Art Gallery', 'National Gallery Bulawayo'],
         coordinates: { latitude: -20.1503, longitude: 28.5833 },
@@ -3070,7 +4560,7 @@ export default function ExploreScreen() {
         region: 'Mashonaland West',
         weatherLocation: 'Kariba, Zimbabwe',
         eventLocationAliases: ['Mana Pools National Park', 'Mana Pools NP', 'Mana Pools'],
-        coordinates: { latitude: -15.9660, longitude: 29.4312 },
+        coordinates: { latitude: -15.966, longitude: 29.4312 },
         creator: 'Zambezi Wild Stories',
         uploads: '148 tagged clips',
         liveSignal: 'Floodplain safari clips',
@@ -3133,7 +4623,11 @@ export default function ExploreScreen() {
         name: 'Victoria Falls National Park',
         region: 'Matabeleland North',
         weatherLocation: 'Victoria Falls, Zimbabwe',
-        eventLocationAliases: ['Victoria Falls National Park', 'Victoria Falls Rainforest', 'Mosi-oa-Tunya'],
+        eventLocationAliases: [
+          'Victoria Falls National Park',
+          'Victoria Falls Rainforest',
+          'Mosi-oa-Tunya',
+        ],
         coordinates: { latitude: -17.9471, longitude: 25.8449 },
         creator: 'Zambezi Creators Guild',
         uploads: '154 tagged clips',
@@ -3149,7 +4643,11 @@ export default function ExploreScreen() {
         name: 'Sengwa Wildlife Research Area',
         region: 'Midlands',
         weatherLocation: 'Gokwe, Zimbabwe',
-        eventLocationAliases: ['Sengwa Wildlife Research Area', 'Sengwa Wildlife Area', 'Sengwa Research Area'],
+        eventLocationAliases: [
+          'Sengwa Wildlife Research Area',
+          'Sengwa Wildlife Area',
+          'Sengwa Research Area',
+        ],
         coordinates: { latitude: -18.0778, longitude: 28.1948 },
         creator: 'Sebungwe Wildlife Routes',
         uploads: '24 tagged clips',
@@ -3163,7 +4661,7 @@ export default function ExploreScreen() {
       createAtlasSpot({
         id: 'chitungwiza',
         name: 'Chitungwiza',
-        region: 'Harare Metropolitan',
+        region: 'Harare',
         weatherLocation: 'Harare, Zimbabwe',
         eventLocationAliases: ['Chitungwiza', 'Chitungwiza City'],
         coordinates: { latitude: -18.0143, longitude: 31.0727 },
@@ -3179,7 +4677,7 @@ export default function ExploreScreen() {
       createAtlasSpot({
         id: 'epworth',
         name: 'Epworth',
-        region: 'Harare Metropolitan',
+        region: 'Harare',
         weatherLocation: 'Harare, Zimbabwe',
         eventLocationAliases: ['Epworth', 'Epworth Town'],
         coordinates: { latitude: -17.8877, longitude: 31.1568 },
@@ -3214,7 +4712,7 @@ export default function ExploreScreen() {
         region: 'Mashonaland West',
         weatherLocation: 'Kariba, Zimbabwe',
         eventLocationAliases: ['Karoi', 'Karoi Town'],
-        coordinates: { latitude: -16.8190, longitude: 29.6837 },
+        coordinates: { latitude: -16.819, longitude: 29.6837 },
         creator: 'Zambezi Valley Routes',
         uploads: '39 tagged clips',
         liveSignal: 'Kariba road clips',
@@ -3278,7 +4776,7 @@ export default function ExploreScreen() {
         region: 'Mashonaland West',
         weatherLocation: 'Kariba, Zimbabwe',
         eventLocationAliases: ['Lake Kariba', 'Kariba Reservoir', 'Kariba Recreational Park'],
-        coordinates: { latitude: -16.9167, longitude: 28.0000 },
+        coordinates: { latitude: -16.9167, longitude: 28.0 },
         creator: 'Kariba Voyager',
         uploads: '221 tagged clips',
         liveSignal: 'Houseboat lake clips',
@@ -3358,7 +4856,7 @@ export default function ExploreScreen() {
         region: 'Matabeleland South',
         weatherLocation: 'Gwanda, Zimbabwe',
         eventLocationAliases: ['Mtshabezi Dam', 'Mtsabezi Dam'],
-        coordinates: { latitude: -20.7289, longitude: 28.8940 },
+        coordinates: { latitude: -20.7289, longitude: 28.894 },
         creator: 'Matabeleland South Routes',
         uploads: '26 tagged clips',
         liveSignal: 'Dam country clips',
@@ -3390,7 +4888,7 @@ export default function ExploreScreen() {
         region: 'Matabeleland South',
         weatherLocation: 'Beitbridge, Zimbabwe',
         eventLocationAliases: ['Limpopo River', 'Vhembe'],
-        coordinates: { latitude: -22.2500, longitude: 31.1667 },
+        coordinates: { latitude: -22.25, longitude: 31.1667 },
         creator: 'Southern Border Routes',
         uploads: '44 tagged clips',
         liveSignal: 'Border river clips',
@@ -3454,7 +4952,7 @@ export default function ExploreScreen() {
         region: 'Mashonaland Central',
         weatherLocation: 'Bindura, Zimbabwe',
         eventLocationAliases: ['Mazowe River', 'Mazoe River'],
-        coordinates: { latitude: -17.5430, longitude: 30.9940 },
+        coordinates: { latitude: -17.543, longitude: 30.994 },
         creator: 'Mazowe Valley Tours',
         uploads: '41 tagged clips',
         liveSignal: 'Valley river clips',
@@ -3467,7 +4965,7 @@ export default function ExploreScreen() {
       createAtlasSpot({
         id: 'manyame-river',
         name: 'Manyame River',
-        region: 'Harare Metropolitan',
+        region: 'Harare',
         weatherLocation: 'Harare, Zimbabwe',
         eventLocationAliases: ['Manyame River', 'Hunyani River'],
         coordinates: { latitude: -17.9803, longitude: 31.0469 },
@@ -3502,7 +5000,7 @@ export default function ExploreScreen() {
         region: 'Matabeleland North',
         weatherLocation: 'Bulawayo, Zimbabwe',
         eventLocationAliases: ['Gwayi River', 'Gwai River'],
-        coordinates: { latitude: -19.1048, longitude: 27.6810 },
+        coordinates: { latitude: -19.1048, longitude: 27.681 },
         creator: 'Matabeleland North Routes',
         uploads: '34 tagged clips',
         liveSignal: 'River plains clips',
@@ -3534,7 +5032,7 @@ export default function ExploreScreen() {
         region: 'Matabeleland South',
         weatherLocation: 'Gwanda, Zimbabwe',
         eventLocationAliases: ['Mzingwane River', 'Umzingwane River'],
-        coordinates: { latitude: -21.1818, longitude: 29.3610 },
+        coordinates: { latitude: -21.1818, longitude: 29.361 },
         creator: 'Matabeleland South Routes',
         uploads: '31 tagged clips',
         liveSignal: 'Southern river clips',
@@ -3614,7 +5112,7 @@ export default function ExploreScreen() {
         region: 'Matabeleland South',
         weatherLocation: 'Bulawayo, Zimbabwe',
         eventLocationAliases: ['Upper Ncema Dam', 'Upper Ncema'],
-        coordinates: { latitude: -20.3023, longitude: 28.9870 },
+        coordinates: { latitude: -20.3023, longitude: 28.987 },
         creator: 'Bulawayo Water Routes',
         uploads: '21 tagged clips',
         liveSignal: 'Bulawayo supply dam clips',
@@ -3630,7 +5128,7 @@ export default function ExploreScreen() {
         region: 'Manicaland',
         weatherLocation: 'Nyanga, Zimbabwe',
         eventLocationAliases: ['Nyangombe Falls', 'Nyanga Falls'],
-        coordinates: { latitude: -18.2850, longitude: 32.6788 },
+        coordinates: { latitude: -18.285, longitude: 32.6788 },
         creator: 'Nyanga Trail Notes',
         uploads: '47 tagged clips',
         liveSignal: 'Waterfall route clips',
@@ -3640,16 +5138,29 @@ export default function ExploreScreen() {
         phrase: 'Maswera sei?',
         translation: 'How has your day been?',
       }),
+      ...MAP_PROVIDER_LOCATION_SPOTS.map(createAtlasSpot),
     ],
     []
   );
 
+  const [searchQuery, setSearchQuery] = useState('');
+  const locationSearchTerms = useMemo(
+    () => normalizeLocationSearchValue(searchQuery).split(' ').filter(Boolean),
+    [searchQuery]
+  );
+  const searchedSpots = useMemo(
+    () =>
+      locationSearchTerms.length
+        ? atlasSpots.filter(spot => spotMatchesLocationSearch(spot, locationSearchTerms))
+        : atlasSpots,
+    [atlasSpots, locationSearchTerms]
+  );
   const locationFilterOptions = useMemo(
     () => [
       { key: 'All', label: 'All' },
-      ...atlasSpots.map(spot => ({ key: spot.name, label: spot.name })),
+      ...ZIMBABWE_PROVINCES.map(province => ({ key: province, label: province })),
     ],
-    [atlasSpots]
+    []
   );
 
   const [activeCategory, setActiveCategory] = useState('All');
@@ -3658,43 +5169,129 @@ export default function ExploreScreen() {
   const [detailCardVisible, setDetailCardVisible] = useState(false);
   const detailCardAnim = useRef(new Animated.Value(0)).current;
   const lastDetailSpot = useRef<AtlasSpot | null>(null);
-  const [forecastBySpotId, setForecastBySpotId] = useState<Record<string, WeatherDay[]>>({});
+  const [forecastByLocation, setForecastByLocation] = useState<Record<string, WeatherDay[]>>({});
   const [events, setEvents] = useState<EventCardItem[]>([]);
   const [eventsLoading, setEventsLoading] = useState(true);
   const [favoriteEventsVersion, setFavoriteEventsVersion] = useState(0);
   const eventHeartScalesRef = useRef<Record<string, Animated.Value>>({});
   const activityHeartScalesRef = useRef<Record<string, Animated.Value>>({});
+  const atlasHeartScalesRef = useRef<Record<string, Animated.Value>>({});
+  const [favoriteLocationsVersion, setFavoriteLocationsVersion] = useState(0);
   const [allStays, setAllStays] = useState<Stay[]>([]);
   const [nowTick, setNowTick] = useState(Date.now());
 
-  const filteredSpots = useMemo(() => {
-    if (activeCategory === 'All') {
-      return atlasSpots;
-    }
-    return atlasSpots.filter(spot => spot.name === activeCategory);
-  }, [activeCategory, atlasSpots]);
+  const handleLocationSearchChange = useCallback((value: string) => {
+    setSearchQuery(value);
+    setActiveCategory('All');
+    setActiveSpotId('');
+  }, []);
 
-  const selectedSpot = activeSpotId ? (atlasSpots.find(spot => spot.id === activeSpotId) ?? null) : null;
-  const selectedSpotId = selectedSpot?.id;
-  const selectedWeatherLocation = selectedSpot?.weatherLocation;
-  const selectedForecast = selectedSpotId ? forecastBySpotId[selectedSpotId] : undefined;
+  const visibleMapSpots = useMemo(() => {
+    if (activeCategory === 'All') {
+      return searchedSpots;
+    }
+    return searchedSpots.filter(spot => spot.region === activeCategory);
+  }, [activeCategory, searchedSpots]);
+  const mapOverview = useMemo(() => {
+    const overview = isZimbabweProvince(activeCategory)
+      ? PROVINCE_MAP_OVERVIEWS[activeCategory]
+      : ZIMBABWE_MAP_OVERVIEW;
+    const mappedCount = activeCategory === 'All' ? searchedSpots.length : visibleMapSpots.length;
+
+    return {
+      ...overview,
+      mappedCount,
+    };
+  }, [activeCategory, searchedSpots.length, visibleMapSpots.length]);
+
+  const selectedSpot = activeSpotId
+    ? (atlasSpots.find(spot => spot.id === activeSpotId) ?? null)
+    : null;
+  const selectedWeatherLocation = selectedSpot
+    ? getWeatherLocationForSpot(selectedSpot)
+    : undefined;
+  const selectedWeatherKey = selectedWeatherLocation
+    ? normalizeLocationSearchValue(selectedWeatherLocation)
+    : '';
+  const selectedForecast = selectedWeatherKey ? forecastByLocation[selectedWeatherKey] : undefined;
   const detailSpot = detailCardVisible ? (selectedSpot ?? lastDetailSpot.current) : null;
   const detailWildlifeSightings = useMemo(
     () => (detailSpot ? getWildlifeSightings(detailSpot) : []),
     [detailSpot]
   );
-  const galleryImages = selectedSpot ? [selectedSpot.image] : [];
+  const hasDetailWildlifeSightings = detailWildlifeSightings.length > 0;
+  const galleryScopeSpots = useMemo(() => {
+    if (selectedSpot) {
+      return [selectedSpot];
+    }
+
+    if (activeCategory !== 'All' || locationSearchTerms.length > 0) {
+      return visibleMapSpots;
+    }
+
+    return searchedSpots;
+  }, [activeCategory, locationSearchTerms.length, searchedSpots, selectedSpot, visibleMapSpots]);
+  const galleryImages = useMemo(
+    () => buildGalleryImagesForScope(galleryScopeSpots, mapOverview.image),
+    [galleryScopeSpots, mapOverview.image]
+  );
+  const galleryLocationLabel =
+    selectedSpot?.name ??
+    (activeCategory !== 'All'
+      ? activeCategory
+      : locationSearchTerms.length > 0
+        ? searchQuery.trim()
+        : 'Zimbabwe');
+  const galleryRouteParams = useMemo(
+    () => ({
+      location: galleryLocationLabel,
+      title: galleryLocationLabel,
+      galleryType: 'location',
+      contextImage: selectedSpot?.image ?? mapOverview.image,
+      images: JSON.stringify(galleryImages),
+    }),
+    [galleryImages, galleryLocationLabel, mapOverview.image, selectedSpot]
+  );
   const languagePhraseOptions = useMemo(
     () => (selectedSpot ? getLanguagePhraseOptions(selectedSpot) : []),
     [selectedSpot]
   );
   const galleryCardBackground = colorScheme === 'dark' ? '#2C2C2E' : '#E5E5EA';
+  const scopedMapSpots = useMemo(() => {
+    if (selectedSpot) {
+      return [selectedSpot];
+    }
+
+    if (activeCategory !== 'All' || locationSearchTerms.length > 0) {
+      return visibleMapSpots;
+    }
+
+    return [];
+  }, [activeCategory, locationSearchTerms.length, selectedSpot, visibleMapSpots]);
+  const listScopeLocations = useMemo(
+    () => buildLocationScope(scopedMapSpots, !!selectedSpot),
+    [scopedMapSpots, selectedSpot]
+  );
+  const listScopeLabel =
+    selectedSpot?.name ??
+    (activeCategory !== 'All'
+      ? activeCategory
+      : locationSearchTerms.length > 0
+        ? searchQuery.trim()
+        : '');
+  const listScopeRouteParams = useMemo(
+    () => ({
+      ...(listScopeLabel ? { location: listScopeLabel } : {}),
+      ...(listScopeLocations.length > 0 ? { locations: listScopeLocations.join('|') } : {}),
+    }),
+    [listScopeLabel, listScopeLocations]
+  );
   const selectedEvents = useMemo(
     () =>
-      selectedSpot
-        ? events.filter(event => eventMatchesLocation(event, selectedSpot.eventLocationAliases))
+      listScopeLocations.length > 0
+        ? events.filter(event => itemMatchesLocationScope(event.location, listScopeLocations))
         : events,
-    [events, selectedSpot]
+    [events, listScopeLocations]
   );
   const upcomingEvents = useMemo(
     () =>
@@ -3709,33 +5306,25 @@ export default function ExploreScreen() {
   }, []);
 
   const selectedStays = useMemo(() => {
-    if (!selectedSpot) return allStays;
-    const aliases = [
-      selectedSpot.name,
-      ...(selectedSpot.eventLocationAliases ?? []),
-    ].map(a => a.toLowerCase());
+    if (listScopeLocations.length === 0) return allStays;
     return allStays.filter(stay =>
-      aliases.some(alias =>
-        stay.location?.toLowerCase().includes(alias) ||
-        alias.includes(stay.location?.toLowerCase() ?? '')
-      )
+      itemMatchesLocationScope(stay.location ?? '', listScopeLocations)
     );
-  }, [allStays, selectedSpot]);
+  }, [allStays, listScopeLocations]);
   const featuredStays = useMemo(() => selectedStays.slice(0, 3), [selectedStays]);
   const selectedActivities = useMemo(() => {
-    if (!selectedSpot) return thingsToDoData;
-    const aliases = [
-      selectedSpot.name,
-      ...(selectedSpot.eventLocationAliases ?? []),
-    ].map(a => a.toLowerCase());
-    return thingsToDoData.filter(a =>
-      aliases.some(alias =>
-        a.location.toLowerCase().includes(alias) ||
-        alias.includes(a.location.toLowerCase())
-      )
+    return thingsToDoData.filter(
+      a =>
+        listScopeLocations.length === 0 || itemMatchesLocationScope(a.location, listScopeLocations)
     );
-  }, [selectedSpot]);
+  }, [listScopeLocations]);
   const featuredActivities = useMemo(() => selectedActivities.slice(0, 3), [selectedActivities]);
+  const getAtlasHeartScale = useCallback((id: string) => {
+    if (!atlasHeartScalesRef.current[id]) {
+      atlasHeartScalesRef.current[id] = new Animated.Value(1);
+    }
+    return atlasHeartScalesRef.current[id];
+  }, []);
   const getActivityHeartScale = useCallback((id: string) => {
     if (!activityHeartScalesRef.current[id]) {
       activityHeartScalesRef.current[id] = new Animated.Value(1);
@@ -3743,13 +5332,44 @@ export default function ExploreScreen() {
     return activityHeartScalesRef.current[id];
   }, []);
   const mapHtml = useMemo(
-    () =>
-      buildZimbabweMapHtml(atlasSpots, '', colorScheme === 'dark'),
-    [colorScheme, atlasSpots] // filteredSpots/activeSpotId intentionally omitted — active state is updated via injectJavaScript
+    () => buildZimbabweMapHtml(searchedSpots, '', colorScheme === 'dark'),
+    [colorScheme, searchedSpots] // activeSpotId intentionally omitted — active state is updated via injectJavaScript; category filtering via injectCategoryFilter
   );
 
-  // Reset shimmer whenever the map HTML rebuilds (e.g. theme switch)
-  useEffect(() => { setMapLoaded(false); }, [mapHtml]);
+  // Reset shimmer whenever the map HTML rebuilds (e.g. theme switch or search change)
+  useEffect(() => {
+    setMapLoaded(false);
+  }, [mapHtml]);
+
+  useEffect(
+    () => subscribeFavorites(() => setFavoriteLocationsVersion(version => version + 1)),
+    []
+  );
+
+  useEffect(() => {
+    if (activeCategory !== 'All' && !searchedSpots.some(spot => spot.region === activeCategory)) {
+      setActiveCategory('All');
+    }
+
+    if (activeSpotId && !searchedSpots.some(spot => spot.id === activeSpotId)) {
+      setActiveSpotId('');
+    }
+  }, [activeCategory, activeSpotId, searchedSpots]);
+
+  useEffect(() => {
+    LayoutAnimation.configureNext({
+      duration: 260,
+      create: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+        property: LayoutAnimation.Properties.opacity,
+      },
+      update: { type: LayoutAnimation.Types.easeInEaseOut },
+      delete: {
+        type: LayoutAnimation.Types.easeInEaseOut,
+        property: LayoutAnimation.Properties.opacity,
+      },
+    });
+  }, [hasDetailWildlifeSightings]);
 
   // Enable LayoutAnimation on Android
   useEffect(() => {
@@ -3765,16 +5385,28 @@ export default function ExploreScreen() {
       if (!detailCardVisible) {
         LayoutAnimation.configureNext({
           duration: 350,
-          create: { type: LayoutAnimation.Types.easeInEaseOut, property: LayoutAnimation.Properties.opacity, duration: 350 },
+          create: {
+            type: LayoutAnimation.Types.easeInEaseOut,
+            property: LayoutAnimation.Properties.opacity,
+            duration: 350,
+          },
           update: { type: LayoutAnimation.Types.spring, springDamping: 0.82 },
         });
         setDetailCardVisible(true);
         detailCardAnim.setValue(0);
-        Animated.spring(detailCardAnim, { toValue: 1, useNativeDriver: true, tension: 72, friction: 9 }).start();
+        Animated.spring(detailCardAnim, {
+          toValue: 1,
+          useNativeDriver: true,
+          tension: 72,
+          friction: 9,
+        }).start();
       }
     } else if (detailCardVisible) {
       Animated.timing(detailCardAnim, {
-        toValue: 0, duration: 220, useNativeDriver: true, easing: Easing.out(Easing.ease),
+        toValue: 0,
+        duration: 220,
+        useNativeDriver: true,
+        easing: Easing.out(Easing.ease),
       }).start(() => {
         LayoutAnimation.configureNext({
           duration: 300,
@@ -3786,10 +5418,16 @@ export default function ExploreScreen() {
   }, [selectedSpot]);
 
   const webViewRef = useRef<InstanceType<typeof WebView>>(null);
+  const lastCategoryFilterInjectionRef = useRef('');
 
   const injectActiveMarker = useCallback((id: string, lat?: number, lng?: number) => {
-    const panJs = (id && lat != null && lng != null)
-      ? `if(window._leafletMap){window._leafletMap.panTo([${lat},${lng}],{animate:true,duration:0.5,easeLinearity:0.25});}` : '';
+    const panJs =
+      id && lat != null && lng != null
+        ? `if(window._leafletMap){
+          var focusZoom = Math.max(window._leafletMap.getZoom(), 8);
+          window._leafletMap.flyTo([${lat},${lng}], focusZoom, {animate:true,duration:0.5,easeLinearity:0.25});
+        }`
+        : '';
     const js = `(function(){
       document.querySelectorAll('.map-marker').forEach(function(el){
         el.classList.remove('is-active');
@@ -3820,14 +5458,112 @@ export default function ExploreScreen() {
     injectActiveMarker(
       selectedSpot?.id ?? '',
       selectedSpot?.coordinates.latitude,
-      selectedSpot?.coordinates.longitude,
+      selectedSpot?.coordinates.longitude
     );
   }, [selectedSpot?.id, injectActiveMarker]);
+
+  const injectCategoryFilter = useCallback((category: string, animated = true) => {
+    const catJson = JSON.stringify(category);
+    const animatedJson = JSON.stringify(animated);
+    const js = `(function(){
+      var cat = ${catJson};
+      var animated = ${animatedJson};
+      var markers = window._markers || {};
+      var markerIds = Object.keys(markers);
+      var filterRunId = (window._categoryFilterRunId || 0) + 1;
+      window._categoryFilterRunId = filterRunId;
+      function setMarkerVisible(id, visible) {
+        var m = markers[id];
+        var el = m && m.marker && m.marker.getElement ? m.marker.getElement() : null;
+        if (!el) return;
+        if (m.hideTimer) {
+          window.clearTimeout(m.hideTimer);
+          m.hideTimer = null;
+        }
+        if (visible) {
+          el.style.display = '';
+          el.style.pointerEvents = '';
+          requestAnimationFrame(function() { el.style.opacity = '1'; });
+        } else {
+          el.style.opacity = '0';
+          el.style.pointerEvents = 'none';
+          m.hideTimer = window.setTimeout(function() {
+            if (filterRunId !== window._categoryFilterRunId) {
+              m.hideTimer = null;
+              return;
+            }
+            if (cat !== 'All' && markers[id] && markers[id].region !== cat) {
+              el.style.display = 'none';
+            }
+            m.hideTimer = null;
+          }, animated ? 160 : 0);
+        }
+      }
+      function easeToBounds(bounds, padding, duration) {
+        if (!window._leafletMap || !bounds) return;
+        var map = window._leafletMap;
+        var pad = L.point(padding[0], padding[1]);
+        var zoom = map.getBoundsZoom(bounds, false, pad);
+        map.stop();
+        if (animated) {
+          map.flyTo(bounds.getCenter(), zoom, {
+            animate: true,
+            duration: duration,
+            easeLinearity: 0.18,
+            noMoveStart: true
+          });
+        } else {
+          map.fitBounds(bounds, { padding: padding, animate: false });
+        }
+      }
+
+      markerIds.forEach(function(id) {
+        var m = markers[id];
+        if (cat === 'All') {
+          setMarkerVisible(id, true);
+        } else {
+          setMarkerVisible(id, m.region === cat);
+        }
+      });
+
+      if (window._leafletMap) {
+        if (cat !== 'All') {
+          var pts = [];
+          markerIds.forEach(function(id) {
+            if (markers[id].region === cat) pts.push(markers[id].marker.getLatLng());
+          });
+          if (pts.length > 0) easeToBounds(L.latLngBounds(pts), [30, 30], 0.55);
+        } else if (window._zimbabweBounds) {
+          easeToBounds(window._zimbabweBounds, [18, 18], 0.5);
+        }
+      }
+      true;
+    })();`;
+    webViewRef.current?.injectJavaScript(js);
+  }, []);
+
+  const runCategoryFilter = useCallback(
+    (category: string, animated = true, force = false) => {
+      const key = `${category}:${animated ? 'animated' : 'static'}`;
+      if (!force && lastCategoryFilterInjectionRef.current === key) {
+        return;
+      }
+
+      lastCategoryFilterInjectionRef.current = key;
+      injectCategoryFilter(category, animated);
+    },
+    [injectCategoryFilter]
+  );
+
+  useEffect(() => {
+    runCategoryFilter(activeCategory);
+  }, [activeCategory, runCategoryFilter]);
 
   const handleMapLoad = useCallback(() => {
     setMapLoaded(true);
     injectActiveMarker(selectedSpot?.id ?? '');
-  }, [injectActiveMarker, selectedSpot?.id]);
+    runCategoryFilter(activeCategory, false, true);
+  }, [injectActiveMarker, runCategoryFilter, selectedSpot?.id, activeCategory]);
 
   const cardBackground = useMemo(
     () => ({
@@ -3836,18 +5572,25 @@ export default function ExploreScreen() {
     }),
     [colorScheme]
   );
+  const listCardBorderStyle = useMemo(
+    () => ({
+      borderWidth: 1,
+      borderColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
+    }),
+    [colorScheme]
+  );
 
   const mutedTextColor = colorScheme === 'dark' ? 'rgba(242,242,247,0.72)' : 'rgba(60,60,67,0.72)';
   const subtleTextColor = colorScheme === 'dark' ? 'rgba(242,242,247,0.58)' : 'rgba(60,60,67,0.58)';
+  const sectionIconColor = colorScheme === 'dark' ? '#FFFFFF' : '#1C1C1E';
+  const sectionSubheadingColor = subtleTextColor;
   const wildlifeIconColor = colorScheme === 'dark' ? '#FFFFFF' : '#111111';
-  const atlasBorderColor =
-    colorScheme === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(31,31,31,0.08)';
   const weatherPillStyle =
     colorScheme === 'dark' ? styles.weatherDayPillDark : styles.weatherDayPillLight;
   const weatherTextColor = theme.tint;
 
   React.useEffect(() => {
-    if (!selectedSpotId || !selectedWeatherLocation || selectedForecast !== undefined) {
+    if (!selectedWeatherLocation || !selectedWeatherKey || selectedForecast !== undefined) {
       return;
     }
 
@@ -3860,17 +5603,17 @@ export default function ExploreScreen() {
           return;
         }
 
-        setForecastBySpotId(prev => ({
+        setForecastByLocation(prev => ({
           ...prev,
-          [selectedSpotId]: forecastData?.slice(0, 5) ?? [],
+          [selectedWeatherKey]: forecastData?.slice(0, 5) ?? [],
         }));
       })
       .catch(error => {
         console.warn(`Failed to load explore forecast for ${selectedWeatherLocation}:`, error);
         if (isActive) {
-          setForecastBySpotId(prev => ({
+          setForecastByLocation(prev => ({
             ...prev,
-            [selectedSpotId]: [],
+            [selectedWeatherKey]: [],
           }));
         }
       });
@@ -3878,7 +5621,7 @@ export default function ExploreScreen() {
     return () => {
       isActive = false;
     };
-  }, [selectedForecast, selectedSpotId, selectedWeatherLocation]);
+  }, [selectedForecast, selectedWeatherKey, selectedWeatherLocation]);
 
   React.useEffect(() => {
     let isActive = true;
@@ -3920,11 +5663,18 @@ export default function ExploreScreen() {
       .getAll()
       .then(({ data, error }) => {
         if (!isActive) return;
-        if (error || !data) { setAllStays([]); return; }
+        if (error || !data) {
+          setAllStays([]);
+          return;
+        }
         setAllStays(data);
       })
-      .catch(() => { if (isActive) setAllStays([]); });
-    return () => { isActive = false; };
+      .catch(() => {
+        if (isActive) setAllStays([]);
+      });
+    return () => {
+      isActive = false;
+    };
   }, []);
 
   const getEventHeartScale = useCallback((id: string) => {
@@ -3934,6 +5684,29 @@ export default function ExploreScreen() {
 
     return eventHeartScalesRef.current[id];
   }, []);
+
+  const handleToggleAtlasFavorite = useCallback(
+    (id: string) => {
+      const scale = getAtlasHeartScale(id);
+      Haptics.selectionAsync().catch(() => {});
+      Animated.sequence([
+        Animated.timing(scale, {
+          toValue: 1.15,
+          duration: 100,
+          useNativeDriver: true,
+        }),
+        Animated.spring(scale, {
+          toValue: 1,
+          friction: 5,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      toggleFavoriteUtil(id, 'destination');
+      setFavoriteLocationsVersion(version => version + 1);
+    },
+    [getAtlasHeartScale]
+  );
 
   const handleToggleEventFavorite = useCallback(
     (id: string) => {
@@ -3960,16 +5733,11 @@ export default function ExploreScreen() {
 
   const handleCategoryPress = useCallback(
     (category: string) => {
+      runCategoryFilter(category);
       setActiveCategory(category);
-      if (category === 'All') {
-        setActiveSpotId('');
-      } else {
-        const nextSpot = atlasSpots.find(spot => spot.name === category);
-        if (nextSpot) setActiveSpotId(nextSpot.id);
-        else setActiveSpotId('');
-      }
+      setActiveSpotId('');
     },
-    [atlasSpots]
+    [runCategoryFilter]
   );
 
   const handleMapMessage = useCallback(
@@ -3979,21 +5747,20 @@ export default function ExploreScreen() {
         if (payload.type === 'mapReady') {
           setMapLoaded(true);
           injectActiveMarker(selectedSpot?.id ?? '');
-        } else if (
-          payload.type === 'selectSpot' &&
-          typeof payload.id === 'string'
-        ) {
+          runCategoryFilter(activeCategory, false, true);
+        } else if (payload.type === 'selectSpot' && typeof payload.id === 'string') {
           const spot = atlasSpots.find(s => s.id === payload.id);
           if (spot) {
+            runCategoryFilter(spot.region);
             setActiveSpotId(spot.id);
-            setActiveCategory(spot.name);
+            setActiveCategory(spot.region);
           }
         }
       } catch {
         // Ignore non-JSON WebView messages.
       }
     },
-    [atlasSpots, injectActiveMarker, selectedSpot?.id]
+    [atlasSpots, injectActiveMarker, runCategoryFilter, selectedSpot?.id, activeCategory]
   );
 
   const handleCloseStory = useCallback(() => {
@@ -4165,69 +5932,24 @@ export default function ExploreScreen() {
             />
           }
         >
-          <View style={styles.storiesSection}>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.storiesRow}
-            >
-              {stories.map((story, index) => {
-                const iconName = story.icon ?? 'play';
-                const hasViewed = viewedStoryIds.includes(story.id);
-                const ringColor = hasViewed
-                  ? colorScheme === 'dark'
-                    ? 'rgba(255,255,255,0.25)'
-                    : 'rgba(31,31,31,0.18)'
-                  : story.accent;
-                const innerFill = hasViewed
-                  ? colorScheme === 'dark'
-                    ? 'rgba(255,255,255,0.12)'
-                    : 'rgba(31,31,31,0.15)'
-                  : colorScheme === 'dark'
-                    ? 'rgba(255,255,255,0.22)'
-                    : 'rgba(31,31,31,0.82)';
-                const iconColor = hasViewed ? 'rgba(255,255,255,0.65)' : '#fff';
-                const labelColor =
-                  colorScheme === 'dark' ? 'rgba(242,242,247,0.9)' : 'rgba(60,60,67,0.85)';
+          <View style={styles.searchFilterSection}>
+            <SearchBar
+              value={searchQuery}
+              onChangeText={handleLocationSearchChange}
+              placeholder="Search"
+            />
 
-                return (
-                  <Pressable
-                    key={story.id}
-                    style={styles.storyItem}
-                    onPress={() => handleStoryPress(index)}
-                  >
-                    <View
-                      style={[
-                        styles.storyRing,
-                        colorScheme === 'dark' ? styles.storyRingDark : styles.storyRingLight,
-                        { borderColor: ringColor },
-                      ]}
-                    >
-                      <View style={[styles.storyInner, { backgroundColor: innerFill }]}>
-                        <Ionicons name={iconName} size={24} color={iconColor} />
-                      </View>
-                    </View>
-                    <ThemedText type="bodyBold" style={[styles.storyLabel, { color: labelColor }]}>
-                      {story.label}
-                    </ThemedText>
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+            <FilterBar
+              options={locationFilterOptions}
+              activeFilter={activeCategory}
+              onFilterChange={handleCategoryPress}
+            />
           </View>
 
-          <FilterBar
-            options={locationFilterOptions}
-            activeFilter={activeCategory}
-            onFilterChange={handleCategoryPress}
-            containerStyle={styles.locationFilterContainer}
-          />
-
           {atlasSpots.length > 0 ? (
-
             <View style={styles.atlasSection}>
               {/* Map Card */}
-              <View style={[styles.atlasCard, cardBackground, { borderColor: atlasBorderColor }]}>
+              <View style={[styles.atlasCard, cardBackground]}>
                 <View style={styles.mapStage}>
                   <View style={styles.mapBackdrop} />
                   <View style={styles.mapCanvas}>
@@ -4254,19 +5976,106 @@ export default function ExploreScreen() {
                 </View>
               </View>
 
+              {!selectedSpot && !detailCardVisible && (
+                <View style={[styles.atlasCard, cardBackground]}>
+                  <ImageBackground
+                    source={{ uri: mapOverview.image }}
+                    style={styles.atlasDetailHero}
+                    imageStyle={styles.atlasDetailImage}
+                    resizeMode="cover"
+                  >
+                    <View style={styles.atlasDetailScrim} />
+                    <View style={styles.atlasDetailHeroContent}>
+                      <ThemedText
+                        style={styles.atlasHeroTitle}
+                        numberOfLines={2}
+                        adjustsFontSizeToFit
+                        minimumFontScale={0.78}
+                      >
+                        {mapOverview.title}
+                      </ThemedText>
+                      <View style={styles.atlasHeroMetaRow}>
+                        <View style={styles.atlasHeroMetaItem}>
+                          <Ionicons name="map-outline" size={13} color="#FFFFFF" />
+                          <ThemedText style={styles.atlasHeroMetaText}>
+                            {mapOverview.mappedCount}{' '}
+                            {mapOverview.mappedCount === 1 ? 'place' : 'places'} mapped
+                          </ThemedText>
+                        </View>
+                      </View>
+                    </View>
+                  </ImageBackground>
+
+                  <View style={styles.atlasDetailPanel}>
+                    {mapOverview.sightings.length > 0 && (
+                      <View style={styles.wildlifeSightingsSection}>
+                        <View style={styles.wildlifeSightingsHeader}>
+                          <View style={styles.staysHeaderIcon}>
+                            <BinocularsIcon size={24} color={sectionIconColor} />
+                          </View>
+                          <View>
+                            <SectionTitle color={sectionIconColor}>Wildlife Sightings</SectionTitle>
+                            <ThemedText
+                              type="bodyBold"
+                              style={[
+                                styles.wildlifeSightingsTitle,
+                                { color: sectionSubheadingColor },
+                              ]}
+                            >
+                              Animals you might see
+                            </ThemedText>
+                          </View>
+                        </View>
+
+                        <WildlifeSightingsScrollRow
+                          items={mapOverview.sightings}
+                          iconColor={wildlifeIconColor}
+                          noteColor={subtleTextColor}
+                          itemKeyPrefix={`overview-${mapOverview.title}`}
+                        />
+                      </View>
+                    )}
+
+                    <ThemedText
+                      type="default"
+                      style={[
+                        styles.atlasDescription,
+                        {
+                          color:
+                            colorScheme === 'dark'
+                              ? 'rgba(242,242,247,0.84)'
+                              : 'rgba(28,28,30,0.78)',
+                        },
+                      ]}
+                    >
+                      {mapOverview.description}
+                    </ThemedText>
+                  </View>
+                </View>
+              )}
+
               {/* Image/Details Card — slides in when a location is selected */}
               {detailCardVisible && (
                 <Animated.View
                   style={{
                     opacity: detailCardAnim,
-                    transform: [{
-                      scale: detailCardAnim.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1] }),
-                    }, {
-                      translateY: detailCardAnim.interpolate({ inputRange: [0, 1], outputRange: [18, 0] }),
-                    }],
+                    transform: [
+                      {
+                        scale: detailCardAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [0.96, 1],
+                        }),
+                      },
+                      {
+                        translateY: detailCardAnim.interpolate({
+                          inputRange: [0, 1],
+                          outputRange: [18, 0],
+                        }),
+                      },
+                    ],
                   }}
                 >
-                  <View style={[styles.atlasCard, cardBackground, { borderColor: atlasBorderColor }]}>
+                  <View style={[styles.atlasCard, cardBackground]}>
                     {detailSpot && (
                       <>
                         <ImageBackground
@@ -4276,6 +6085,36 @@ export default function ExploreScreen() {
                           resizeMode="cover"
                         >
                           <View style={styles.atlasDetailScrim} />
+                          <TouchableOpacity
+                            style={[
+                              styles.atlasHeroHeartButton,
+                              {
+                                backgroundColor:
+                                  colorScheme === 'dark'
+                                    ? 'rgba(0,0,0,0.7)'
+                                    : 'rgba(255,255,255,0.8)',
+                              },
+                            ]}
+                            onPress={() => handleToggleAtlasFavorite(detailSpot.id)}
+                            hitSlop={{
+                              top: FEATURED_DESTINATION_OVERLAY_PADDING,
+                              left: FEATURED_DESTINATION_OVERLAY_PADDING,
+                              bottom: FEATURED_DESTINATION_OVERLAY_PADDING,
+                              right: FEATURED_DESTINATION_OVERLAY_PADDING,
+                            }}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Favorite ${detailSpot.name} ${isFavoritedUtil(detailSpot.id) ? 'selected' : 'not selected'}`}
+                          >
+                            <Animated.View
+                              style={{ transform: [{ scale: getAtlasHeartScale(detailSpot.id) }] }}
+                            >
+                              <FontAwesomeIcon
+                                icon={isFavoritedUtil(detailSpot.id) ? solidHeart : regularHeart}
+                                size={18}
+                                color="#FF4757"
+                              />
+                            </Animated.View>
+                          </TouchableOpacity>
                           <View style={styles.atlasDetailHeroContent}>
                             <ThemedText
                               style={styles.atlasHeroTitle}
@@ -4295,7 +6134,8 @@ export default function ExploreScreen() {
                               <View style={styles.atlasHeroMetaItem}>
                                 <Ionicons name="navigate-outline" size={13} color="#FFFFFF" />
                                 <ThemedText style={styles.atlasHeroMetaText}>
-                                  {Math.abs(detailSpot.coordinates.latitude).toFixed(2)}°S · {detailSpot.coordinates.longitude.toFixed(2)}°E
+                                  {Math.abs(detailSpot.coordinates.latitude).toFixed(2)}°S ·{' '}
+                                  {detailSpot.coordinates.longitude.toFixed(2)}°E
                                 </ThemedText>
                               </View>
                             </View>
@@ -4303,78 +6143,63 @@ export default function ExploreScreen() {
                         </ImageBackground>
 
                         <View style={styles.atlasDetailPanel}>
-                          <View style={styles.wildlifeSightingsHeader}>
-                            <View>
-                              <ThemedText
-                                type="caption"
-                                style={[styles.wildlifeSightingsEyebrow, { color: subtleTextColor }]}
-                              >
-                                Wildlife sightings
-                              </ThemedText>
-                              <ThemedText
-                                type="bodyBold"
-                                style={[
-                                  styles.wildlifeSightingsTitle,
-                                  { color: colorScheme === 'dark' ? '#FFFFFF' : '#1C1C1E' },
-                                ]}
-                              >
-                                Animals you might see
-                              </ThemedText>
-                            </View>
-                            <Ionicons
-                              name="paw-outline"
-                              size={22}
-                              color={colorScheme === 'dark' ? '#FFFFFF' : '#1C1C1E'}
-                            />
-                          </View>
-
-                          <View style={styles.wildlifeSightingsGrid}>
-                            {detailWildlifeSightings.map((item, index) => (
-                              <Animated.View
-                                key={item.label}
-                                style={[
-                                  styles.wildlifeSightingTile,
-                                  {
-                                    opacity: detailCardAnim,
-                                    transform: [{
+                          {hasDetailWildlifeSightings && (
+                            <Animated.View
+                              style={[
+                                styles.wildlifeSightingsSection,
+                                {
+                                  opacity: detailCardAnim,
+                                  transform: [
+                                    {
                                       translateY: detailCardAnim.interpolate({
                                         inputRange: [0, 1],
-                                        outputRange: [10 + index * 3, 0],
+                                        outputRange: [10, 0],
                                       }),
-                                    }],
-                                  },
-                                ]}
-                              >
-                                <View style={styles.wildlifeSightingIcon}>
-                                  <WildlifeIcon
-                                    name={item.icon}
-                                    color={wildlifeIconColor}
-                                  />
+                                    },
+                                  ],
+                                },
+                              ]}
+                            >
+                              <View style={styles.wildlifeSightingsHeader}>
+                                <View style={styles.staysHeaderIcon}>
+                                  <BinocularsIcon size={24} color={sectionIconColor} />
                                 </View>
-                                <ThemedText
-                                  type="caption"
-                                  style={[
-                                    styles.wildlifeSightingName,
-                                    { color: wildlifeIconColor },
-                                  ]}
-                                >
-                                  {item.label}
-                                </ThemedText>
-                                <ThemedText
-                                  type="caption"
-                                  style={[styles.wildlifeSightingNote, { color: subtleTextColor }]}
-                                >
-                                  {item.note}
-                                </ThemedText>
-                              </Animated.View>
-                            ))}
-                          </View>
+                                <View>
+                                  <SectionTitle color={sectionIconColor}>
+                                    Wildlife Sightings
+                                  </SectionTitle>
+                                  <ThemedText
+                                    type="bodyBold"
+                                    style={[
+                                      styles.wildlifeSightingsTitle,
+                                      { color: sectionSubheadingColor },
+                                    ]}
+                                  >
+                                    Animals you might see
+                                  </ThemedText>
+                                </View>
+                              </View>
+
+                              <WildlifeSightingsScrollRow
+                                items={detailWildlifeSightings}
+                                iconColor={wildlifeIconColor}
+                                noteColor={subtleTextColor}
+                                animation={detailCardAnim}
+                                itemKeyPrefix={`detail-${detailSpot.id}`}
+                              />
+                            </Animated.View>
+                          )}
 
                           <ThemedText
                             type="default"
                             style={[
                               styles.atlasDescription,
-                              { color: colorScheme === 'dark' ? 'rgba(242,242,247,0.84)' : 'rgba(28,28,30,0.78)' },
+                              {
+                                color:
+                                  colorScheme === 'dark'
+                                    ? 'rgba(242,242,247,0.84)'
+                                    : 'rgba(28,28,30,0.78)',
+                              },
                             ]}
                           >
                             {detailSpot.description}
@@ -4383,7 +6208,10 @@ export default function ExploreScreen() {
                           <View style={styles.atlasDetailFooterRow}>
                             <View style={styles.atlasDetailMiniStat}>
                               <Ionicons name="language-outline" size={15} color={mutedTextColor} />
-                              <ThemedText type="caption" style={[styles.atlasDetailMiniStatText, { color: mutedTextColor }]}>
+                              <ThemedText
+                                type="caption"
+                                style={[styles.atlasDetailMiniStatText, { color: mutedTextColor }]}
+                              >
                                 {detailSpot.language}
                               </ThemedText>
                             </View>
@@ -4395,60 +6223,58 @@ export default function ExploreScreen() {
                 </Animated.View>
               )}
 
-              {selectedSpot && (
-              <View style={[styles.weatherCard, cardBackground, { borderColor: atlasBorderColor }]}>
-                <View style={styles.featureHeaderRow}>
-                  <View style={[styles.featureIcon, { backgroundColor: colorScheme === 'dark' ? '#FFFFFF' : '#1C1C1E' }]}>
-                    <Ionicons name="partly-sunny-outline" size={18} color={colorScheme === 'dark' ? '#000000' : '#FFFFFF'} />
+              {selectedSpot && selectedWeatherLocation && (
+                <View style={[styles.weatherCard, cardBackground]}>
+                  <View style={styles.featureHeaderRow}>
+                    <View style={styles.staysHeaderIcon}>
+                      <WeatherIcon size={24} color={sectionIconColor} />
+                    </View>
+                    <View>
+                      <SectionTitle color={sectionIconColor}>Weather Forecast</SectionTitle>
+                    </View>
                   </View>
-                  <View style={styles.featureTitleGroup}>
-                    <ThemedText type="sectionTitle" style={styles.featureTitle}>
-                      Weather Forecast
-                    </ThemedText>
-                  </View>
-                </View>
 
-                {selectedForecast === undefined ? (
-                  <View style={[styles.weatherStatusPanel, weatherPillStyle]}>
-                    <ThemedText style={[styles.weatherStatusText, { color: weatherTextColor }]}>
-                      Loading forecast...
-                    </ThemedText>
-                  </View>
-                ) : selectedForecast.length > 0 ? (
-                  <View style={styles.weatherForecastRow}>
-                    {selectedForecast.map((day, index) => (
-                      <View
-                        key={`${day.day}-${index}`}
-                        style={[styles.weatherPill, weatherPillStyle]}
-                      >
-                        <ThemedText style={[styles.pillDayText, { color: weatherTextColor }]}>
-                          {day.day}
-                        </ThemedText>
-                        <Ionicons
-                          name={getForecastIconName(day.iconName)}
-                          size={22}
-                          color={weatherTextColor}
-                          style={styles.pillWeatherIcon}
-                        />
-                        <View style={styles.pillTempRow}>
-                          <ThemedText style={[styles.pillHighText, { color: weatherTextColor }]}>
-                            {day.high}°
+                  {selectedForecast === undefined ? (
+                    <View style={[styles.weatherStatusPanel, weatherPillStyle]}>
+                      <ThemedText style={[styles.weatherStatusText, { color: weatherTextColor }]}>
+                        Loading forecast...
+                      </ThemedText>
+                    </View>
+                  ) : selectedForecast.length > 0 ? (
+                    <View style={styles.weatherForecastRow}>
+                      {selectedForecast.map((day, index) => (
+                        <View
+                          key={`${day.day}-${index}`}
+                          style={[styles.weatherPill, weatherPillStyle]}
+                        >
+                          <ThemedText style={[styles.pillDayText, { color: weatherTextColor }]}>
+                            {day.day}
                           </ThemedText>
-                          <ThemedText style={[styles.pillLowText, { color: weatherTextColor }]}>
-                            {day.low}°
-                          </ThemedText>
+                          <Ionicons
+                            name={getForecastIconName(day.iconName)}
+                            size={22}
+                            color={weatherTextColor}
+                            style={styles.pillWeatherIcon}
+                          />
+                          <View style={styles.pillTempRow}>
+                            <ThemedText style={[styles.pillHighText, { color: weatherTextColor }]}>
+                              {day.high}°
+                            </ThemedText>
+                            <ThemedText style={[styles.pillLowText, { color: weatherTextColor }]}>
+                              {day.low}°
+                            </ThemedText>
+                          </View>
                         </View>
-                      </View>
-                    ))}
-                  </View>
-                ) : (
-                  <View style={[styles.weatherStatusPanel, weatherPillStyle]}>
-                    <ThemedText style={[styles.weatherStatusText, { color: weatherTextColor }]}>
-                      Forecast unavailable for this location.
-                    </ThemedText>
-                  </View>
-                )}
-              </View>
+                      ))}
+                    </View>
+                  ) : (
+                    <View style={[styles.weatherStatusPanel, weatherPillStyle]}>
+                      <ThemedText style={[styles.weatherStatusText, { color: weatherTextColor }]}>
+                        Forecast unavailable for this location.
+                      </ThemedText>
+                    </View>
+                  )}
+                </View>
               )}
 
               {galleryImages.length > 0 && (
@@ -4461,23 +6287,17 @@ export default function ExploreScreen() {
                   ]}
                 >
                   <View style={styles.gallerySectionHeader}>
-                    <View style={[styles.featureIcon, { backgroundColor: colorScheme === 'dark' ? '#FFFFFF' : '#1C1C1E' }]}>
-                      <Ionicons name="images-outline" size={18} color={colorScheme === 'dark' ? '#000000' : '#FFFFFF'} />
+                    <View style={styles.staysHeaderIcon}>
+                      <GalleryIcon size={24} color={sectionIconColor} />
                     </View>
                     <View style={styles.featureTitleGroup}>
-                      <ThemedText type="sectionTitle" style={styles.featureTitle}>
-                        Gallery
-                      </ThemedText>
+                      <SectionTitle color={sectionIconColor}>Gallery</SectionTitle>
                     </View>
                     <ViewAllButton
                       onPress={() =>
                         router.push({
                           pathname: '/gallery',
-                          params: {
-                            location: selectedSpot?.name ?? '',
-                            title: 'Photo Gallery',
-                            images: JSON.stringify(galleryImages),
-                          },
+                          params: galleryRouteParams,
                         })
                       }
                     />
@@ -4486,15 +6306,14 @@ export default function ExploreScreen() {
                     <View style={styles.galleryRow}>
                       <TouchableOpacity
                         activeOpacity={0.8}
-                        style={[styles.galleryCardContainer, { backgroundColor: galleryCardBackground }]}
+                        style={[
+                          styles.galleryCardContainer,
+                          { backgroundColor: galleryCardBackground },
+                        ]}
                         onPress={() =>
                           router.push({
                             pathname: '/gallery',
-                            params: {
-                              location: selectedSpot?.name ?? '',
-                              title: 'Photo Gallery',
-                              images: JSON.stringify(galleryImages),
-                            },
+                            params: galleryRouteParams,
                           })
                         }
                       >
@@ -4506,15 +6325,14 @@ export default function ExploreScreen() {
                       </TouchableOpacity>
                       <TouchableOpacity
                         activeOpacity={0.8}
-                        style={[styles.galleryCardContainer, { backgroundColor: galleryCardBackground }]}
+                        style={[
+                          styles.galleryCardContainer,
+                          { backgroundColor: galleryCardBackground },
+                        ]}
                         onPress={() =>
                           router.push({
                             pathname: '/gallery',
-                            params: {
-                              location: selectedSpot?.name ?? '',
-                              title: 'Photo Gallery',
-                              images: JSON.stringify(galleryImages),
-                            },
+                            params: galleryRouteParams,
                           })
                         }
                       >
@@ -4543,20 +6361,18 @@ export default function ExploreScreen() {
                 ]}
               >
                 <View style={styles.gallerySectionHeader}>
-                  <View style={[styles.featureIcon, { backgroundColor: colorScheme === 'dark' ? '#FFFFFF' : '#1C1C1E' }]}>
-                    <Ionicons name="bed-outline" size={18} color={colorScheme === 'dark' ? '#000000' : '#FFFFFF'} />
+                  <View style={styles.staysHeaderIcon}>
+                    <AccommodationIcon size={24} color={sectionIconColor} />
                   </View>
                   <View style={styles.featureTitleGroup}>
-                    <ThemedText type="sectionTitle" style={styles.featureTitle}>
-                      Stays
-                    </ThemedText>
+                    <SectionTitle color={sectionIconColor}>Stays</SectionTitle>
                   </View>
                   <ViewAllButton
                     disabled={featuredStays.length === 0}
                     onPress={() =>
                       router.push({
                         pathname: '/destination-stays',
-                        params: { location: selectedSpot?.name },
+                        params: listScopeRouteParams,
                       })
                     }
                   />
@@ -4568,24 +6384,24 @@ export default function ExploreScreen() {
                         key={stay.id}
                         stay={stay}
                         isDark={colorScheme === 'dark'}
-                        onPress={s => router.push({ pathname: '/stay-profile', params: { id: s.id } })}
+                        onPress={s =>
+                          router.push({ pathname: '/stay-profile', params: { id: s.id } })
+                        }
                         onShare={() => {}}
-                        style={[styles.staysListCard, {
-                          borderWidth: 1,
-                          borderColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-                          shadowOpacity: 0,
-                          elevation: 0,
-                        }]}
+                        style={[
+                          styles.staysListCard,
+                          listCardBorderStyle,
+                          {
+                            shadowOpacity: 0,
+                            elevation: 0,
+                          },
+                        ]}
                       />
                     ))}
                   </View>
                 ) : (
                   <View style={styles.eventsEmptyState}>
-                    <Ionicons
-                      name="bed-outline"
-                      size={60}
-                      color={colorScheme === 'dark' ? '#555' : '#ccc'}
-                    />
+                    <AccommodationIcon size={60} color={colorScheme === 'dark' ? '#555' : '#ccc'} />
                     <ThemedText type="defaultSemiBold" style={styles.eventsEmptyTitle}>
                       No stays listed yet
                     </ThemedText>
@@ -4600,17 +6416,17 @@ export default function ExploreScreen() {
                 ]}
               >
                 <View style={styles.gallerySectionHeader}>
-                  <View style={[styles.featureIcon, { backgroundColor: colorScheme === 'dark' ? '#FFFFFF' : '#1C1C1E' }]}>
-                    <Ionicons name="calendar-outline" size={18} color={colorScheme === 'dark' ? '#000000' : '#FFFFFF'} />
+                  <View style={styles.staysHeaderIcon}>
+                    <EventsIcon size={24} color={sectionIconColor} />
                   </View>
                   <View style={styles.featureTitleGroup}>
-                    <ThemedText type="sectionTitle" style={styles.featureTitle}>
-                      Events
-                    </ThemedText>
+                    <SectionTitle color={sectionIconColor}>Upcoming Events</SectionTitle>
                   </View>
                   <ViewAllButton
                     disabled={upcomingEvents.length === 0}
-                    onPress={() => router.push({ pathname: '/screens/Events', params: { location: selectedSpot?.name ?? '' } })}
+                    onPress={() =>
+                      router.push({ pathname: '/screens/Events', params: listScopeRouteParams })
+                    }
                   />
                 </View>
                 {upcomingEvents.length > 0 ? (
@@ -4622,20 +6438,13 @@ export default function ExploreScreen() {
                         isFavorited={isFavoritedUtil(item.id)}
                         onToggleFavorite={handleToggleEventFavorite}
                         heartScale={getEventHeartScale(item.id)}
-                        style={[styles.eventsListCard, {
-                          borderWidth: 1,
-                          borderColor: colorScheme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-                        }]}
+                        style={[styles.eventsListCard, listCardBorderStyle]}
                       />
                     ))}
                   </View>
                 ) : (
                   <View style={styles.eventsEmptyState}>
-                    <Ionicons
-                      name="calendar-outline"
-                      size={60}
-                      color={colorScheme === 'dark' ? '#555' : '#ccc'}
-                    />
+                    <EventsIcon size={60} color={colorScheme === 'dark' ? '#555' : '#ccc'} />
                     <ThemedText type="defaultSemiBold" style={styles.eventsEmptyTitle}>
                       No events listed yet
                     </ThemedText>
@@ -4650,17 +6459,20 @@ export default function ExploreScreen() {
                 ]}
               >
                 <View style={styles.gallerySectionHeader}>
-                  <View style={[styles.featureIcon, { backgroundColor: colorScheme === 'dark' ? '#FFFFFF' : '#1C1C1E' }]}>
-                    <Ionicons name="ticket-outline" size={18} color={colorScheme === 'dark' ? '#000000' : '#FFFFFF'} />
+                  <View style={styles.staysHeaderIcon}>
+                    <ThingsIcon size={24} color={sectionIconColor} />
                   </View>
                   <View style={styles.featureTitleGroup}>
-                    <ThemedText type="sectionTitle" style={styles.featureTitle}>
-                      Things To Do
-                    </ThemedText>
+                    <SectionTitle color={sectionIconColor}>Things To Do</SectionTitle>
                   </View>
                   <ViewAllButton
                     disabled={featuredActivities.length === 0}
-                    onPress={() => router.push({ pathname: '/screens/ThingsToDoScreen', params: { location: selectedSpot?.name ?? '' } })}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/screens/ThingsToDoScreen',
+                        params: listScopeRouteParams,
+                      })
+                    }
                   />
                 </View>
                 {featuredActivities.length > 0 ? (
@@ -4677,9 +6489,10 @@ export default function ExploreScreen() {
                         durationHours: item.durationHours,
                       });
                       const statusColor = activityStatusColor(status);
-                      const basePrice = typeof item.priceFrom === 'number' && item.priceFrom > 0
-                        ? Math.max(5, Math.round(item.priceFrom / 5) * 5)
-                        : 25;
+                      const basePrice =
+                        typeof item.priceFrom === 'number' && item.priceFrom > 0
+                          ? Math.max(5, Math.round(item.priceFrom / 5) * 5)
+                          : 25;
                       return (
                         <ListImageCard
                           key={item.id}
@@ -4701,12 +6514,14 @@ export default function ExploreScreen() {
                           heartScale={getActivityHeartScale(item.id)}
                           backgroundColor={cardBg}
                           heartBackgroundColor={heartBg}
-                          style={[styles.activitiesListCard, {
-                            borderWidth: 1,
-                            borderColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)',
-                            shadowOpacity: 0,
-                            elevation: 0,
-                          }]}
+                          style={[
+                            styles.activitiesListCard,
+                            listCardBorderStyle,
+                            {
+                              shadowOpacity: 0,
+                              elevation: 0,
+                            },
+                          ]}
                           topRow={
                             <View style={styles.activityMetaRow}>
                               <LocationPill
@@ -4738,14 +6553,41 @@ export default function ExploreScreen() {
                           }
                           bottomRight={
                             <View style={styles.activityPriceStack}>
-                              <ThemedText style={styles.activityPriceLabel} lightColor="#8E8E93" darkColor="#8E8E93">
+                              <ThemedText
+                                style={styles.activityPriceLabel}
+                                lightColor="#8E8E93"
+                                darkColor="#8E8E93"
+                              >
                                 from
                               </ThemedText>
                               <View style={styles.activityPriceRow}>
-                                <Ionicons name="pricetag-outline" size={14} color="#34C759" style={styles.activityPriceIcon} />
-                                <ThemedText style={styles.activityPriceCurrency} lightColor={isDark ? '#FFFFFF' : '#1C1C1E'} darkColor="#FFFFFF">$</ThemedText>
-                                <ThemedText style={styles.activityPriceValue} lightColor={isDark ? '#FFFFFF' : '#1C1C1E'} darkColor="#FFFFFF">{basePrice}</ThemedText>
-                                <ThemedText style={styles.activityPriceUnit} lightColor="#8E8E93" darkColor="#8E8E93">/person</ThemedText>
+                                <Ionicons
+                                  name="pricetag-outline"
+                                  size={14}
+                                  color="#34C759"
+                                  style={styles.activityPriceIcon}
+                                />
+                                <ThemedText
+                                  style={styles.activityPriceCurrency}
+                                  lightColor={isDark ? '#FFFFFF' : '#1C1C1E'}
+                                  darkColor="#FFFFFF"
+                                >
+                                  $
+                                </ThemedText>
+                                <ThemedText
+                                  style={styles.activityPriceValue}
+                                  lightColor={isDark ? '#FFFFFF' : '#1C1C1E'}
+                                  darkColor="#FFFFFF"
+                                >
+                                  {basePrice}
+                                </ThemedText>
+                                <ThemedText
+                                  style={styles.activityPriceUnit}
+                                  lightColor="#8E8E93"
+                                  darkColor="#8E8E93"
+                                >
+                                  /person
+                                </ThemedText>
                               </View>
                             </View>
                           }
@@ -4755,11 +6597,7 @@ export default function ExploreScreen() {
                   </View>
                 ) : (
                   <View style={styles.eventsEmptyState}>
-                    <Ionicons
-                      name="ticket-outline"
-                      size={60}
-                      color={colorScheme === 'dark' ? '#555' : '#ccc'}
-                    />
+                    <ThingsIcon size={60} color={colorScheme === 'dark' ? '#555' : '#ccc'} />
                     <ThemedText type="defaultSemiBold" style={styles.eventsEmptyTitle}>
                       No activities listed yet
                     </ThemedText>
@@ -4768,17 +6606,13 @@ export default function ExploreScreen() {
               </View>
 
               {selectedSpot && (
-                <View
-                  style={[styles.languageCard, cardBackground, { borderColor: atlasBorderColor }]}
-                >
+                <View style={[styles.languageCard, cardBackground]}>
                   <View style={styles.featureHeaderRow}>
                     <View style={[styles.featureIcon, styles.languageIcon]}>
                       <Ionicons name="language-outline" size={18} color="#1F1F1F" />
                     </View>
                     <View style={styles.featureTitleGroup}>
-                      <ThemedText type="title3" style={styles.featureTitle}>
-                        Phrase of the Day
-                      </ThemedText>
+                      <SectionTitle color={sectionIconColor}>Phrase of the Day</SectionTitle>
                     </View>
                   </View>
 
@@ -4859,9 +6693,7 @@ export default function ExploreScreen() {
               )}
             </View>
           ) : (
-            <View
-              style={[styles.placeholderCard, cardBackground, { borderColor: atlasBorderColor }]}
-            >
+            <View style={[styles.placeholderCard, cardBackground]}>
               <ThemedText type="defaultSemiBold" style={styles.emptyTitle}>
                 Atlas locations are being curated
               </ThemedText>
@@ -5022,16 +6854,20 @@ const styles = StyleSheet.create({
     lineHeight: responsiveLineHeight(12),
     textAlign: 'center',
   },
-  locationFilterContainer: {
+  searchFilterSection: {
     marginHorizontal: -SCREEN_HORIZONTAL_PADDING,
+    paddingHorizontal: 0,
+    paddingTop: 8,
+    marginTop: 4,
+    marginBottom: EXPLORE_SECTION_GAP,
+    overflow: 'hidden',
   },
   atlasSection: {
-    gap: 16,
+    gap: EXPLORE_SECTION_GAP,
     paddingBottom: 8,
   },
   atlasCard: {
     borderRadius: 20,
-    borderWidth: 1,
     overflow: 'hidden',
   },
   mapStage: {
@@ -5080,6 +6916,17 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.38)',
   },
+  atlasHeroHeartButton: {
+    position: 'absolute',
+    top: FEATURED_DESTINATION_CARD_INSET,
+    right: FEATURED_DESTINATION_CARD_INSET,
+    width: FEATURED_DESTINATION_ACTION_SIZE,
+    height: FEATURED_DESTINATION_ACTION_SIZE,
+    borderRadius: FEATURED_DESTINATION_ACTION_SIZE / 2,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2,
+  },
   atlasDetailHeroContent: {
     gap: 9,
   },
@@ -5114,15 +6961,18 @@ const styles = StyleSheet.create({
     padding: 16,
     gap: 15,
   },
+  wildlifeSightingsSection: {
+    gap: 15,
+  },
   wildlifeSightingsHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: 16,
+    gap: 12,
   },
-  wildlifeSightingsEyebrow: {
+  sectionTitleText: {
+    fontSize: responsiveFontSize(20),
+    lineHeight: responsiveLineHeight(21),
     fontFamily: Fonts.bold,
-    textTransform: 'uppercase',
     letterSpacing: 0,
   },
   wildlifeSightingsTitle: {
@@ -5130,14 +6980,41 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(18),
     lineHeight: responsiveLineHeight(20),
   },
+  wildlifeSightingsScrollWrap: {
+    gap: 8,
+  },
+  wildlifeSightingsScroller: {
+    marginHorizontal: -4,
+  },
   wildlifeSightingsGrid: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    columnGap: 10,
-    rowGap: 16,
+    flexWrap: 'nowrap',
+    columnGap: WILDLIFE_SIGHTING_TILE_GAP,
+    paddingHorizontal: 4,
+    paddingRight: 14,
+  },
+  wildlifeScrollTrack: {
+    height: 3,
+    marginHorizontal: 4,
+    borderRadius: 999,
+    borderTopLeftRadius: 999,
+    borderTopRightRadius: 999,
+    borderBottomLeftRadius: 999,
+    borderBottomRightRadius: 999,
+    backgroundColor: 'rgba(142,142,147,0.22)',
+    overflow: 'visible',
+  },
+  wildlifeScrollThumb: {
+    height: 3,
+    borderRadius: 999,
+    borderTopLeftRadius: 999,
+    borderTopRightRadius: 999,
+    borderBottomLeftRadius: 999,
+    borderBottomRightRadius: 999,
+    opacity: 0.62,
   },
   wildlifeSightingTile: {
-    width: 72,
+    width: WILDLIFE_SIGHTING_TILE_WIDTH,
     minHeight: 88,
     alignItems: 'center',
     justifyContent: 'flex-start',
@@ -5162,6 +7039,7 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   atlasDescription: {
+    fontFamily: Fonts.bold,
     lineHeight: responsiveLineHeight(18),
   },
   atlasDetailFooterRow: {
@@ -5187,20 +7065,18 @@ const styles = StyleSheet.create({
   },
   aiVisitCard: {
     borderRadius: 20,
-    borderWidth: 1,
     padding: 16,
     gap: 14,
   },
   weatherCard: {
     borderRadius: 20,
-    borderWidth: 1,
     padding: 16,
     gap: 14,
   },
   eventsListContainer: {
     paddingHorizontal: GALLERY_CONTAINER_PADDING,
     paddingBottom: GALLERY_CONTAINER_PADDING,
-    gap: 8,
+    gap: 12,
   },
   eventsListCard: {
     width: '100%',
@@ -5321,10 +7197,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
+    shadowOpacity: 0,
+    shadowRadius: 0,
     elevation: 0,
-    marginBottom: 12,
   },
   gallerySectionHeader: {
     flexDirection: 'row',
@@ -5336,9 +7211,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingTop: 16,
   },
-  gallerySectionTitle: { marginBottom: 0 },
-  galleryIcon: {},
-  eventsIcon: {},
+  staysHeaderIcon: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   galleryContainer: {
     width: '100%',
     paddingHorizontal: GALLERY_CONTAINER_PADDING,
@@ -5379,7 +7257,6 @@ const styles = StyleSheet.create({
   },
   languageCard: {
     borderRadius: 20,
-    borderWidth: 1,
     padding: 16,
     gap: 14,
   },
@@ -5455,19 +7332,8 @@ const styles = StyleSheet.create({
     textAlign: 'left',
     letterSpacing: 0.3,
   },
-  weatherIcon: {},
   featureTitleGroup: {
     flex: 1,
-  },
-  featureTitle: {
-    fontSize: responsiveFontSize(18),
-    lineHeight: responsiveLineHeight(18),
-  },
-  featureCaption: {
-    marginTop: 2,
-  },
-  aiCopy: {
-    lineHeight: responsiveLineHeight(15),
   },
   weatherForecastRow: {
     flexDirection: 'row',
@@ -5486,13 +7352,9 @@ const styles = StyleSheet.create({
   },
   weatherDayPillLight: {
     backgroundColor: 'rgba(255,255,255,0.82)',
-    borderWidth: 1,
-    borderColor: 'rgba(0,0,0,0.06)',
   },
   weatherDayPillDark: {
     backgroundColor: 'rgba(0,0,0,0.6)',
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.1)',
   },
   pillDayText: {
     fontSize: responsiveFontSize(12),
@@ -5537,7 +7399,6 @@ const styles = StyleSheet.create({
   actionButton: {
     flex: 1,
     minHeight: 44,
-    borderWidth: 1,
     borderRadius: 14,
     paddingHorizontal: 10,
     paddingVertical: 10,
@@ -5615,8 +7476,6 @@ const styles = StyleSheet.create({
   placeholderCard: {
     padding: 20,
     borderRadius: 16,
-    marginBottom: 24,
-    borderWidth: 1,
   },
   placeholderCopy: {
     marginTop: 8,

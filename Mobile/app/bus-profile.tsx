@@ -551,7 +551,17 @@ export default function BusProfile() {
                 }}
               >
                 {/* Wallpaper Pattern Background */}
-                <View style={[StyleSheet.absoluteFillObject, { height: 2000, borderTopLeftRadius: 32, borderTopRightRadius: 32, overflow: 'hidden' }]}>
+                <View
+                  style={[
+                    StyleSheet.absoluteFillObject,
+                    {
+                      height: 2000,
+                      borderTopLeftRadius: 32,
+                      borderTopRightRadius: 32,
+                      overflow: 'hidden',
+                    },
+                  ]}
+                >
                   <WallpaperPattern offsetTop={0} unlimited={true} height={2000} />
                 </View>
 
@@ -649,7 +659,9 @@ export default function BusProfile() {
                             pathname: '/gallery',
                             params: {
                               location: bus.name,
-                              title: 'Bus Gallery',
+                              title: bus.name,
+                              galleryType: 'provider',
+                              contextImage: bus.images[0] || galleryImages[0],
                               images: JSON.stringify(galleryImages),
                               busId: normalizedBusId,
                             },
@@ -671,7 +683,9 @@ export default function BusProfile() {
                               pathname: '/gallery',
                               params: {
                                 location: bus.name,
-                                title: 'Bus Gallery',
+                                title: bus.name,
+                                galleryType: 'provider',
+                                contextImage: bus.images[0] || galleryImages[0],
                                 images: JSON.stringify(galleryImages),
                                 busId: normalizedBusId,
                               },
@@ -697,7 +711,9 @@ export default function BusProfile() {
                               pathname: '/gallery',
                               params: {
                                 location: bus.name,
-                                title: 'Bus Gallery',
+                                title: bus.name,
+                                galleryType: 'provider',
+                                contextImage: bus.images[0] || galleryImages[0],
                                 images: JSON.stringify(galleryImages),
                                 busId: normalizedBusId,
                               },

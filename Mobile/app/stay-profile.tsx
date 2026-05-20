@@ -424,18 +424,30 @@ export default function StayProfileScreen() {
 
   const handleCallStay = useCallback(() => {
     if (!stay?.phone) {
-      showAlert({ title: 'No Phone Number', message: 'Phone number is not available for this property.', buttons: [{ text: 'OK' }] });
+      showAlert({
+        title: 'No Phone Number',
+        message: 'Phone number is not available for this property.',
+        buttons: [{ text: 'OK' }],
+      });
       return;
     }
     const phoneNumber = Platform.OS === 'ios' ? `telprompt:${stay.phone}` : `tel:${stay.phone}`;
     Linking.openURL(phoneNumber).catch(() => {
-      showAlert({ title: 'Error', message: 'Unable to make phone call', buttons: [{ text: 'OK' }] });
+      showAlert({
+        title: 'Error',
+        message: 'Unable to make phone call',
+        buttons: [{ text: 'OK' }],
+      });
     });
   }, [stay?.phone]);
 
   const handleDirections = useCallback(() => {
     if (!stay?.fullLocation) {
-      showAlert({ title: 'No Location', message: 'Location details are not available for this property.', buttons: [{ text: 'OK' }] });
+      showAlert({
+        title: 'No Location',
+        message: 'Location details are not available for this property.',
+        buttons: [{ text: 'OK' }],
+      });
       return;
     }
     const address = encodeURIComponent(stay.fullLocation);
@@ -466,7 +478,9 @@ export default function StayProfileScreen() {
       }),
       isRead: true,
       avatar: displayAvatar,
-      avatarImage: stay.providerLogo || `https://api.dicebear.com/8.x/shapes/png?seed=${encodeURIComponent(stay.name || 'Property')}&size=128&backgroundColor=FF4757`,
+      avatarImage:
+        stay.providerLogo ||
+        `https://api.dicebear.com/8.x/shapes/png?seed=${encodeURIComponent(stay.name || 'Property')}&size=128&backgroundColor=FF4757`,
       avatarBgColor: isDark ? 'rgba(255, 71, 87, 0.18)' : 'rgba(255, 71, 87, 0.08)',
       avatarBorderColor: '#FF4757',
       status: 'received' as const,
@@ -845,7 +859,17 @@ export default function StayProfileScreen() {
                 }}
               >
                 {/* Wallpaper Pattern Background */}
-                <View style={[StyleSheet.absoluteFillObject, { height: 2000, borderTopLeftRadius: 32, borderTopRightRadius: 32, overflow: 'hidden' }]}>
+                <View
+                  style={[
+                    StyleSheet.absoluteFillObject,
+                    {
+                      height: 2000,
+                      borderTopLeftRadius: 32,
+                      borderTopRightRadius: 32,
+                      overflow: 'hidden',
+                    },
+                  ]}
+                >
                   <WallpaperPattern offsetTop={0} unlimited={true} height={2000} />
                 </View>
                 {/* Title and rating - standalone section */}
@@ -975,8 +999,10 @@ export default function StayProfileScreen() {
                           router.push({
                             pathname: '/gallery',
                             params: {
-                              location: stay.name,
-                              title: 'Stay Gallery',
+                              location: stay.location || stay.name,
+                              title: stay.name,
+                              galleryType: 'provider',
+                              contextImage: stay.imageUrl || galleryImages[0],
                               images: JSON.stringify(galleryImages),
                               stayId: stayName,
                             },
@@ -999,8 +1025,10 @@ export default function StayProfileScreen() {
                             router.push({
                               pathname: '/gallery',
                               params: {
-                                location: stay.name,
-                                title: 'Stay Gallery',
+                                location: stay.location || stay.name,
+                                title: stay.name,
+                                galleryType: 'provider',
+                                contextImage: stay.imageUrl || galleryImages[0],
                                 images: JSON.stringify(galleryImages),
                                 stayId: stayName,
                               },
@@ -1026,8 +1054,10 @@ export default function StayProfileScreen() {
                             router.push({
                               pathname: '/gallery',
                               params: {
-                                location: stay.name,
-                                title: 'Stay Gallery',
+                                location: stay.location || stay.name,
+                                title: stay.name,
+                                galleryType: 'provider',
+                                contextImage: stay.imageUrl || galleryImages[0],
                                 images: JSON.stringify(galleryImages),
                                 stayId: stayName,
                               },
@@ -1604,7 +1634,11 @@ export default function StayProfileScreen() {
                                         <ThemedText
                                           style={[
                                             styles.guestSubLabel,
-                                            { fontSize: responsiveFontSize(14), opacity: 0.7, marginBottom: 8 },
+                                            {
+                                              fontSize: responsiveFontSize(14),
+                                              opacity: 0.7,
+                                              marginBottom: 8,
+                                            },
                                           ]}
                                         >
                                           {roomType.description}

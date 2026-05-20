@@ -42,14 +42,31 @@ const filterOptions = [
   { key: 'favorite', label: 'Favorites' },
 ];
 
+function normalizeStayLocationValue(value: string) {
+  return value.toLowerCase().replace(/,\s*zimbabwe\b/g, '').replace(/\s+/g, ' ').trim();
+}
+
+function stayMatchesLocationScope(stayLocation: string, scopeLocations: string[]) {
+  const location = normalizeStayLocationValue(stayLocation);
+
+  return scopeLocations.some(scope =>
+    scope.includes(location) || location.includes(scope)
+  );
+}
+
 export default function DestinationStaysScreen() {
   const params = useLocalSearchParams();
-  const { location, destinationId } = params;
+  const { location, destinationId, locations } = params;
   const rawLocation = Array.isArray(location) ? location[0] : location;
+  const rawLocations = Array.isArray(locations) ? locations[0] : locations;
   const normalizedLocation =
     typeof rawLocation === 'string' && rawLocation.trim().length > 0
       ? rawLocation.trim()
       : undefined;
+  const locationsParam =
+    typeof rawLocations === 'string' && rawLocations.trim().length > 0
+      ? rawLocations.trim()
+      : '';
   const resolvedLocation = normalizedLocation ?? 'All locations';
   const dataLocation =
     normalizedLocation &&
@@ -57,6 +74,16 @@ export default function DestinationStaysScreen() {
     normalizedLocation.toLowerCase() !== 'all locations'
       ? normalizedLocation
       : undefined;
+  const scopedLocations = useMemo(
+    () => Array.from(
+      new Set(
+        (locationsParam ? locationsParam.split('|') : dataLocation ? [dataLocation] : [])
+          .map(normalizeStayLocationValue)
+          .filter(Boolean)
+      )
+    ),
+    [dataLocation, locationsParam]
+  );
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
 
@@ -94,10 +121,12 @@ export default function DestinationStaysScreen() {
 
   const loadStays = useCallback(() => {
     setLoading(true);
-    const staysByLocation = getStaysByLocation(dataLocation);
+    const staysByLocation = scopedLocations.length > 0
+      ? getStaysByLocation().filter(stay => stayMatchesLocationScope(stay.location, scopedLocations))
+      : getStaysByLocation();
     setStays(staysByLocation.map(cloneStay));
     setLoading(false);
-  }, [dataLocation]);
+  }, [scopedLocations]);
 
   useEffect(() => {
     loadStays();

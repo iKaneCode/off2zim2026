@@ -549,7 +549,17 @@ export default function FlightProfile() {
                 }}
               >
                 {/* Wallpaper Pattern Background */}
-                <View style={[StyleSheet.absoluteFillObject, { height: 2000, borderTopLeftRadius: 32, borderTopRightRadius: 32, overflow: 'hidden' }]}>
+                <View
+                  style={[
+                    StyleSheet.absoluteFillObject,
+                    {
+                      height: 2000,
+                      borderTopLeftRadius: 32,
+                      borderTopRightRadius: 32,
+                      overflow: 'hidden',
+                    },
+                  ]}
+                >
                   <WallpaperPattern offsetTop={0} unlimited={true} height={2000} />
                 </View>
 
@@ -647,7 +657,9 @@ export default function FlightProfile() {
                             pathname: '/gallery',
                             params: {
                               location: flight.name,
-                              title: 'Flight Gallery',
+                              title: flight.name,
+                              galleryType: 'provider',
+                              contextImage: flight.images[0] || galleryImages[0],
                               images: JSON.stringify(galleryImages),
                               flightId: normalizedFlightId,
                             },
@@ -669,7 +681,9 @@ export default function FlightProfile() {
                               pathname: '/gallery',
                               params: {
                                 location: flight.name,
-                                title: 'Flight Gallery',
+                                title: flight.name,
+                                galleryType: 'provider',
+                                contextImage: flight.images[0] || galleryImages[0],
                                 images: JSON.stringify(galleryImages),
                                 flightId: normalizedFlightId,
                               },
@@ -695,7 +709,9 @@ export default function FlightProfile() {
                               pathname: '/gallery',
                               params: {
                                 location: flight.name,
-                                title: 'Flight Gallery',
+                                title: flight.name,
+                                galleryType: 'provider',
+                                contextImage: flight.images[0] || galleryImages[0],
                                 images: JSON.stringify(galleryImages),
                                 flightId: normalizedFlightId,
                               },

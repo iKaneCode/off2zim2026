@@ -38,19 +38,32 @@ export function ViewAllButton({
   ...touchableProps
 }: ViewAllButtonProps) {
   const colorScheme = useColorScheme();
-  const backgroundColor = colorScheme === 'dark' ? '#402221' : '#F3E0E3';
-  const textColor = colorScheme === 'dark' ? '#FFFFFF' : '#000000';
-  const resolvedIconColor = iconColor ?? '#FF3B30';
+  const isDark = colorScheme === 'dark';
+  const backgroundColor = disabled
+    ? isDark
+      ? 'rgba(255,255,255,0.12)'
+      : 'rgba(28,28,30,0.08)'
+    : isDark
+      ? '#FFFFFF'
+      : '#1C1C1E';
+  const contentColor = disabled
+    ? isDark
+      ? 'rgba(255,255,255,0.46)'
+      : 'rgba(28,28,30,0.42)'
+    : isDark
+      ? '#1C1C1E'
+      : '#FFFFFF';
+  const resolvedIconColor = iconColor ?? contentColor;
 
   return (
     <TouchableOpacity
       {...touchableProps}
       onPress={onPress}
       disabled={disabled}
-      style={[styles.container, { backgroundColor, opacity: disabled ? 0.5 : 1 }, style]}
+      style={[styles.container, { backgroundColor }, style]}
       activeOpacity={touchableProps.activeOpacity ?? 0.85}
     >
-      <ThemedText type={textType} style={[styles.text, { color: textColor }, textStyle]}>
+      <ThemedText type={textType} style={[styles.text, { color: contentColor }, textStyle]}>
         {label}
       </ThemedText>
       {!hideIcon && iconName ? (

@@ -7,7 +7,6 @@ import { ThemedText } from '@/components/ThemedText';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
 import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
-import * as Haptics from 'expo-haptics';
 import { useFocusEffect } from 'expo-router';
 
 // Import reusable components and utilities
@@ -168,7 +167,8 @@ export default function OrdersScreen() {
           currency: 'USD',
           notes: `Status: ${booking.status}`,
           // TODO(db): logo_url comes from service_providers table; DiceBear is placeholder
-          providerLogo: booking.stays?.service_providers?.logo_url ||
+          providerLogo:
+            booking.stays?.service_providers?.logo_url ||
             `https://api.dicebear.com/8.x/shapes/png?seed=${encodeURIComponent(resolvedName)}&size=128&backgroundColor=FF4757`,
           checkInTime: booking.stays?.check_in_time,
           checkOutTime: booking.stays?.check_out_time,
@@ -215,7 +215,6 @@ export default function OrdersScreen() {
 
   const handleFilterChange = useCallback((filter: string) => {
     if (Platform.OS === 'ios') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     }
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setActiveFilter(filter);
@@ -247,7 +246,6 @@ export default function OrdersScreen() {
   const handleRefresh = useCallback(async () => {
     await fetchOrders(true);
     if (Platform.OS === 'ios') {
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     }
   }, [fetchOrders]);
 
@@ -271,7 +269,6 @@ export default function OrdersScreen() {
           style: 'destructive',
           onPress: () => {
             if (Platform.OS === 'ios') {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
             }
             LayoutAnimation.configureNext(messageAnimations.batchOperation);
             setOrders([]);
@@ -295,7 +292,6 @@ export default function OrdersScreen() {
 
       closeAllSwipeables();
       LayoutAnimation.configureNext(messageAnimations.deletion);
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
       setOrders(prev => prev.filter(order => order.id !== orderId));
 
       if (!user?.id || isGuest) {
@@ -408,7 +404,8 @@ export default function OrdersScreen() {
         checkOutDate: order.checkOutDate,
         checkInTime: order.checkInTime,
         checkOutTime: order.checkOutTime,
-        providerLogo: order.providerLogo ||
+        providerLogo:
+          order.providerLogo ||
           `https://api.dicebear.com/8.x/shapes/png?seed=${encodeURIComponent(order.name)}&size=128&backgroundColor=FF4757`,
       };
     });
@@ -430,7 +427,6 @@ export default function OrdersScreen() {
       sheetInstanceRef.current += 1;
       const instanceId = sheetInstanceRef.current;
       setActiveOrderSheet({ order: { ...item }, instanceId });
-      Haptics.selectionAsync();
     }
   };
 

@@ -32,11 +32,11 @@ import {
   toggleFavorite as toggleFavoriteUtil,
 } from '@/utils/favoritesUtils';
 import {
-  ViewAllButton,
-  WebSlideTransition,
-  ProviderHeroCard,
-  LocationPill,
   BusSearchForm,
+  LocationPill,
+  ProfileGalleryHeader,
+  ProviderHeroCard,
+  WebSlideTransition,
 } from '@/components';
 
 const { width } = Dimensions.get('window');
@@ -216,18 +216,15 @@ export default function BusProfile() {
   }, [opacityAnim]);
 
   const handleGoBack = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.back();
   };
 
   const toggleFavorite = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const newState = toggleFavoriteUtil(normalizedBusId);
     setIsFavorited(newState);
   };
 
   const handleShare = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     console.log('Share bus');
   };
 
@@ -410,8 +407,6 @@ export default function BusProfile() {
       }
     }
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
     router.push({
       pathname: '/bus-search',
       params: {
@@ -438,7 +433,6 @@ export default function BusProfile() {
       return;
     }
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setTripType(type);
 
     if (type === 'oneWay') {
@@ -447,27 +441,22 @@ export default function BusProfile() {
   };
 
   const openFromPicker = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShowFromPicker(true);
   };
 
   const openToPicker = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShowToPicker(true);
   };
 
   const openDepartureDatePicker = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShowDatePicker(true);
   };
 
   const openReturnDatePicker = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShowReturnDatePicker(true);
   };
 
   const incrementPassengers = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setPassengers(prev => prev + 1);
   };
 
@@ -476,7 +465,6 @@ export default function BusProfile() {
       return;
     }
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setPassengers(prev => Math.max(1, prev - 1));
   };
 
@@ -651,24 +639,21 @@ export default function BusProfile() {
                       },
                     ]}
                   >
-                    <View style={styles.sectionHeader}>
-                      <ThemedText style={styles.sectionTitle}>Gallery</ThemedText>
-                      <ViewAllButton
-                        onPress={() =>
-                          router.push({
-                            pathname: '/gallery',
-                            params: {
-                              location: bus.name,
-                              title: bus.name,
-                              galleryType: 'provider',
-                              contextImage: bus.images[0] || galleryImages[0],
-                              images: JSON.stringify(galleryImages),
-                              busId: normalizedBusId,
-                            },
-                          })
-                        }
-                      />
-                    </View>
+                    <ProfileGalleryHeader
+                      onPress={() =>
+                        router.push({
+                          pathname: '/gallery',
+                          params: {
+                            location: bus.name,
+                            title: bus.name,
+                            galleryType: 'provider',
+                            contextImage: bus.images[0] || galleryImages[0],
+                            images: JSON.stringify(galleryImages),
+                            busId: normalizedBusId,
+                          },
+                        })
+                      }
+                    />
                     <View style={styles.gallerySectionContainer}>
                       <View style={styles.galleryRow}>
                         {/* First Image */}
@@ -920,7 +905,6 @@ export default function BusProfile() {
                             activeOpacity={0.8}
                             onPress={(e: GestureResponderEvent) => {
                               e.stopPropagation();
-                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                               setSelectedFromLocation(location);
                               setShowFromPicker(false);
                             }}
@@ -1050,7 +1034,6 @@ export default function BusProfile() {
                               activeOpacity={0.8}
                               onPress={(e: GestureResponderEvent) => {
                                 e.stopPropagation();
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                                 setSelectedToLocation(location);
                                 setShowToPicker(false);
                               }}

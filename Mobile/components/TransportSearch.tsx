@@ -97,12 +97,13 @@ export function TransportSearch({
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push({
       pathname: searchRoute,
       params: {
         serviceProvider:
-          selectedOperator === 'All' ? serviceProviderDefault : selectedOperator || serviceProviderDefault,
+          selectedOperator === 'All'
+            ? serviceProviderDefault
+            : selectedOperator || serviceProviderDefault,
         fromLocation: selectedFromLocation || '',
         toLocation: selectedToLocation || '',
         departureDate: selectedDate || '',
@@ -115,39 +116,31 @@ export function TransportSearch({
 
   const handleTripTypeChange = (type: 'oneWay' | 'return') => {
     if (type === tripType) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setTripType(type);
     if (type === 'oneWay') setSelectedReturnDate(null);
   };
 
   const openOperatorPicker = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShowOperatorPicker(true);
   };
   const openFromPicker = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShowFromPicker(true);
   };
   const openToPicker = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShowToPicker(true);
   };
   const openDepartureDatePicker = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShowDatePicker(true);
   };
   const openReturnDatePicker = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShowReturnDatePicker(true);
   };
 
   const incrementPassengers = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setPassengers(prev => prev + 1);
   };
   const decrementPassengers = () => {
     if (passengers <= 1) return;
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setPassengers(prev => Math.max(1, prev - 1));
   };
 
@@ -274,33 +267,27 @@ export function TransportSearch({
     options?: { minimumDate?: string }
   ) => {
     const weeks: Array<
-      Array<
-        | null
-        | {
-            day: number;
-            date: string;
-            isSelected: boolean;
-            isPast: boolean;
-            isToday: boolean;
-            isDisabled: boolean;
-          }
-      >
+      Array<null | {
+        day: number;
+        date: string;
+        isSelected: boolean;
+        isPast: boolean;
+        isToday: boolean;
+        isDisabled: boolean;
+      }>
     > = [];
     const firstDay = new Date(month.getFullYear(), month.getMonth(), 1);
     const startDay = (firstDay.getDay() + 6) % 7;
     const daysInMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
     for (let weekIndex = 0; weekIndex < 6; weekIndex += 1) {
-      const weekDays: Array<
-        | null
-        | {
-            day: number;
-            date: string;
-            isSelected: boolean;
-            isPast: boolean;
-            isToday: boolean;
-            isDisabled: boolean;
-          }
-      > = [];
+      const weekDays: Array<null | {
+        day: number;
+        date: string;
+        isSelected: boolean;
+        isPast: boolean;
+        isToday: boolean;
+        isDisabled: boolean;
+      }> = [];
       for (let dayIndex = 0; dayIndex < 7; dayIndex += 1) {
         const totalDayIndex = weekIndex * 7 + dayIndex;
         const dayNumber = totalDayIndex - startDay + 1;
@@ -346,7 +333,10 @@ export function TransportSearch({
           {weeks.map((week, weekIndex) => (
             <View key={`week-${weekIndex}`} style={styles.itineraryWeekRow}>
               {week.map((day, dayIndex) => (
-                <View key={`day-${weekIndex}-${dayIndex}`} style={styles.itineraryCalendarDayContainer}>
+                <View
+                  key={`day-${weekIndex}-${dayIndex}`}
+                  style={styles.itineraryCalendarDayContainer}
+                >
                   {day && (
                     <TouchableOpacity
                       onPress={() => {
@@ -364,7 +354,10 @@ export function TransportSearch({
                             { backgroundColor: isDark ? '#FFFFFF' : '#000000' },
                           ],
                           day.isToday && !day.isSelected && styles.itineraryTodayDay,
-                          day.isDisabled && !day.isSelected && !day.isToday && styles.itineraryPastDay,
+                          day.isDisabled &&
+                            !day.isSelected &&
+                            !day.isToday &&
+                            styles.itineraryPastDay,
                         ]}
                       >
                         <ThemedText
@@ -375,7 +368,10 @@ export function TransportSearch({
                               { color: isDark ? '#000000' : '#FFFFFF' },
                             ],
                             day.isToday && !day.isSelected && styles.itineraryTodayDayText,
-                            day.isDisabled && !day.isSelected && !day.isToday && styles.itineraryPastDayText,
+                            day.isDisabled &&
+                              !day.isSelected &&
+                              !day.isToday &&
+                              styles.itineraryPastDayText,
                           ]}
                         >
                           {day.day}
@@ -397,7 +393,10 @@ export function TransportSearch({
       <ThemedView style={styles.container} lightColor="#f2f2f7" darkColor="#000000">
         <WallpaperPattern offsetTop={0} offsetBottom={0} unlimited height={2000} />
 
-        <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+        <ScrollView
+          contentContainerStyle={styles.scrollContent}
+          showsVerticalScrollIndicator={false}
+        >
           <View
             style={[
               styles.bookingSection,
@@ -517,7 +516,6 @@ export function TransportSearch({
                         ]}
                         onPress={e => {
                           e.stopPropagation();
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                           setSelectedOperator('All');
                           setShowOperatorPicker(false);
                         }}
@@ -549,7 +547,14 @@ export function TransportSearch({
                             {operatorAllLabel}
                           </ThemedText>
                         </View>
-                        <View style={{ width: 28, height: 28, justifyContent: 'center', alignItems: 'center' }}>
+                        <View
+                          style={{
+                            width: 28,
+                            height: 28,
+                            justifyContent: 'center',
+                            alignItems: 'center',
+                          }}
+                        >
                           {selectedOperator === 'All' && (
                             <Ionicons name="checkmark-circle" size={28} color="#34C759" />
                           )}
@@ -574,7 +579,6 @@ export function TransportSearch({
                           ]}
                           onPress={e => {
                             e.stopPropagation();
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                             setSelectedOperator(operator.name);
                             setShowOperatorPicker(false);
                           }}
@@ -606,7 +610,14 @@ export function TransportSearch({
                               {operator.name}
                             </ThemedText>
                           </View>
-                          <View style={{ width: 28, height: 28, justifyContent: 'center', alignItems: 'center' }}>
+                          <View
+                            style={{
+                              width: 28,
+                              height: 28,
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                            }}
+                          >
                             {selectedOperator === operator.name && (
                               <Ionicons name="checkmark-circle" size={28} color="#34C759" />
                             )}
@@ -695,7 +706,6 @@ export function TransportSearch({
                           ]}
                           onPress={e => {
                             e.stopPropagation();
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                             setSelectedFromLocation(location);
                             setShowFromPicker(false);
                           }}
@@ -727,7 +737,14 @@ export function TransportSearch({
                               {location}
                             </ThemedText>
                           </View>
-                          <View style={{ width: 28, height: 28, justifyContent: 'center', alignItems: 'center' }}>
+                          <View
+                            style={{
+                              width: 28,
+                              height: 28,
+                              justifyContent: 'center',
+                              alignItems: 'center',
+                            }}
+                          >
                             {selectedFromLocation === location && (
                               <Ionicons name="checkmark-circle" size={28} color="#34C759" />
                             )}
@@ -818,7 +835,6 @@ export function TransportSearch({
                             ]}
                             onPress={e => {
                               e.stopPropagation();
-                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                               setSelectedToLocation(location);
                               setShowToPicker(false);
                             }}
@@ -850,7 +866,14 @@ export function TransportSearch({
                                 {location}
                               </ThemedText>
                             </View>
-                            <View style={{ width: 28, height: 28, justifyContent: 'center', alignItems: 'center' }}>
+                            <View
+                              style={{
+                                width: 28,
+                                height: 28,
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                              }}
+                            >
                               {selectedToLocation === location && (
                                 <Ionicons name="checkmark-circle" size={28} color="#34C759" />
                               )}
@@ -1254,11 +1277,27 @@ const styles = StyleSheet.create({
     backgroundColor: 'transparent',
   },
   itineraryWeekDayItem: { flex: 1, alignItems: 'center', paddingVertical: 8 },
-  itineraryWeekDayText: { fontSize: responsiveFontSize(12), fontWeight: '600', opacity: 0.5, textTransform: 'uppercase' },
+  itineraryWeekDayText: {
+    fontSize: responsiveFontSize(12),
+    fontWeight: '600',
+    opacity: 0.5,
+    textTransform: 'uppercase',
+  },
   itineraryCalendarGrid: { paddingHorizontal: 16, paddingBottom: 8 },
   itineraryWeekRow: { flexDirection: 'row' },
-  itineraryCalendarDayContainer: { flex: 1, alignItems: 'center', paddingVertical: 2, paddingHorizontal: 2 },
-  itineraryCalendarDayTouchable: { alignItems: 'center', justifyContent: 'center', width: 48, height: 48, borderRadius: 24 },
+  itineraryCalendarDayContainer: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 2,
+    paddingHorizontal: 2,
+  },
+  itineraryCalendarDayTouchable: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+  },
   itineraryCalendarDay: {
     width: 36,
     height: 36,
@@ -1271,8 +1310,21 @@ const styles = StyleSheet.create({
     minHeight: 36,
     maxHeight: 36,
   },
-  itinerarySelectedDay: { overflow: 'hidden', width: 36, height: 36, borderRadius: 18, marginBottom: 0 },
-  itineraryTodayDay: { backgroundColor: '#FF3B30', overflow: 'hidden', width: 36, height: 36, borderRadius: 18, marginBottom: 0 },
+  itinerarySelectedDay: {
+    overflow: 'hidden',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginBottom: 0,
+  },
+  itineraryTodayDay: {
+    backgroundColor: '#FF3B30',
+    overflow: 'hidden',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    marginBottom: 0,
+  },
   itineraryPastDay: { opacity: 0.3 },
   itineraryDayText: { fontSize: responsiveFontSize(20), fontWeight: '400' },
   itinerarySelectedDayText: { fontWeight: '600', fontSize: responsiveFontSize(20) },

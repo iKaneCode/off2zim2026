@@ -6,7 +6,6 @@ import { ThemedText } from '@/components/ThemedText';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
 import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
-import * as Haptics from 'expo-haptics';
 import { router, useFocusEffect } from 'expo-router';
 
 // Import reusable components and utilities
@@ -446,7 +445,6 @@ export default function ItineraryScreen() {
   // Collapsible search section (for list view only)
   const handleFilterChange = useCallback((filter: string) => {
     if (Platform.OS === 'ios') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     }
     setActiveFilter(filter as ItineraryFilter);
   }, []);
@@ -468,7 +466,6 @@ export default function ItineraryScreen() {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, REFRESH_DELAY));
     setIsRefreshing(false);
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   }, []);
 
   // Handle delete itinerary item
@@ -479,7 +476,6 @@ export default function ItineraryScreen() {
       }
 
       closeAllSwipeables();
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
       setItinerary(prev => prev.filter(item => item.id !== itemId));
 
       if (!user?.id || isGuest) {
@@ -533,7 +529,6 @@ export default function ItineraryScreen() {
         prevItems.map(i => (i.id === item.id ? { ...i, isRead: !i.isRead } : i))
       );
     }
-    Haptics.selectionAsync();
   };
 
   const handleGoBack = useCallback(() => {
@@ -565,7 +560,6 @@ export default function ItineraryScreen() {
                   setSelectedDate(null);
                   setIsWeekFocused(false);
                   setFocusedWeekIndex(null);
-                  Haptics.selectionAsync();
                 },
               }}
             />

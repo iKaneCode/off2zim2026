@@ -227,7 +227,6 @@ export default function BusSearchScreen() {
   };
 
   const handleDateSelect = (dateString: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSelectedDate(dateString);
   };
 
@@ -263,7 +262,6 @@ export default function BusSearchScreen() {
   };
 
   const handleReturnDateSelect = (dateString: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSelectedReturnDate(dateString);
   };
 
@@ -392,8 +390,6 @@ export default function BusSearchScreen() {
 
   // Function to perform search with updated criteria
   const performSearch = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
     // Set loading state
     setLoading(true);
 
@@ -453,12 +449,10 @@ export default function BusSearchScreen() {
       setLastSearchedTripType(selectedTripType);
 
       // Show success feedback
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }, 1000);
   };
 
   const handleSelectBus = (bus: BusResult) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push({
       pathname: '/payment',
       params: {
@@ -500,7 +494,6 @@ export default function BusSearchScreen() {
               { backgroundColor: isDark ? '#1C1C1E' : 'rgba(255,255,255,0.8)' },
             ]}
             onPress={() => {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
               setShowOperatorPicker(true);
             }}
           >
@@ -556,7 +549,6 @@ export default function BusSearchScreen() {
                       },
                     ]}
                     onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       setSelectedTripType('oneWay');
                     }}
                     disabled={selectedTripType === 'oneWay'}
@@ -594,7 +586,6 @@ export default function BusSearchScreen() {
                       },
                     ]}
                     onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       setSelectedTripType('return');
                     }}
                     disabled={selectedTripType === 'return'}
@@ -633,7 +624,6 @@ export default function BusSearchScreen() {
                   </ThemedText>
                   <TouchableOpacity
                     onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       setShowFromPicker(true);
                     }}
                     activeOpacity={0.7}
@@ -684,7 +674,6 @@ export default function BusSearchScreen() {
                   </ThemedText>
                   <TouchableOpacity
                     onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       setShowToPicker(true);
                     }}
                     activeOpacity={0.7}
@@ -735,7 +724,6 @@ export default function BusSearchScreen() {
                   </ThemedText>
                   <TouchableOpacity
                     onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       setShowDatePicker(true);
                     }}
                     activeOpacity={0.7}
@@ -792,7 +780,6 @@ export default function BusSearchScreen() {
                     </ThemedText>
                     <TouchableOpacity
                       onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setShowReturnDatePicker(true);
                       }}
                       activeOpacity={0.7}
@@ -853,7 +840,6 @@ export default function BusSearchScreen() {
                   </ThemedText>
                   <TouchableOpacity
                     onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       setShowPassengerPicker(true);
                     }}
                     activeOpacity={0.7}
@@ -974,7 +960,6 @@ export default function BusSearchScreen() {
                         },
                       ]}
                       onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setSelectedDepartureBus(selectedDepartureBus === bus.id ? null : bus.id);
                         if (showDepartureError) setShowDepartureError(false);
                       }}
@@ -1060,7 +1045,6 @@ export default function BusSearchScreen() {
                           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
                           return;
                         }
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                         const selectedBus = busResults.find(bus => bus.id === selectedDepartureBus);
                         const providerForDetails = selectedBus?.operator || providerDisplayName;
                         router.push({
@@ -1125,7 +1109,6 @@ export default function BusSearchScreen() {
                           },
                         ]}
                         onPress={() => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                           setSelectedReturnBus(selectedReturnBus === bus.id ? null : bus.id);
                           if (showReturnError) setShowReturnError(false);
                         }}
@@ -1212,7 +1195,6 @@ export default function BusSearchScreen() {
                             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
                             return;
                           }
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                           const selectedBus = busResults.find(
                             bus => bus.id === selectedDepartureBus
                           );
@@ -1333,7 +1315,6 @@ export default function BusSearchScreen() {
                             ]}
                             onPress={e => {
                               e.stopPropagation();
-                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                               setSelectedFromLocation(location);
                               setShowFromPicker(false);
                             }}
@@ -1446,7 +1427,6 @@ export default function BusSearchScreen() {
                             ]}
                             onPress={e => {
                               e.stopPropagation();
-                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                               setSelectedToLocation(location);
                               setShowToPicker(false);
                             }}
@@ -2016,7 +1996,6 @@ export default function BusSearchScreen() {
                         ]}
                         onPress={() => {
                           if (selectedPassengers > 1) {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                             setSelectedPassengers(prev => prev - 1);
                           }
                         }}
@@ -2043,7 +2022,6 @@ export default function BusSearchScreen() {
                           },
                         ]}
                         onPress={() => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                           setSelectedPassengers(prev => prev + 1);
                         }}
                         activeOpacity={0.8}
@@ -2136,7 +2114,6 @@ export default function BusSearchScreen() {
                         ]}
                         onPress={e => {
                           e.stopPropagation();
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                           setSelectedOperator('All');
                           setShowOperatorPicker(false);
                         }}
@@ -2200,7 +2177,6 @@ export default function BusSearchScreen() {
                           ]}
                           onPress={e => {
                             e.stopPropagation();
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                             setSelectedOperator(operator.name);
                             setShowOperatorPicker(false);
                           }}

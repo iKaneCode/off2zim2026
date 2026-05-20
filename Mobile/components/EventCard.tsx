@@ -9,13 +9,10 @@ import {
   type ViewStyle,
   View,
 } from 'react-native';
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faHeart as solidHeart } from '@fortawesome/free-solid-svg-icons';
-import { faHeart as regularHeart } from '@fortawesome/free-regular-svg-icons';
-import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 
 import { DateTimePill } from './DateTimePill';
+import { IconActionButton } from './IconActionButton';
 import { LocationPill } from './LocationPill';
 import { RatingPill } from './RatingPill';
 import { ThemedText } from './ThemedText';
@@ -66,7 +63,6 @@ export const EventCard = React.memo(function EventCard({
   const cardBg = colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF';
 
   const handleEventPress = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     router.push({
       pathname: '/event-profile',
       params: {
@@ -93,8 +89,11 @@ export const EventCard = React.memo(function EventCard({
         style={styles.destinationImage}
         resizeMode="cover"
       />
-      <TouchableOpacity
-        style={[styles.heartContainer, { backgroundColor: pillBg }]}
+      <IconActionButton
+        variant="like"
+        isActive={isFavorited}
+        size={HEART_SIZE}
+        style={styles.heartContainer}
         onPress={handleFavoritePress}
         hitSlop={{
           top: OVERLAY_PADDING,
@@ -104,15 +103,8 @@ export const EventCard = React.memo(function EventCard({
         }}
         accessibilityRole="button"
         accessibilityLabel={`Favorite ${item.name} ${isFavorited ? 'selected' : 'not selected'}`}
-      >
-        <Animated.View style={{ transform: [{ scale: resolvedHeartScale }] }}>
-          <FontAwesomeIcon
-            icon={isFavorited ? solidHeart : regularHeart}
-            size={18}
-            color="#FF4757"
-          />
-        </Animated.View>
-      </TouchableOpacity>
+        iconContainerStyle={{ transform: [{ scale: resolvedHeartScale }] }}
+      />
 
       <View style={styles.eventInfoContainer}>
         <View style={styles.eventTopRow}>

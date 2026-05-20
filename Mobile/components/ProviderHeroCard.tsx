@@ -8,10 +8,8 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faHeart as solidHeart, faShareFromSquare } from '@fortawesome/free-solid-svg-icons';
-import { faHeart as regularHeart } from '@fortawesome/free-regular-svg-icons';
 
+import { IconActionButton } from './IconActionButton';
 import { ThemedText } from './ThemedText';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { responsiveFontSize, responsiveLineHeight, responsiveSize, Fonts } from '@/constants/Fonts';
@@ -85,7 +83,6 @@ function ProviderHeroCardComponent({
 
   const cardBackground = isDark ? '#1C1C1E' : '#FFFFFF';
   const cardBorderColor = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.06)';
-  const controlBackground = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.04)';
   const subtleBackground = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)';
   const accentSurface = isDark ? '#1C1C1E' : '#FFFFFF';
   const textColor = isDark ? '#FFFFFF' : '#1C1C1E';
@@ -122,28 +119,10 @@ function ProviderHeroCardComponent({
           {hasTopActions ? (
             <View style={styles.actionCluster}>
               {onFavoritePress ? (
-                <TouchableOpacity
-                  style={[styles.actionButton, { backgroundColor: controlBackground }]}
-                  onPress={onFavoritePress}
-                  activeOpacity={0.85}
-                >
-                  <FontAwesomeIcon
-                    icon={isFavorited ? solidHeart : regularHeart}
-                    size={18}
-                    color="#FF4757"
-                  />
-                </TouchableOpacity>
+                <IconActionButton variant="like" isActive={isFavorited} onPress={onFavoritePress} />
               ) : null}
 
-              {onSharePress ? (
-                <TouchableOpacity
-                  style={[styles.actionButton, { backgroundColor: controlBackground }]}
-                  onPress={onSharePress}
-                  activeOpacity={0.85}
-                >
-                  <FontAwesomeIcon icon={faShareFromSquare} size={18} color="#FF4757" />
-                </TouchableOpacity>
-              ) : null}
+              {onSharePress ? <IconActionButton variant="share" onPress={onSharePress} /> : null}
             </View>
           ) : null}
         </View>
@@ -313,13 +292,6 @@ const styles = StyleSheet.create({
   actionCluster: {
     flexDirection: 'row',
     gap: 10,
-  },
-  actionButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   profileCircle: {
     width: AVATAR_SIZE,

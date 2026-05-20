@@ -187,7 +187,6 @@ export default function Profile() {
   };
 
   const handleDobSelect = (dateString: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const [year, month, day] = dateString.split('-');
     setDateOfBirth(`${day}/${month}/${year}`);
     setShowDobPicker(false);
@@ -355,7 +354,6 @@ export default function Profile() {
       const { error: profileError } = await updateProfile(user.id, profileData);
       if (profileError) throw profileError;
 
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       setEditing(false);
       setAttemptedSubmit(false);
       loadProfile();
@@ -388,7 +386,11 @@ export default function Profile() {
                 buttons: [{ text: 'OK' }],
               });
             } catch (error: any) {
-              showAlert({ title: 'Error', message: 'Failed to send password reset: ' + error.message, buttons: [{ text: 'OK' }] });
+              showAlert({
+                title: 'Error',
+                message: 'Failed to send password reset: ' + error.message,
+                buttons: [{ text: 'OK' }],
+              });
             }
           },
         },
@@ -413,7 +415,6 @@ export default function Profile() {
               }
 
               setDeletingAccount(true);
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
 
               const { ok } = await apiFetch<{ ok: boolean }>('/api/profile', {
                 method: 'DELETE',
@@ -425,12 +426,15 @@ export default function Profile() {
 
               await signOut();
 
-              Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
               router.replace('/auth');
             } catch (error: any) {
               console.error('Error deleting account:', error);
               Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
-              showAlert({ title: 'Error', message: 'Failed to delete account: ' + error.message, buttons: [{ text: 'OK' }] });
+              showAlert({
+                title: 'Error',
+                message: 'Failed to delete account: ' + error.message,
+                buttons: [{ text: 'OK' }],
+              });
             } finally {
               setDeletingAccount(false);
             }
@@ -445,17 +449,14 @@ export default function Profile() {
   const { background: cardBgColor, border: borderColor } = getCardSurfaceColors(colorScheme);
 
   const handleGoBack = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.back();
   };
 
   const handleEditToggle = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setEditing(prev => !prev);
   };
 
   const handleSave = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     saveProfile();
   };
 
@@ -463,7 +464,11 @@ export default function Profile() {
     try {
       const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
       if (status !== 'granted') {
-        showAlert({ title: 'Permission Required', message: 'Please grant permission to access your photo library.', buttons: [{ text: 'OK' }] });
+        showAlert({
+          title: 'Permission Required',
+          message: 'Please grant permission to access your photo library.',
+          buttons: [{ text: 'OK' }],
+        });
         return;
       }
 
@@ -475,13 +480,23 @@ export default function Profile() {
           { text: 'Take Photo', onPress: () => openCamera() },
           { text: 'Choose from Library', onPress: () => openImageLibrary() },
           ...(profileImage
-            ? [{ text: 'Remove Photo', onPress: () => removeProfileImage(), style: 'destructive' as const }]
+            ? [
+                {
+                  text: 'Remove Photo',
+                  onPress: () => removeProfileImage(),
+                  style: 'destructive' as const,
+                },
+              ]
             : []),
         ],
       });
     } catch (error) {
       console.error('Error requesting permissions:', error);
-      showAlert({ title: 'Error', message: 'Failed to request permissions', buttons: [{ text: 'OK' }] });
+      showAlert({
+        title: 'Error',
+        message: 'Failed to request permissions',
+        buttons: [{ text: 'OK' }],
+      });
     }
   };
 
@@ -489,7 +504,11 @@ export default function Profile() {
     try {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
       if (status !== 'granted') {
-        showAlert({ title: 'Permission Required', message: 'Please grant permission to access your camera.', buttons: [{ text: 'OK' }] });
+        showAlert({
+          title: 'Permission Required',
+          message: 'Please grant permission to access your camera.',
+          buttons: [{ text: 'OK' }],
+        });
         return;
       }
 
@@ -523,7 +542,11 @@ export default function Profile() {
       }
     } catch (error) {
       console.error('Error opening image library:', error);
-      showAlert({ title: 'Error', message: 'Failed to open image library', buttons: [{ text: 'OK' }] });
+      showAlert({
+        title: 'Error',
+        message: 'Failed to open image library',
+        buttons: [{ text: 'OK' }],
+      });
     }
   };
 
@@ -541,7 +564,11 @@ export default function Profile() {
       });
     } catch (error: any) {
       console.error('Error uploading image:', error);
-      showAlert({ title: 'Error', message: 'Failed to upload image: ' + error.message, buttons: [{ text: 'OK' }] });
+      showAlert({
+        title: 'Error',
+        message: 'Failed to upload image: ' + error.message,
+        buttons: [{ text: 'OK' }],
+      });
     } finally {
       setUploadingImage(false);
     }
@@ -557,10 +584,18 @@ export default function Profile() {
       if (error) throw error;
 
       setProfileImage(null);
-      showAlert({ title: 'Success', message: 'Profile picture removed successfully', buttons: [{ text: 'OK' }] });
+      showAlert({
+        title: 'Success',
+        message: 'Profile picture removed successfully',
+        buttons: [{ text: 'OK' }],
+      });
     } catch (error: any) {
       console.error('Error removing image:', error);
-      showAlert({ title: 'Error', message: 'Failed to remove image: ' + error.message, buttons: [{ text: 'OK' }] });
+      showAlert({
+        title: 'Error',
+        message: 'Failed to remove image: ' + error.message,
+        buttons: [{ text: 'OK' }],
+      });
     } finally {
       setUploadingImage(false);
     }
@@ -751,7 +786,6 @@ export default function Profile() {
                     </View>
                     <TouchableOpacity
                       onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setShowTitlePicker(true);
                       }}
                       style={[
@@ -849,7 +883,6 @@ export default function Profile() {
                     </View>
                     <TouchableOpacity
                       onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setShowGenderPicker(true);
                       }}
                       style={[
@@ -897,7 +930,6 @@ export default function Profile() {
                     </View>
                     <TouchableOpacity
                       onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setShowIdTypePicker(true);
                       }}
                       style={[
@@ -971,7 +1003,6 @@ export default function Profile() {
                     </View>
                     <TouchableOpacity
                       onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setShowDobPicker(true);
                       }}
                       style={[
@@ -1019,7 +1050,6 @@ export default function Profile() {
                     </View>
                     <TouchableOpacity
                       onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setShowNationalityPicker(true);
                       }}
                       style={[
@@ -1326,7 +1356,6 @@ export default function Profile() {
                           ]}
                           onPress={e => {
                             e.stopPropagation();
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                             setTitle(titleOption);
                             setShowTitlePicker(false);
                           }}
@@ -1434,7 +1463,6 @@ export default function Profile() {
                           ]}
                           onPress={e => {
                             e.stopPropagation();
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                             setGender(genderOption);
                             setShowGenderPicker(false);
                           }}
@@ -1542,7 +1570,6 @@ export default function Profile() {
                           ]}
                           onPress={e => {
                             e.stopPropagation();
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                             setIdType(idTypeOption);
                             setShowIdTypePicker(false);
                           }}
@@ -1710,7 +1737,6 @@ export default function Profile() {
                             ]}
                             onPress={e => {
                               e.stopPropagation();
-                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                               setNationality(zimbabwe.name);
                               setShowNationalityPicker(false);
                               setNationalitySearch('');
@@ -1718,7 +1744,11 @@ export default function Profile() {
                           >
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                               <ThemedText
-                                style={{ fontSize: responsiveFontSize(28), lineHeight: 34, includeFontPadding: false }}
+                                style={{
+                                  fontSize: responsiveFontSize(28),
+                                  lineHeight: 34,
+                                  includeFontPadding: false,
+                                }}
                               >
                                 {zimbabwe.flag}
                               </ThemedText>
@@ -1783,7 +1813,6 @@ export default function Profile() {
                               ]}
                               onPress={e => {
                                 e.stopPropagation();
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                                 setNationality(country.name);
                                 setShowNationalityPicker(false);
                                 setNationalitySearch('');
@@ -1886,7 +1915,6 @@ export default function Profile() {
                       activeOpacity={0.7}
                       onPress={e => {
                         e?.stopPropagation?.();
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setShowDobPicker(false);
                         setTimeout(() => setShowMonthPicker(true), 100);
                       }}
@@ -1901,7 +1929,6 @@ export default function Profile() {
                       activeOpacity={0.7}
                       onPress={e => {
                         e?.stopPropagation?.();
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setShowDobPicker(false);
                         setTimeout(() => setShowYearPicker(true), 100);
                       }}
@@ -2166,7 +2193,6 @@ export default function Profile() {
                             onPress={e => {
                               if (!isFutureMonth) {
                                 e.stopPropagation();
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                                 const newDate = new Date(currentDobCalendarMonth);
                                 newDate.setMonth(index);
                                 setCurrentDobCalendarMonth(newDate);
@@ -2295,7 +2321,6 @@ export default function Profile() {
                             onPress={e => {
                               if (!isFutureYear) {
                                 e.stopPropagation();
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                                 const newDate = new Date(currentDobCalendarMonth);
                                 newDate.setFullYear(yearOption);
                                 const todayDate = new Date();

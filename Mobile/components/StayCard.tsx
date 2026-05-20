@@ -13,11 +13,8 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faHeart as solidHeart } from '@fortawesome/free-solid-svg-icons';
-import { faHeart as regularHeart, faShareFromSquare } from '@fortawesome/free-regular-svg-icons';
-import * as Haptics from 'expo-haptics';
 
+import { IconActionButton } from './IconActionButton';
 import { ThemedText } from './ThemedText';
 import { CarouselIndicators } from './CarouselIndicators';
 import { responsiveFontSize, Fonts } from '@/constants/Fonts';
@@ -116,8 +113,6 @@ export function StayCard({
     setIsFavorite(newFavoriteState);
     onFavoriteToggle?.(stay, newFavoriteState);
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-
     Animated.sequence([
       Animated.spring(heartScale, {
         toValue: 1.3,
@@ -171,33 +166,14 @@ export function StayCard({
 
         <View style={styles.topActionsRow}>
           <View style={styles.actionButtonsRow}>
-            <TouchableOpacity
-              style={[
-                styles.actionButton,
-                { backgroundColor: isDark ? 'rgba(0, 0, 0, 0.4)' : 'rgba(255, 255, 255, 0.6)' },
-              ]}
+            <IconActionButton
+              variant="like"
+              isActive={isFavorite}
               onPress={handleToggleFavorite}
-              hitSlop={{ top: 8, left: 8, bottom: 8, right: 8 }}
-            >
-              <Animated.View style={{ transform: [{ scale: heartScale }] }}>
-                <FontAwesomeIcon
-                  icon={isFavorite ? solidHeart : regularHeart}
-                  size={18}
-                  color="#FF4757"
-                />
-              </Animated.View>
-            </TouchableOpacity>
+              iconContainerStyle={{ transform: [{ scale: heartScale }] }}
+            />
 
-            <TouchableOpacity
-              style={[
-                styles.actionButton,
-                { backgroundColor: isDark ? 'rgba(0, 0, 0, 0.4)' : 'rgba(255, 255, 255, 0.6)' },
-              ]}
-              onPress={() => onShare(stay)}
-              hitSlop={{ top: 8, left: 8, bottom: 8, right: 8 }}
-            >
-              <FontAwesomeIcon icon={faShareFromSquare} size={18} color="#FF4757" />
-            </TouchableOpacity>
+            <IconActionButton variant="share" onPress={() => onShare(stay)} />
           </View>
         </View>
       </View>
@@ -321,14 +297,7 @@ const styles = StyleSheet.create({
   actionButtonsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  actionButton: {
-    width: 36,
-    height: 36,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 18,
-    marginLeft: 8,
+    gap: 8,
   },
   content: {
     padding: 16,

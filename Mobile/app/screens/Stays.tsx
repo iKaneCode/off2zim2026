@@ -16,7 +16,6 @@ import { ThemedText } from '@/components/ThemedText';
 import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import { StayCard, useCollapsibleSearchSection } from '@/components';
 import type { Stay } from '@/types/Stay';
 import { isFavorited as isFavoriteStored } from '@/utils/favoritesUtils';
@@ -136,13 +135,11 @@ export default function Stays() {
   ];
 
   const handleFilterChange = useCallback((filter: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setActiveFilter(filter);
   }, []);
 
   const handleSortDirectionChange = useCallback((direction: 'asc' | 'desc') => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setSortDirection(direction);
   }, []);
@@ -163,7 +160,6 @@ export default function Stays() {
 
   const handleShare = useCallback(async (stay: Stay) => {
     try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
       await Share.share({
         message: `Check out ${stay.name} in ${stay.location}! It looks amazing.`,
         title: `${stay.name} in ${stay.location}`,

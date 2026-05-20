@@ -1,7 +1,14 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { View, StyleSheet, ScrollView, TextInput, TouchableOpacity, Modal, Pressable } from 'react-native';
+import {
+  View,
+  StyleSheet,
+  ScrollView,
+  TextInput,
+  TouchableOpacity,
+  Modal,
+  Pressable,
+} from 'react-native';
 import { router } from 'expo-router';
-import * as Haptics from 'expo-haptics';
 import { CustomHeader } from '@/components/CustomHeader';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
@@ -64,16 +71,22 @@ export default function TranslateScreen() {
   }, [detectSource, sourceText]);
 
   const handleGoBack = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.back();
   };
 
   return (
     <IOSScreenWrapper>
-      <ThemedView style={[styles.container]} lightColor={Colors.light.appBackground} darkColor={Colors.dark.appBackground}>
+      <ThemedView
+        style={[styles.container]}
+        lightColor={Colors.light.appBackground}
+        darkColor={Colors.dark.appBackground}
+      >
         <WallpaperPattern />
 
-        <CustomHeader showLogo leftAction={{ icon: 'chevron-back', onPress: handleGoBack, color: '#FF3B30' }} />
+        <CustomHeader
+          showLogo
+          leftAction={{ icon: 'chevron-back', onPress: handleGoBack, color: '#FF3B30' }}
+        />
 
         <View style={styles.titleSection}>
           <ThemedText type="title1" style={styles.pageTitle}>
@@ -94,80 +107,87 @@ export default function TranslateScreen() {
           >
             {/* Language Selection Row */}
             <View style={styles.section}>
-            <View style={styles.langRow}>
-              <TouchableOpacity
-                style={[styles.langPill, { backgroundColor: subtleBackground }]}
-                activeOpacity={0.85}
-                onPress={() => {
-                  // Allow opening even when detect is enabled
-                  setShowSourcePicker(true);
-                }}
-              >
-                <View style={[styles.iconBubble, { backgroundColor: accentSurface }]}>                    
-                  <Ionicons name="language" size={12} color={isDark ? '#FFFFFF' : '#1C1C1E'} />
-                </View>
-                  <ThemedText style={[styles.langText, { color: textColor }]} numberOfLines={1}>
-                  {detectSource ? 'Auto' : sourceLang}
-                </ThemedText>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.swapButton, { backgroundColor: subtleBackground }]}
-                activeOpacity={0.85}
-                onPress={() => {
-                  Haptics.selectionAsync();
-                  if (!detectSource) {
-                    const prevSource = sourceLang;
-                    setSourceLang(targetLang);
-                    setTargetLang(prevSource);
-                  } else {
-                    // when Auto, just swap target language with detected or keep target
-                    setSourceLang(targetLang);
-                    setTargetLang(detectedLang || targetLang);
-                    setDetectSource(false);
-                  }
-                  // also swap text
-                  const prevSrcText = sourceText;
-                  setSourceText(targetText);
-                  setTargetText(prevSrcText);
-                }}
-              >
-                <Ionicons name="swap-horizontal" size={18} color={isDark ? '#FFFFFF' : '#1C1C1E'} />
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.langPill, { backgroundColor: subtleBackground }]}
-                activeOpacity={0.85}
-                onPress={() => setShowTargetPicker(true)}
-              >
-                <View style={[styles.iconBubble, { backgroundColor: accentSurface }]}>                    
-                  <Ionicons name="language" size={12} color={isDark ? '#FFFFFF' : '#1C1C1E'} />
-                </View>
-                <ThemedText style={[styles.langText, { color: textColor }]} numberOfLines={1}>
-                  {targetLang}
-                </ThemedText>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.detectRow}>
-              {detectSource && detectedLang ? (
-                <View style={[styles.detectBadge, { backgroundColor: subtleBackground }]}>                    
-                  <View style={[styles.iconBubbleSmall, { backgroundColor: accentSurface }]}>                    
-                    <Ionicons name="information-circle" size={12} color={isDark ? '#FFFFFF' : '#1C1C1E'} />
+              <View style={styles.langRow}>
+                <TouchableOpacity
+                  style={[styles.langPill, { backgroundColor: subtleBackground }]}
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    // Allow opening even when detect is enabled
+                    setShowSourcePicker(true);
+                  }}
+                >
+                  <View style={[styles.iconBubble, { backgroundColor: accentSurface }]}>
+                    <Ionicons name="language" size={12} color={isDark ? '#FFFFFF' : '#1C1C1E'} />
                   </View>
-                  <ThemedText style={[styles.detectText, { color: textColor }]} numberOfLines={1}>
-                    Detected: {detectedLang}
+                  <ThemedText style={[styles.langText, { color: textColor }]} numberOfLines={1}>
+                    {detectSource ? 'Auto' : sourceLang}
                   </ThemedText>
-                </View>
-              ) : null}
-            </View>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.swapButton, { backgroundColor: subtleBackground }]}
+                  activeOpacity={0.85}
+                  onPress={() => {
+                    if (!detectSource) {
+                      const prevSource = sourceLang;
+                      setSourceLang(targetLang);
+                      setTargetLang(prevSource);
+                    } else {
+                      // when Auto, just swap target language with detected or keep target
+                      setSourceLang(targetLang);
+                      setTargetLang(detectedLang || targetLang);
+                      setDetectSource(false);
+                    }
+                    // also swap text
+                    const prevSrcText = sourceText;
+                    setSourceText(targetText);
+                    setTargetText(prevSrcText);
+                  }}
+                >
+                  <Ionicons
+                    name="swap-horizontal"
+                    size={18}
+                    color={isDark ? '#FFFFFF' : '#1C1C1E'}
+                  />
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={[styles.langPill, { backgroundColor: subtleBackground }]}
+                  activeOpacity={0.85}
+                  onPress={() => setShowTargetPicker(true)}
+                >
+                  <View style={[styles.iconBubble, { backgroundColor: accentSurface }]}>
+                    <Ionicons name="language" size={12} color={isDark ? '#FFFFFF' : '#1C1C1E'} />
+                  </View>
+                  <ThemedText style={[styles.langText, { color: textColor }]} numberOfLines={1}>
+                    {targetLang}
+                  </ThemedText>
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.detectRow}>
+                {detectSource && detectedLang ? (
+                  <View style={[styles.detectBadge, { backgroundColor: subtleBackground }]}>
+                    <View style={[styles.iconBubbleSmall, { backgroundColor: accentSurface }]}>
+                      <Ionicons
+                        name="information-circle"
+                        size={12}
+                        color={isDark ? '#FFFFFF' : '#1C1C1E'}
+                      />
+                    </View>
+                    <ThemedText style={[styles.detectText, { color: textColor }]} numberOfLines={1}>
+                      Detected: {detectedLang}
+                    </ThemedText>
+                  </View>
+                ) : null}
+              </View>
             </View>
 
             <View style={styles.section}>
               <Pressable
                 style={[styles.inputContainer, { backgroundColor: subtleBackground }]}
                 onPress={() => sourceInputRef.current?.focus()}
-              >              
+              >
                 <TextInput
                   ref={sourceInputRef}
                   value={sourceText}
@@ -182,18 +202,24 @@ export default function TranslateScreen() {
 
             <View style={styles.actionRow}>
               <TouchableOpacity
-                style={[styles.translateButton, { backgroundColor: isDark ? '#FFFFFF' : '#000000' }]}
+                style={[
+                  styles.translateButton,
+                  { backgroundColor: isDark ? '#FFFFFF' : '#000000' },
+                ]}
                 activeOpacity={0.9}
                 onPress={() => {
-                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                   // For now, mirror source text as placeholder translation
                   setTargetText(sourceText);
                 }}
               >
-                <View style={[styles.translateIconBubble, { backgroundColor: accentSurface }]}>                    
+                <View style={[styles.translateIconBubble, { backgroundColor: accentSurface }]}>
                   <Ionicons name="swap-vertical" size={18} color={isDark ? '#FFFFFF' : '#1C1C1E'} />
                 </View>
-                <ThemedText style={[styles.translateButtonText, { color: isDark ? '#000000' : '#FFFFFF' }]}>Translate</ThemedText>
+                <ThemedText
+                  style={[styles.translateButtonText, { color: isDark ? '#000000' : '#FFFFFF' }]}
+                >
+                  Translate
+                </ThemedText>
               </TouchableOpacity>
             </View>
 
@@ -201,7 +227,7 @@ export default function TranslateScreen() {
               <Pressable
                 style={[styles.inputContainer, { backgroundColor: subtleBackground }]}
                 onPress={() => targetInputRef.current?.focus()}
-              >              
+              >
                 <TextInput
                   ref={targetInputRef}
                   value={targetText}
@@ -224,19 +250,43 @@ export default function TranslateScreen() {
             statusBarTranslucent={true}
             onRequestClose={() => setShowSourcePicker(false)}
           >
-            <TouchableOpacity style={styles.fullScreenBackdrop} onPress={() => setShowSourcePicker(false)} activeOpacity={1}>
+            <TouchableOpacity
+              style={styles.fullScreenBackdrop}
+              onPress={() => setShowSourcePicker(false)}
+              activeOpacity={1}
+            >
               <View style={styles.guestDropdownContainer}>
                 <View style={styles.cardWrapper}>
                   <TouchableOpacity
                     activeOpacity={1}
                     onPress={e => e.stopPropagation()}
-                    style={[styles.guestDropdownCard, { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', position: 'relative' }]}
+                    style={[
+                      styles.guestDropdownCard,
+                      { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', position: 'relative' },
+                    ]}
                   >
                     <View style={styles.guestDropdownHeader}>
                       <ThemedText style={styles.guestDropdownTitle}>Source Language</ThemedText>
-                      <TouchableOpacity style={styles.guestDropdownCloseButton} onPress={() => setShowSourcePicker(false)}>
-                        <View style={[styles.closeButtonCircle, { backgroundColor: isDark ? 'rgba(255, 59, 48, 0.15)' : 'rgba(255, 59, 48, 0.15)' }]}>
-                          <Ionicons name="close-sharp" size={28} color="#FF3B30" style={{ textAlign: 'center', fontWeight: '900' }} />
+                      <TouchableOpacity
+                        style={styles.guestDropdownCloseButton}
+                        onPress={() => setShowSourcePicker(false)}
+                      >
+                        <View
+                          style={[
+                            styles.closeButtonCircle,
+                            {
+                              backgroundColor: isDark
+                                ? 'rgba(255, 59, 48, 0.15)'
+                                : 'rgba(255, 59, 48, 0.15)',
+                            },
+                          ]}
+                        >
+                          <Ionicons
+                            name="close-sharp"
+                            size={28}
+                            color="#FF3B30"
+                            style={{ textAlign: 'center', fontWeight: '900' }}
+                          />
                         </View>
                       </TouchableOpacity>
                     </View>
@@ -263,22 +313,53 @@ export default function TranslateScreen() {
                             activeOpacity={0.8}
                             onPress={e => {
                               e.stopPropagation();
-                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                               setSourceLang(lang);
                               setDetectSource(lang === 'Auto');
                               setShowSourcePicker(false);
                             }}
                           >
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                              <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: accentSurface, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 0 }}>
-                                <Ionicons name="language" size={14} color={isDark ? '#FFFFFF' : '#1C1C1E'} />
+                              <View
+                                style={{
+                                  width: 28,
+                                  height: 28,
+                                  borderRadius: 14,
+                                  backgroundColor: accentSurface,
+                                  justifyContent: 'center',
+                                  alignItems: 'center',
+                                  shadowColor: '#000',
+                                  shadowOffset: { width: 0, height: 1 },
+                                  shadowOpacity: 0.1,
+                                  shadowRadius: 2,
+                                  elevation: 0,
+                                }}
+                              >
+                                <Ionicons
+                                  name="language"
+                                  size={14}
+                                  color={isDark ? '#FFFFFF' : '#1C1C1E'}
+                                />
                               </View>
-                              <ThemedText style={[styles.guestSubLabel, sourceLang === lang && { fontFamily: Fonts.bold }]}>
+                              <ThemedText
+                                style={[
+                                  styles.guestSubLabel,
+                                  sourceLang === lang && { fontFamily: Fonts.bold },
+                                ]}
+                              >
                                 {lang}
                               </ThemedText>
                             </View>
-                            <View style={{ width: 28, height: 28, justifyContent: 'center', alignItems: 'center' }}>
-                              {sourceLang === lang && <Ionicons name="checkmark-circle" size={28} color="#34C759" />}
+                            <View
+                              style={{
+                                width: 28,
+                                height: 28,
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                              }}
+                            >
+                              {sourceLang === lang && (
+                                <Ionicons name="checkmark-circle" size={28} color="#34C759" />
+                              )}
                             </View>
                           </TouchableOpacity>
                         ))}
@@ -298,63 +379,120 @@ export default function TranslateScreen() {
             statusBarTranslucent={true}
             onRequestClose={() => setShowTargetPicker(false)}
           >
-            <TouchableOpacity style={styles.fullScreenBackdrop} onPress={() => setShowTargetPicker(false)} activeOpacity={1}>
+            <TouchableOpacity
+              style={styles.fullScreenBackdrop}
+              onPress={() => setShowTargetPicker(false)}
+              activeOpacity={1}
+            >
               <View style={styles.guestDropdownContainer}>
                 <View style={styles.cardWrapper}>
                   <TouchableOpacity
                     activeOpacity={1}
                     onPress={e => e.stopPropagation()}
-                    style={[styles.guestDropdownCard, { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', position: 'relative' }]}
+                    style={[
+                      styles.guestDropdownCard,
+                      { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF', position: 'relative' },
+                    ]}
                   >
                     <View style={styles.guestDropdownHeader}>
                       <ThemedText style={styles.guestDropdownTitle}>Target Language</ThemedText>
-                      <TouchableOpacity style={styles.guestDropdownCloseButton} onPress={() => setShowTargetPicker(false)}>
-                        <View style={[styles.closeButtonCircle, { backgroundColor: isDark ? 'rgba(255, 59, 48, 0.15)' : 'rgba(255, 59, 48, 0.15)' }]}>
-                          <Ionicons name="close-sharp" size={28} color="#FF3B30" style={{ textAlign: 'center', fontWeight: '900' }} />
+                      <TouchableOpacity
+                        style={styles.guestDropdownCloseButton}
+                        onPress={() => setShowTargetPicker(false)}
+                      >
+                        <View
+                          style={[
+                            styles.closeButtonCircle,
+                            {
+                              backgroundColor: isDark
+                                ? 'rgba(255, 59, 48, 0.15)'
+                                : 'rgba(255, 59, 48, 0.15)',
+                            },
+                          ]}
+                        >
+                          <Ionicons
+                            name="close-sharp"
+                            size={28}
+                            color="#FF3B30"
+                            style={{ textAlign: 'center', fontWeight: '900' }}
+                          />
                         </View>
                       </TouchableOpacity>
                     </View>
 
                     <ScrollView style={{ maxHeight: 400 }}>
                       <View style={styles.guestSection}>
-                        {languages.filter(l => l !== 'Auto').map(lang => (
-                          <TouchableOpacity
-                            key={`tgt-${lang}`}
-                            style={[
-                              styles.guestRow,
-                              {
-                                backgroundColor:
-                                  targetLang === lang
-                                    ? isDark
-                                      ? 'rgba(52, 199, 89, 0.15)'
-                                      : 'rgba(52, 199, 89, 0.1)'
-                                    : isDark
-                                      ? 'rgba(255,255,255,0.05)'
-                                      : 'rgba(0,0,0,0.03)',
-                                marginTop: 8,
-                              },
-                            ]}
-                            activeOpacity={0.8}
-                            onPress={e => {
-                              e.stopPropagation();
-                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-                              setTargetLang(lang);
-                              setShowTargetPicker(false);
-                            }}
-                          >
-                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                              <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: accentSurface, justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 1 }, shadowOpacity: 0.1, shadowRadius: 2, elevation: 0 }}>
-                                <Ionicons name="language" size={14} color={isDark ? '#FFFFFF' : '#1C1C1E'} />
+                        {languages
+                          .filter(l => l !== 'Auto')
+                          .map(lang => (
+                            <TouchableOpacity
+                              key={`tgt-${lang}`}
+                              style={[
+                                styles.guestRow,
+                                {
+                                  backgroundColor:
+                                    targetLang === lang
+                                      ? isDark
+                                        ? 'rgba(52, 199, 89, 0.15)'
+                                        : 'rgba(52, 199, 89, 0.1)'
+                                      : isDark
+                                        ? 'rgba(255,255,255,0.05)'
+                                        : 'rgba(0,0,0,0.03)',
+                                  marginTop: 8,
+                                },
+                              ]}
+                              activeOpacity={0.8}
+                              onPress={e => {
+                                e.stopPropagation();
+                                setTargetLang(lang);
+                                setShowTargetPicker(false);
+                              }}
+                            >
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                <View
+                                  style={{
+                                    width: 28,
+                                    height: 28,
+                                    borderRadius: 14,
+                                    backgroundColor: accentSurface,
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    shadowColor: '#000',
+                                    shadowOffset: { width: 0, height: 1 },
+                                    shadowOpacity: 0.1,
+                                    shadowRadius: 2,
+                                    elevation: 0,
+                                  }}
+                                >
+                                  <Ionicons
+                                    name="language"
+                                    size={14}
+                                    color={isDark ? '#FFFFFF' : '#1C1C1E'}
+                                  />
+                                </View>
+                                <ThemedText
+                                  style={[
+                                    styles.guestSubLabel,
+                                    targetLang === lang && { fontFamily: Fonts.bold },
+                                  ]}
+                                >
+                                  {lang}
+                                </ThemedText>
                               </View>
-                              <ThemedText style={[styles.guestSubLabel, targetLang === lang && { fontFamily: Fonts.bold }]}>
-                                {lang}
-                              </ThemedText>
-                            </View>
-                            <View style={{ width: 28, height: 28, justifyContent: 'center', alignItems: 'center' }}>
-                              {targetLang === lang && <Ionicons name="checkmark-circle" size={28} color="#34C759" />}
-                            </View>
-                          </TouchableOpacity>
-                        ))}
+                              <View
+                                style={{
+                                  width: 28,
+                                  height: 28,
+                                  justifyContent: 'center',
+                                  alignItems: 'center',
+                                }}
+                              >
+                                {targetLang === lang && (
+                                  <Ionicons name="checkmark-circle" size={28} color="#34C759" />
+                                )}
+                              </View>
+                            </TouchableOpacity>
+                          ))}
                       </View>
                     </ScrollView>
                   </TouchableOpacity>

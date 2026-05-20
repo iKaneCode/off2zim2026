@@ -105,7 +105,6 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
   }, [themePref]);
 
   const cycleThemePref = useCallback(async () => {
-    Haptics.selectionAsync();
     const next = themePref === 'auto' ? 'light' : themePref === 'light' ? 'dark' : 'auto';
     await setThemePreference(next);
   }, [themePref]);
@@ -505,7 +504,11 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
             // Let the _layout.tsx handle navigation
           } catch (logoutError) {
             console.error('Error logging out:', logoutError);
-            showAlert({ title: 'Error', message: 'Failed to logout. Please try again.', buttons: [{ text: 'OK', style: 'default' }] });
+            showAlert({
+              title: 'Error',
+              message: 'Failed to logout. Please try again.',
+              buttons: [{ text: 'OK', style: 'default' }],
+            });
           }
         },
       },
@@ -514,7 +517,11 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
 
   const handleLogin = async () => {
     if (!email || !password) {
-      showAlert({ title: 'Error', message: 'Please fill in all fields', buttons: [{ text: 'OK' }] });
+      showAlert({
+        title: 'Error',
+        message: 'Please fill in all fields',
+        buttons: [{ text: 'OK' }],
+      });
       return;
     }
 
@@ -523,7 +530,11 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
       const result = await signIn(email, password);
 
       if (result.error) {
-        showAlert({ title: 'Error', message: result.error.message || 'Login failed', buttons: [{ text: 'OK' }] });
+        showAlert({
+          title: 'Error',
+          message: result.error.message || 'Login failed',
+          buttons: [{ text: 'OK' }],
+        });
       } else {
         // Exit guest mode and reset form
         if (setGuestMode) {
@@ -535,7 +546,11 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
         onClose();
       }
     } catch (error: any) {
-      showAlert({ title: 'Error', message: error.message || 'An unexpected error occurred', buttons: [{ text: 'OK' }] });
+      showAlert({
+        title: 'Error',
+        message: error.message || 'An unexpected error occurred',
+        buttons: [{ text: 'OK' }],
+      });
     } finally {
       setLoading(false);
     }
@@ -629,9 +644,17 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
         const lower = message.toLowerCase();
 
         if (lower.includes('already registered') || lower.includes('already exists')) {
-          showAlert({ title: 'Account exists', message: 'It looks like this email already has an account. Try signing in instead.', buttons: [{ text: 'OK' }] });
+          showAlert({
+            title: 'Account exists',
+            message: 'It looks like this email already has an account. Try signing in instead.',
+            buttons: [{ text: 'OK' }],
+          });
         } else if (lower.includes('network')) {
-          showAlert({ title: 'Network issue', message: 'Please check your internet connection and try again.', buttons: [{ text: 'OK' }] });
+          showAlert({
+            title: 'Network issue',
+            message: 'Please check your internet connection and try again.',
+            buttons: [{ text: 'OK' }],
+          });
         } else {
           showAlert({ title: 'Sign up failed', message, buttons: [{ text: 'OK' }] });
         }
@@ -664,11 +687,19 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
 
   const handleForgotPassword = () => {
     if (!email) {
-      showAlert({ title: 'Error', message: 'Please enter your email address first', buttons: [{ text: 'OK' }] });
+      showAlert({
+        title: 'Error',
+        message: 'Please enter your email address first',
+        buttons: [{ text: 'OK' }],
+      });
       return;
     }
 
-    showAlert({ title: 'Reset Password', message: 'Password reset functionality will be implemented soon.', buttons: [{ text: 'OK' }] });
+    showAlert({
+      title: 'Reset Password',
+      message: 'Password reset functionality will be implemented soon.',
+      buttons: [{ text: 'OK' }],
+    });
   };
 
   const showModal = () => {
@@ -796,7 +827,10 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
 
           {/* Emergency Services Section */}
           <View
-            style={[styles.menuContainer, { backgroundColor: isDark ? '#1C1C1E' : '#ffffff', marginTop: 8 }]}
+            style={[
+              styles.menuContainer,
+              { backgroundColor: isDark ? '#1C1C1E' : '#ffffff', marginTop: 8 },
+            ]}
           >
             <TouchableOpacity
               style={styles.menuItem}
@@ -827,9 +861,7 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
                 >
                   <Ionicons name="warning" size={18} color="#FFFFFF" />
                 </View>
-                <Text
-                  style={[styles.drawerItemText, { color: themeTextColor, marginLeft: 12 }]}
-                >
+                <Text style={[styles.drawerItemText, { color: themeTextColor, marginLeft: 12 }]}>
                   Emergency Services
                 </Text>
               </View>
@@ -838,12 +870,12 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
 
           {/* Appearance toggle moved under Emergency */}
           <View
-            style={[styles.menuContainer, { backgroundColor: isDark ? '#1C1C1E' : '#ffffff', marginTop: 8 }]}
+            style={[
+              styles.menuContainer,
+              { backgroundColor: isDark ? '#1C1C1E' : '#ffffff', marginTop: 8 },
+            ]}
           >
-            <TouchableOpacity
-              style={styles.menuItem}
-              onPress={cycleThemePref}
-            >
+            <TouchableOpacity style={styles.menuItem} onPress={cycleThemePref}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <View
                   style={{
@@ -866,9 +898,7 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
                 >
                   <Ionicons name={themeIconName} size={18} color="#FFFFFF" />
                 </View>
-                <Text
-                  style={[styles.drawerItemText, { color: themeTextColor, marginLeft: 12 }]}
-                >
+                <Text style={[styles.drawerItemText, { color: themeTextColor, marginLeft: 12 }]}>
                   {themeLabelText}
                 </Text>
               </View>
@@ -879,7 +909,10 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
             {/* Grouped Menu Items */}
             {isAuthenticated && (
               <View
-                style={[styles.menuContainer, { backgroundColor: isDark ? '#1C1C1E' : '#ffffff', marginTop: 8 }]}
+                style={[
+                  styles.menuContainer,
+                  { backgroundColor: isDark ? '#1C1C1E' : '#ffffff', marginTop: 8 },
+                ]}
               >
                 {/* Likes */}
                 <TouchableOpacity
@@ -1038,8 +1071,6 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
                   </View>
                 </TouchableOpacity>
 
-                
-
                 {/* Help */}
                 <TouchableOpacity
                   style={styles.menuItem}
@@ -1124,7 +1155,12 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
                   onPress={showModal}
                   activeOpacity={0.68}
                 >
-                  <Text style={[styles.drawerLoginButtonText, { color: isDark ? '#000000' : '#FFFFFF' }]}>
+                  <Text
+                    style={[
+                      styles.drawerLoginButtonText,
+                      { color: isDark ? '#000000' : '#FFFFFF' },
+                    ]}
+                  >
                     Login
                   </Text>
                 </TouchableOpacity>
@@ -1144,7 +1180,12 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
                   }}
                   activeOpacity={0.68}
                 >
-                  <Text style={[styles.drawerSignUpButtonText, { color: isDark ? '#FFFFFF' : '#000000' }]}>
+                  <Text
+                    style={[
+                      styles.drawerSignUpButtonText,
+                      { color: isDark ? '#FFFFFF' : '#000000' },
+                    ]}
+                  >
                     Sign Up
                   </Text>
                 </TouchableOpacity>
@@ -1533,7 +1574,6 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
                           <TouchableOpacity
                             activeOpacity={0.7}
                             onPress={() => {
-                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                               setShowTitlePicker(true);
                             }}
                             style={[
@@ -1614,7 +1654,6 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
                           <TouchableOpacity
                             activeOpacity={0.7}
                             onPress={() => {
-                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                               setShowGenderPicker(true);
                             }}
                             style={[
@@ -1665,7 +1704,6 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
                           <TouchableOpacity
                             activeOpacity={0.7}
                             onPress={() => {
-                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                               setShowIdTypePicker(true);
                             }}
                             style={[
@@ -1750,7 +1788,6 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
                           <TouchableOpacity
                             activeOpacity={0.7}
                             onPress={() => {
-                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                               setShowDobPicker(true);
                             }}
                             style={[
@@ -1801,7 +1838,6 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
                           <TouchableOpacity
                             activeOpacity={0.7}
                             onPress={() => {
-                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                               setShowNationalityPicker(true);
                             }}
                             style={[
@@ -2105,7 +2141,6 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
                       },
                     ]}
                     onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                       setSignUpTitle(titleOption);
                       setShowTitlePicker(false);
                     }}
@@ -2161,7 +2196,6 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
                       },
                     ]}
                     onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                       setSignUpGender(genderOption);
                       setShowGenderPicker(false);
                     }}
@@ -2217,7 +2251,6 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
                       },
                     ]}
                     onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                       setSignUpIdType(idTypeOption);
                       setShowIdTypePicker(false);
                     }}
@@ -2273,7 +2306,6 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
                       },
                     ]}
                     onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                       setSignUpNationality(country.name);
                       setShowNationalityPicker(false);
                     }}

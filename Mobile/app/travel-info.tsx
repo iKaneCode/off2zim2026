@@ -2,7 +2,6 @@
 import { responsiveFontSize } from '@/constants/Fonts';
 import { View, StyleSheet, ScrollView } from 'react-native';
 import { router } from 'expo-router';
-import * as Haptics from 'expo-haptics';
 import { CustomHeader } from '@/components/CustomHeader';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
@@ -19,16 +18,22 @@ export default function TravelInfoScreen() {
   const isDark = colorScheme === 'dark';
 
   const handleGoBack = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.back();
   };
 
   return (
     <IOSScreenWrapper>
-      <ThemedView style={[styles.container]} lightColor={Colors.light.appBackground} darkColor={Colors.dark.appBackground}>
+      <ThemedView
+        style={[styles.container]}
+        lightColor={Colors.light.appBackground}
+        darkColor={Colors.dark.appBackground}
+      >
         <WallpaperPattern />
 
-        <CustomHeader showLogo leftAction={{ icon: 'chevron-back', onPress: handleGoBack, color: '#FF3B30' }} />
+        <CustomHeader
+          showLogo
+          leftAction={{ icon: 'chevron-back', onPress: handleGoBack, color: '#FF3B30' }}
+        />
 
         <View style={styles.titleSection}>
           <ThemedText type="title1" style={styles.pageTitle}>

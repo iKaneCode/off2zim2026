@@ -1,6 +1,5 @@
 import { BottomTabBarButtonProps } from '@react-navigation/bottom-tabs';
 import { PlatformPressable } from '@react-navigation/elements';
-import * as Haptics from 'expo-haptics';
 import React from 'react';
 import { usePathname } from 'expo-router';
 
@@ -38,7 +37,6 @@ export function HomeTabButton(props: BottomTabBarButtonProps) {
       console.log('📜 Scrolling to top and refreshing Featured');
       scrollToTopAndRefresh();
       if (process.env.EXPO_OS === 'ios') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
       return;
     }
@@ -48,7 +46,6 @@ export function HomeTabButton(props: BottomTabBarButtonProps) {
       console.log('🎯 Calling navigation to Featured');
       navigateToFeatured();
       if (process.env.EXPO_OS === 'ios') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
       // Don't prevent default - let the tab still get focus
       return;
@@ -66,7 +63,6 @@ export function HomeTabButton(props: BottomTabBarButtonProps) {
       onPressIn={ev => {
         if (process.env.EXPO_OS === 'ios') {
           // Add a soft haptic feedback when pressing down on the tabs.
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }
         props.onPressIn?.(ev);
       }}

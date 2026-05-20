@@ -22,12 +22,17 @@ import { CustomHeader, WallpaperPattern } from '@/components';
 import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useAppAlert } from '@/context/AppAlertContext';
-import { responsiveFontSize, responsiveSize, Fonts, FontSizes, LineHeights } from '@/constants/Fonts';
+import {
+  responsiveFontSize,
+  responsiveSize,
+  Fonts,
+  FontSizes,
+  LineHeights,
+} from '@/constants/Fonts';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { getAvatarColor } from '@/utils/messageUtils';
 import * as ImagePicker from 'expo-image-picker';
 import * as DocumentPicker from 'expo-document-picker';
-import * as Haptics from 'expo-haptics';
 import * as Sharing from 'expo-sharing';
 
 interface ChatMessage {
@@ -118,7 +123,6 @@ export default function MessageDetailScreen() {
       setRefreshing(false);
       // Add haptic feedback after refresh completes
       if (Platform.OS === 'ios') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
     }, 1500); // Slightly longer delay for more natural feel
   };
@@ -167,7 +171,8 @@ export default function MessageDetailScreen() {
         // Fallback to showing document info
         showAlert({
           title: name || 'Document',
-          message: 'Document viewing is not available on this device. Here are the document details:',
+          message:
+            'Document viewing is not available on this device. Here are the document details:',
           buttons: [
             { text: 'OK', style: 'default' },
             {
@@ -194,7 +199,11 @@ export default function MessageDetailScreen() {
                   await Sharing.shareAsync(uri);
                 }
               } catch {
-                showAlert({ title: 'Sharing Failed', message: 'Could not share this document.', buttons: [{ text: 'OK' }] });
+                showAlert({
+                  title: 'Sharing Failed',
+                  message: 'Could not share this document.',
+                  buttons: [{ text: 'OK' }],
+                });
               }
             },
           },
@@ -272,7 +281,11 @@ export default function MessageDetailScreen() {
   const pickImageFromCamera = async () => {
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') {
-      showAlert({ title: 'Permission needed', message: 'Camera permission is required to take photos.', buttons: [{ text: 'OK' }] });
+      showAlert({
+        title: 'Permission needed',
+        message: 'Camera permission is required to take photos.',
+        buttons: [{ text: 'OK' }],
+      });
       return;
     }
 
@@ -290,7 +303,11 @@ export default function MessageDetailScreen() {
   const pickImageFromLibrary = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') {
-      showAlert({ title: 'Permission needed', message: 'Photo library permission is required to select photos.', buttons: [{ text: 'OK' }] });
+      showAlert({
+        title: 'Permission needed',
+        message: 'Photo library permission is required to select photos.',
+        buttons: [{ text: 'OK' }],
+      });
       return;
     }
 
@@ -573,25 +590,21 @@ export default function MessageDetailScreen() {
                   styles.callButton,
                   {
                     backgroundColor:
-                      colorScheme === 'dark'
-                        ? 'rgba(52,199,89,0.15)'
-                        : 'rgba(52,199,89,0.1)',
+                      colorScheme === 'dark' ? 'rgba(52,199,89,0.15)' : 'rgba(52,199,89,0.1)',
                   },
                 ]}
               >
-                <View style={[
-                  styles.callIconBubble,
-                  {
-                    backgroundColor:
-                      colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
-                  },
-                ]}>
+                <View
+                  style={[
+                    styles.callIconBubble,
+                    {
+                      backgroundColor: colorScheme === 'dark' ? '#1C1C1E' : '#FFFFFF',
+                    },
+                  ]}
+                >
                   <Ionicons name="call" size={12} color="#34C759" />
                 </View>
-                <ThemedText style={styles.callLabel}
-                  lightColor="#1C1C1E"
-                  darkColor="#FFFFFF"
-                >
+                <ThemedText style={styles.callLabel} lightColor="#1C1C1E" darkColor="#FFFFFF">
                   Call
                 </ThemedText>
               </TouchableOpacity>

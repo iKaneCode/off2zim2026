@@ -178,7 +178,9 @@ export default function AuthScreen() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [businessName, setBusinessName] = useState('');
-  const [userType, setUserType] = useState<'individual' | 'business'>(variantConfig.defaultUserType);
+  const [userType, setUserType] = useState<'individual' | 'business'>(
+    variantConfig.defaultUserType
+  );
   const [explorerType, setExplorerType] = useState<ExplorerType>('foreign');
   const [submitting, setSubmitting] = useState(false);
   const [attemptedSubmit, setAttemptedSubmit] = useState(false);
@@ -324,7 +326,6 @@ export default function AuthScreen() {
   };
 
   const handleDobSelect = (isoDate: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const [year, month, day] = isoDate.split('-');
     setDateOfBirth(`${day}/${month}/${year}`);
     setShowDobPicker(false);
@@ -363,7 +364,6 @@ export default function AuthScreen() {
       return;
     }
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const newDate = new Date(currentDobCalendarMonth);
     newDate.setMonth(monthIndex);
     setCurrentDobCalendarMonth(newDate);
@@ -377,7 +377,6 @@ export default function AuthScreen() {
       return;
     }
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const newDate = new Date(currentDobCalendarMonth);
     newDate.setFullYear(year);
 
@@ -521,7 +520,12 @@ export default function AuthScreen() {
           return;
         }
 
-        router.replace(getMobilePostAuthRoute({ id: 'signed-in', email: trimmedEmail, user_metadata: { user_type: userType } }, false));
+        router.replace(
+          getMobilePostAuthRoute(
+            { id: 'signed-in', email: trimmedEmail, user_metadata: { user_type: userType } },
+            false
+          )
+        );
         return;
       }
 
@@ -728,802 +732,780 @@ export default function AuthScreen() {
               ]}
             >
               <>
-                  <View
+                <View
+                  style={[
+                    styles.modeSwitch,
+                    {
+                      borderColor: segmentBorderColor,
+                      backgroundColor: segmentBackground,
+                    },
+                  ]}
+                >
+                  <TouchableOpacity
                     style={[
-                      styles.modeSwitch,
-                      {
-                        borderColor: segmentBorderColor,
-                        backgroundColor: segmentBackground,
-                      },
+                      styles.modeButton,
+                      mode === 'sign-in' && { backgroundColor: activeTabBackground },
+                      mode === 'sign-in' && styles.modeButtonActive,
                     ]}
+                    onPress={() => {
+                      setMode('sign-in');
+                      setAttemptedSubmit(false);
+                    }}
+                    disabled={mode === 'sign-in'}
                   >
+                    <Text
+                      style={[
+                        styles.modeButtonText,
+                        { color: inactiveTabTextColor },
+                        mode === 'sign-in' && { color: activeTabTextColor },
+                        mode === 'sign-in' && styles.modeButtonTextActive,
+                      ]}
+                    >
+                      Sign In
+                    </Text>
+                  </TouchableOpacity>
+                  {variantConfig.allowSelfSignup ? (
                     <TouchableOpacity
                       style={[
                         styles.modeButton,
-                        mode === 'sign-in' && { backgroundColor: activeTabBackground },
-                        mode === 'sign-in' && styles.modeButtonActive,
+                        mode === 'sign-up' && { backgroundColor: activeTabBackground },
+                        mode === 'sign-up' && styles.modeButtonActive,
                       ]}
                       onPress={() => {
-                        setMode('sign-in');
+                        setMode('sign-up');
                         setAttemptedSubmit(false);
                       }}
-                      disabled={mode === 'sign-in'}
+                      disabled={mode === 'sign-up'}
                     >
                       <Text
                         style={[
                           styles.modeButtonText,
                           { color: inactiveTabTextColor },
-                          mode === 'sign-in' && { color: activeTabTextColor },
-                          mode === 'sign-in' && styles.modeButtonTextActive,
+                          mode === 'sign-up' && { color: activeTabTextColor },
+                          mode === 'sign-up' && styles.modeButtonTextActive,
                         ]}
                       >
-                        Sign In
+                        Sign Up
                       </Text>
                     </TouchableOpacity>
-                    {variantConfig.allowSelfSignup ? (
-                      <TouchableOpacity
-                        style={[
-                          styles.modeButton,
-                          mode === 'sign-up' && { backgroundColor: activeTabBackground },
-                          mode === 'sign-up' && styles.modeButtonActive,
-                        ]}
-                        onPress={() => {
-                          setMode('sign-up');
-                          setAttemptedSubmit(false);
-                        }}
-                        disabled={mode === 'sign-up'}
-                      >
-                        <Text
-                          style={[
-                            styles.modeButtonText,
-                            { color: inactiveTabTextColor },
-                            mode === 'sign-up' && { color: activeTabTextColor },
-                            mode === 'sign-up' && styles.modeButtonTextActive,
-                          ]}
-                        >
-                          Sign Up
-                        </Text>
-                      </TouchableOpacity>
-                    ) : null}
-                  </View>
+                  ) : null}
+                </View>
 
-                  {mode === 'sign-up' && variantConfig.showAccountTypeSwitch && (
-                    <View style={{ gap: 8 }}>
-                      <View style={styles.labelErrorContainer}>
-                        <Text
-                          style={[
-                            styles.inputLabel,
-                            {
-                              color: colorScheme === 'dark' ? Colors.dark.text : Colors.light.text,
-                            },
-                          ]}
-                        >
-                          Account Type
-                        </Text>
-                      </View>
-                      <View
+                {mode === 'sign-up' && variantConfig.showAccountTypeSwitch && (
+                  <View style={{ gap: 8 }}>
+                    <View style={styles.labelErrorContainer}>
+                      <Text
                         style={[
-                          styles.userTypeSwitch,
+                          styles.inputLabel,
                           {
-                            borderColor: segmentBorderColor,
-                            backgroundColor: segmentBackground,
+                            color: colorScheme === 'dark' ? Colors.dark.text : Colors.light.text,
                           },
                         ]}
                       >
-                        <TouchableOpacity
-                          style={[
-                            styles.userTypeButton,
-                            userType === 'individual' && {
-                              backgroundColor: activeTabBackground,
-                            },
-                            userType === 'individual' && styles.userTypeButtonActive,
-                          ]}
-                          onPress={() => setUserType('individual')}
-                          disabled={userType === 'individual'}
-                        >
-                          <Text
-                            style={[
-                              styles.userTypeButtonText,
-                              { color: inactiveTabTextColor },
-                              userType === 'individual' && {
-                                color: activeTabTextColor,
-                              },
-                              userType === 'individual' && styles.userTypeButtonTextActive,
-                            ]}
-                          >
-                            Individual
-                          </Text>
-                        </TouchableOpacity>
-                        <TouchableOpacity
-                          style={[
-                            styles.userTypeButton,
-                            userType === 'business' && {
-                              backgroundColor: activeTabBackground,
-                            },
-                            userType === 'business' && styles.userTypeButtonActive,
-                          ]}
-                          onPress={() => setUserType('business')}
-                          disabled={userType === 'business'}
-                        >
-                          <Text
-                            style={[
-                              styles.userTypeButtonText,
-                              { color: inactiveTabTextColor },
-                              userType === 'business' && {
-                                color: activeTabTextColor,
-                              },
-                              userType === 'business' && styles.userTypeButtonTextActive,
-                            ]}
-                          >
-                            Service Provider
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
+                        Account Type
+                      </Text>
                     </View>
-                  )}
-
-                  {mode === 'sign-in' ? (
-                    <>
-                      <LabeledInput
-                        label="Email"
-                        value={email}
-                        onChangeText={text => {
-                          setEmail(text);
-                        }}
-                        placeholder="Enter your email"
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                        autoComplete="email"
-                        textContentType="emailAddress"
-                        colorScheme={colorScheme}
-                        placeholderColor={placeholderColor}
-                        returnKeyType="next"
-                        errorMessage={
-                          attemptedSubmit && !email.trim() ? 'This field is required' : undefined
-                        }
-                        hasError={attemptedSubmit && !email.trim()}
-                      />
-
-                      <PasswordInput
-                        label="Password"
-                        value={password}
-                        onChangeText={text => {
-                          setPassword(text);
-                        }}
-                        placeholder="Enter your password"
-                        colorScheme={colorScheme}
-                        placeholderColor={placeholderColor}
-                        autoComplete="password"
-                        textContentType="password"
-                        returnKeyType="go"
-                        onSubmitEditing={handleSubmit}
-                        errorMessage={
-                          attemptedSubmit && !password.trim() ? 'This field is required' : undefined
-                        }
-                        hasError={attemptedSubmit && !password.trim()}
-                      />
-
+                    <View
+                      style={[
+                        styles.userTypeSwitch,
+                        {
+                          borderColor: segmentBorderColor,
+                          backgroundColor: segmentBackground,
+                        },
+                      ]}
+                    >
                       <TouchableOpacity
-                        style={styles.signInForgotWrapper}
-                        onPress={async () => {
-                          const resetEmail = email.trim().toLowerCase();
-                          if (!resetEmail) {
+                        style={[
+                          styles.userTypeButton,
+                          userType === 'individual' && {
+                            backgroundColor: activeTabBackground,
+                          },
+                          userType === 'individual' && styles.userTypeButtonActive,
+                        ]}
+                        onPress={() => setUserType('individual')}
+                        disabled={userType === 'individual'}
+                      >
+                        <Text
+                          style={[
+                            styles.userTypeButtonText,
+                            { color: inactiveTabTextColor },
+                            userType === 'individual' && {
+                              color: activeTabTextColor,
+                            },
+                            userType === 'individual' && styles.userTypeButtonTextActive,
+                          ]}
+                        >
+                          Individual
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={[
+                          styles.userTypeButton,
+                          userType === 'business' && {
+                            backgroundColor: activeTabBackground,
+                          },
+                          userType === 'business' && styles.userTypeButtonActive,
+                        ]}
+                        onPress={() => setUserType('business')}
+                        disabled={userType === 'business'}
+                      >
+                        <Text
+                          style={[
+                            styles.userTypeButtonText,
+                            { color: inactiveTabTextColor },
+                            userType === 'business' && {
+                              color: activeTabTextColor,
+                            },
+                            userType === 'business' && styles.userTypeButtonTextActive,
+                          ]}
+                        >
+                          Service Provider
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                )}
+
+                {mode === 'sign-in' ? (
+                  <>
+                    <LabeledInput
+                      label="Email"
+                      value={email}
+                      onChangeText={text => {
+                        setEmail(text);
+                      }}
+                      placeholder="Enter your email"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoComplete="email"
+                      textContentType="emailAddress"
+                      colorScheme={colorScheme}
+                      placeholderColor={placeholderColor}
+                      returnKeyType="next"
+                      errorMessage={
+                        attemptedSubmit && !email.trim() ? 'This field is required' : undefined
+                      }
+                      hasError={attemptedSubmit && !email.trim()}
+                    />
+
+                    <PasswordInput
+                      label="Password"
+                      value={password}
+                      onChangeText={text => {
+                        setPassword(text);
+                      }}
+                      placeholder="Enter your password"
+                      colorScheme={colorScheme}
+                      placeholderColor={placeholderColor}
+                      autoComplete="password"
+                      textContentType="password"
+                      returnKeyType="go"
+                      onSubmitEditing={handleSubmit}
+                      errorMessage={
+                        attemptedSubmit && !password.trim() ? 'This field is required' : undefined
+                      }
+                      hasError={attemptedSubmit && !password.trim()}
+                    />
+
+                    <TouchableOpacity
+                      style={styles.signInForgotWrapper}
+                      onPress={async () => {
+                        const resetEmail = email.trim().toLowerCase();
+                        if (!resetEmail) {
+                          showAlert({
+                            title: 'Email required',
+                            message:
+                              'Enter your email address first, then tap Forgot Password again.',
+                            buttons: [{ text: 'OK' }],
+                          });
+                          return;
+                        }
+
+                        try {
+                          const { data, error } = await resetPassword(resetEmail);
+                          if (error) {
+                            throw error;
+                          }
+
+                          if (data?.resetUrl) {
                             showAlert({
-                              title: 'Email required',
-                              message: 'Enter your email address first, then tap Forgot Password again.',
-                              buttons: [{ text: 'OK' }],
+                              title: 'Reset ready',
+                              message:
+                                'Email delivery is not configured yet, so open the reset link now to choose a new password.',
+                              buttons: [
+                                {
+                                  text: 'Open Reset Link',
+                                  onPress: async () => {
+                                    try {
+                                      await Linking.openURL(data.resetUrl);
+                                    } catch {
+                                      showNotification(
+                                        'Reset link',
+                                        'Copy and open this link in your browser: ' + data.resetUrl
+                                      );
+                                    }
+                                  },
+                                },
+                                { text: 'OK', style: 'cancel' },
+                              ],
                             });
                             return;
                           }
 
-                          try {
-                            const { data, error } = await resetPassword(resetEmail);
-                            if (error) {
-                              throw error;
-                            }
-
-                            if (data?.resetUrl) {
-                              showAlert({
-                                title: 'Reset ready',
-                                message:
-                                  'Email delivery is not configured yet, so open the reset link now to choose a new password.',
-                                buttons: [
-                                  {
-                                    text: 'Open Reset Link',
-                                    onPress: async () => {
-                                      try {
-                                        await Linking.openURL(data.resetUrl);
-                                      } catch {
-                                        showNotification(
-                                          'Reset link',
-                                          'Copy and open this link in your browser: ' +
-                                            data.resetUrl
-                                        );
-                                      }
-                                    },
-                                  },
-                                  { text: 'OK', style: 'cancel' },
-                                ],
-                              });
-                              return;
-                            }
-
-                            showAlert({
-                              title: 'Password reset sent',
-                              message: 'Check your email for a password reset link.',
-                              buttons: [{ text: 'OK' }],
-                            });
-                          } catch (error: any) {
-                            showAlert({
-                              title: 'Reset failed',
-                              message: error?.message ?? 'Unable to start password reset right now.',
-                              buttons: [{ text: 'OK' }],
-                            });
-                          }
-                        }}
-                      >
-                        <Text style={[styles.signInForgotPassword, { color: palette.tint }]}>
-                          Forgot Password?
-                        </Text>
-                      </TouchableOpacity>
-                    </>
-                  ) : (
-                    <>
-                      {userType === 'business' ? (
-                        <>
-                          <LabeledInput
-                            label="Business name"
-                            value={businessName}
-                            onChangeText={setBusinessName}
-                            placeholder="Enter your business name"
-                            autoCapitalize="words"
-                            autoComplete="organization"
-                            colorScheme={colorScheme}
-                            placeholderColor={placeholderColor}
-                            returnKeyType="next"
-                            errorMessage={
-                              attemptedSubmit && !businessName.trim()
-                                ? 'This field is required'
-                                : undefined
-                            }
-                            hasError={attemptedSubmit && !businessName.trim()}
-                          />
-
-                          <LabeledInput
-                            label="Trading name"
-                            value={tradingName}
-                            onChangeText={setTradingName}
-                            placeholder="Enter your trading name"
-                            autoCapitalize="words"
-                            colorScheme={colorScheme}
-                            placeholderColor={placeholderColor}
-                            returnKeyType="next"
-                            errorMessage={
-                              attemptedSubmit && !tradingName.trim()
-                                ? 'This field is required'
-                                : undefined
-                            }
-                            hasError={attemptedSubmit && !tradingName.trim()}
-                          />
-
-                          <LabeledInput
-                            label="Business registration number"
-                            value={businessRegistrationNumber}
-                            onChangeText={setBusinessRegistrationNumber}
-                            placeholder="Enter registration number"
-                            autoCapitalize="characters"
-                            colorScheme={colorScheme}
-                            placeholderColor={placeholderColor}
-                            returnKeyType="next"
-                            errorMessage={
-                              attemptedSubmit && !businessRegistrationNumber.trim()
-                                ? 'This field is required'
-                                : undefined
-                            }
-                            hasError={attemptedSubmit && !businessRegistrationNumber.trim()}
-                          />
-
-                          <LabeledInput
-                            label="Main contact person"
-                            value={mainContactPerson}
-                            onChangeText={setMainContactPerson}
-                            placeholder="Enter contact person name"
-                            autoCapitalize="words"
-                            autoComplete="name"
-                            colorScheme={colorScheme}
-                            placeholderColor={placeholderColor}
-                            returnKeyType="next"
-                            errorMessage={
-                              attemptedSubmit && !mainContactPerson.trim()
-                                ? 'This field is required'
-                                : undefined
-                            }
-                            hasError={attemptedSubmit && !mainContactPerson.trim()}
-                          />
-
-                          <LabeledInput
-                            label="Business phone number"
-                            value={businessPhone}
-                            onChangeText={setBusinessPhone}
-                            placeholder="Enter business phone number"
-                            keyboardType="phone-pad"
-                            autoComplete="tel"
-                            colorScheme={colorScheme}
-                            placeholderColor={placeholderColor}
-                            returnKeyType="next"
-                            errorMessage={
-                              attemptedSubmit && !businessPhone.trim()
-                                ? 'This field is required'
-                                : undefined
-                            }
-                            hasError={attemptedSubmit && !businessPhone.trim()}
-                          />
-
-                          <LabeledInput
-                            label="Physical address"
-                            value={physicalAddress}
-                            onChangeText={setPhysicalAddress}
-                            placeholder="Enter physical address"
-                            autoCapitalize="sentences"
-                            colorScheme={colorScheme}
-                            placeholderColor={placeholderColor}
-                            returnKeyType="next"
-                            errorMessage={
-                              attemptedSubmit && !physicalAddress.trim()
-                                ? 'This field is required'
-                                : undefined
-                            }
-                            hasError={attemptedSubmit && !physicalAddress.trim()}
-                          />
-                        </>
-                      ) : (
-                        <>
-                          <View style={{ gap: 8 }}>
-                            <View style={styles.labelErrorContainer}>
-                              <Text style={[styles.inputLabel, { color: palette.text }]}>
-                                Title
-                              </Text>
-                              {attemptedSubmit && !title && (
-                                <Text style={styles.inputRequired}>This field is required</Text>
-                              )}
-                            </View>
-                            <TouchableOpacity
-                              activeOpacity={0.7}
-                              onPress={() => {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                setShowTitlePicker(true);
-                              }}
-                              style={[
-                                styles.authPickerField,
-                                {
-                                  backgroundColor: colorScheme === 'dark' ? '#3A3A3C' : '#E5E5EA',
-                                  borderColor: colorScheme === 'dark' ? '#4A4A4A' : '#D4D4DA',
-                                },
-                                attemptedSubmit && !title && styles.authErrorBorder,
-                              ]}
-                            >
-                              <Text
-                                style={[
-                                  styles.authPickerValue,
-                                  { color: title ? palette.text : placeholderColor },
-                                ]}
-                              >
-                                {title || 'Select title'}
-                              </Text>
-                              <Ionicons name="chevron-down" size={20} color={placeholderColor} />
-                            </TouchableOpacity>
-                          </View>
-
-                          <LabeledInput
-                            label="Full name"
-                            value={fullName}
-                            onChangeText={setFullName}
-                            placeholder="Enter your full name"
-                            autoCapitalize="words"
-                            autoComplete="name"
-                            colorScheme={colorScheme}
-                            placeholderColor={placeholderColor}
-                            returnKeyType="next"
-                            errorMessage={
-                              attemptedSubmit && !fullName.trim()
-                                ? 'This field is required'
-                                : undefined
-                            }
-                            hasError={attemptedSubmit && !fullName.trim()}
-                          />
-
-                          <View style={{ gap: 8 }}>
-                            <View style={styles.labelErrorContainer}>
-                              <Text style={[styles.inputLabel, { color: palette.text }]}>
-                                Gender
-                              </Text>
-                              {attemptedSubmit && !gender && (
-                                <Text style={styles.inputRequired}>This field is required</Text>
-                              )}
-                            </View>
-                            <TouchableOpacity
-                              activeOpacity={0.7}
-                              onPress={() => {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                setShowGenderPicker(true);
-                              }}
-                              style={[
-                                styles.authPickerField,
-                                {
-                                  backgroundColor: colorScheme === 'dark' ? '#3A3A3C' : '#E5E5EA',
-                                  borderColor: colorScheme === 'dark' ? '#4A4A4A' : '#D4D4DA',
-                                },
-                                attemptedSubmit && !gender && styles.authErrorBorder,
-                              ]}
-                            >
-                              <Text
-                                style={[
-                                  styles.authPickerValue,
-                                  { color: gender ? palette.text : placeholderColor },
-                                ]}
-                              >
-                                {gender || 'Select gender'}
-                              </Text>
-                              <Ionicons name="chevron-down" size={20} color={placeholderColor} />
-                            </TouchableOpacity>
-                          </View>
-
-                          <View style={{ gap: 8 }}>
-                            <View style={styles.labelErrorContainer}>
-                              <Text style={[styles.inputLabel, { color: palette.text }]}>
-                                ID Type
-                              </Text>
-                              {attemptedSubmit && !idType && (
-                                <Text style={styles.inputRequired}>This field is required</Text>
-                              )}
-                            </View>
-                            <TouchableOpacity
-                              activeOpacity={0.7}
-                              onPress={() => {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                setShowIdTypePicker(true);
-                              }}
-                              style={[
-                                styles.authPickerField,
-                                {
-                                  backgroundColor: colorScheme === 'dark' ? '#3A3A3C' : '#E5E5EA',
-                                  borderColor: colorScheme === 'dark' ? '#4A4A4A' : '#D4D4DA',
-                                },
-                                attemptedSubmit && !idType && styles.authErrorBorder,
-                              ]}
-                            >
-                              <Text
-                                style={[
-                                  styles.authPickerValue,
-                                  { color: idType ? palette.text : placeholderColor },
-                                ]}
-                              >
-                                {idType || 'Select ID type'}
-                              </Text>
-                              <Ionicons name="chevron-down" size={20} color={placeholderColor} />
-                            </TouchableOpacity>
-                          </View>
-
-                          <LabeledInput
-                            label="Identity number"
-                            value={identityNumber}
-                            onChangeText={setIdentityNumber}
-                            placeholder="Enter identity number"
-                            autoCapitalize="characters"
-                            colorScheme={colorScheme}
-                            placeholderColor={placeholderColor}
-                            returnKeyType="next"
-                            errorMessage={
-                              attemptedSubmit && !identityNumber.trim()
-                                ? 'This field is required'
-                                : undefined
-                            }
-                            hasError={attemptedSubmit && !identityNumber.trim()}
-                          />
-
-                          <View style={{ gap: 8 }}>
-                            <View style={styles.labelErrorContainer}>
-                              <Text style={[styles.inputLabel, { color: palette.text }]}>
-                                Date of birth
-                              </Text>
-                              {attemptedSubmit && !dateOfBirth && (
-                                <Text style={styles.inputRequired}>This field is required</Text>
-                              )}
-                            </View>
-                            <TouchableOpacity
-                              activeOpacity={0.7}
-                              onPress={() => {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                setShowDobPicker(true);
-                              }}
-                              style={[
-                                styles.authPickerField,
-                                {
-                                  backgroundColor: colorScheme === 'dark' ? '#3A3A3C' : '#E5E5EA',
-                                  borderColor: colorScheme === 'dark' ? '#4A4A4A' : '#D4D4DA',
-                                },
-                                attemptedSubmit && !dateOfBirth && styles.authErrorBorder,
-                              ]}
-                            >
-                              <Text
-                                style={[
-                                  styles.authPickerValue,
-                                  { color: dateOfBirth ? palette.text : placeholderColor },
-                                ]}
-                              >
-                                {dateOfBirth || 'DD/MM/YYYY'}
-                              </Text>
-                              <Ionicons
-                                name="calendar-outline"
-                                size={20}
-                                color={placeholderColor}
-                              />
-                            </TouchableOpacity>
-                          </View>
-
-                          <View style={{ gap: 8 }}>
-                            <View style={styles.labelErrorContainer}>
-                              <Text style={[styles.inputLabel, { color: palette.text }]}>
-                                Nationality
-                              </Text>
-                              {attemptedSubmit && !nationality && (
-                                <Text style={styles.inputRequired}>This field is required</Text>
-                              )}
-                            </View>
-                            <TouchableOpacity
-                              activeOpacity={0.7}
-                              onPress={() => {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-                                setNationalitySearch('');
-                                setShowNationalityPicker(true);
-                              }}
-                              style={[
-                                styles.authPickerField,
-                                {
-                                  backgroundColor: colorScheme === 'dark' ? '#3A3A3C' : '#E5E5EA',
-                                  borderColor: colorScheme === 'dark' ? '#4A4A4A' : '#D4D4DA',
-                                },
-                                attemptedSubmit && !nationality && styles.authErrorBorder,
-                              ]}
-                            >
-                              <View style={styles.authPickerValueRow}>
-                                {nationality && (
-                                  <Text style={styles.authPickerFlag}>
-                                    {countries.find(c => c.name === nationality)?.flag}
-                                  </Text>
-                                )}
-                                <Text
-                                  style={[
-                                    styles.authPickerValue,
-                                    { color: nationality ? palette.text : placeholderColor },
-                                  ]}
-                                >
-                                  {nationality || 'Select nationality'}
-                                </Text>
-                              </View>
-                              <Ionicons name="chevron-down" size={20} color={placeholderColor} />
-                            </TouchableOpacity>
-                          </View>
-
-                          <LabeledInput
-                            label="Cell phone number"
-                            value={phone}
-                            onChangeText={setPhone}
-                            placeholder="Enter phone number"
-                            colorScheme={colorScheme}
-                            placeholderColor={placeholderColor}
-                            keyboardType="phone-pad"
-                            autoComplete="tel"
-                            returnKeyType="next"
-                            errorMessage={
-                              attemptedSubmit && !phone.trim()
-                                ? 'This field is required'
-                                : undefined
-                            }
-                            hasError={attemptedSubmit && !phone.trim()}
-                          />
-                        </>
-                      )}
-
-                      <LabeledInput
-                        label="Email"
-                        value={email}
-                        onChangeText={text => {
-                          setEmail(text);
-                        }}
-                        placeholder="Enter your email"
-                        keyboardType="email-address"
-                        autoCapitalize="none"
-                        autoComplete="email"
-                        textContentType="emailAddress"
-                        colorScheme={colorScheme}
-                        placeholderColor={placeholderColor}
-                        returnKeyType="next"
-                        errorMessage={
-                          attemptedSubmit && !email.trim() ? 'This field is required' : undefined
+                          showAlert({
+                            title: 'Password reset sent',
+                            message: 'Check your email for a password reset link.',
+                            buttons: [{ text: 'OK' }],
+                          });
+                        } catch (error: any) {
+                          showAlert({
+                            title: 'Reset failed',
+                            message: error?.message ?? 'Unable to start password reset right now.',
+                            buttons: [{ text: 'OK' }],
+                          });
                         }
-                        hasError={attemptedSubmit && !email.trim()}
-                      />
-
-                      <PasswordInput
-                        label="Password"
-                        value={password}
-                        onChangeText={text => {
-                          setPassword(text);
-                        }}
-                        placeholder="Enter your password"
-                        colorScheme={colorScheme}
-                        placeholderColor={placeholderColor}
-                        autoComplete="password-new"
-                        textContentType="newPassword"
-                        returnKeyType="next"
-                        errorMessage={
-                          attemptedSubmit && !password.trim() ? 'This field is required' : undefined
-                        }
-                        hasError={attemptedSubmit && !password.trim()}
-                      />
-
-                      <PasswordInput
-                        label="Confirm password"
-                        value={confirmPassword}
-                        onChangeText={text => {
-                          setConfirmPassword(text);
-                        }}
-                        placeholder="Re-enter your password"
-                        colorScheme={colorScheme}
-                        placeholderColor={placeholderColor}
-                        autoComplete="password-new"
-                        textContentType="newPassword"
-                        onSubmitEditing={handleSubmit}
-                        errorMessage={
-                          attemptedSubmit
-                            ? !confirmPassword.trim()
+                      }}
+                    >
+                      <Text style={[styles.signInForgotPassword, { color: palette.tint }]}>
+                        Forgot Password?
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                ) : (
+                  <>
+                    {userType === 'business' ? (
+                      <>
+                        <LabeledInput
+                          label="Business name"
+                          value={businessName}
+                          onChangeText={setBusinessName}
+                          placeholder="Enter your business name"
+                          autoCapitalize="words"
+                          autoComplete="organization"
+                          colorScheme={colorScheme}
+                          placeholderColor={placeholderColor}
+                          returnKeyType="next"
+                          errorMessage={
+                            attemptedSubmit && !businessName.trim()
                               ? 'This field is required'
-                              : password !== confirmPassword
-                                ? 'Passwords do not match'
-                                : undefined
-                            : undefined
-                        }
-                        hasError={
-                          attemptedSubmit &&
-                          (!confirmPassword.trim() || password !== confirmPassword)
-                        }
-                      />
+                              : undefined
+                          }
+                          hasError={attemptedSubmit && !businessName.trim()}
+                        />
 
-                      {userType === 'individual' && (
-                        <View style={styles.socialSection}>
-                          <View style={styles.socialDivider}>
-                            <View
+                        <LabeledInput
+                          label="Trading name"
+                          value={tradingName}
+                          onChangeText={setTradingName}
+                          placeholder="Enter your trading name"
+                          autoCapitalize="words"
+                          colorScheme={colorScheme}
+                          placeholderColor={placeholderColor}
+                          returnKeyType="next"
+                          errorMessage={
+                            attemptedSubmit && !tradingName.trim()
+                              ? 'This field is required'
+                              : undefined
+                          }
+                          hasError={attemptedSubmit && !tradingName.trim()}
+                        />
+
+                        <LabeledInput
+                          label="Business registration number"
+                          value={businessRegistrationNumber}
+                          onChangeText={setBusinessRegistrationNumber}
+                          placeholder="Enter registration number"
+                          autoCapitalize="characters"
+                          colorScheme={colorScheme}
+                          placeholderColor={placeholderColor}
+                          returnKeyType="next"
+                          errorMessage={
+                            attemptedSubmit && !businessRegistrationNumber.trim()
+                              ? 'This field is required'
+                              : undefined
+                          }
+                          hasError={attemptedSubmit && !businessRegistrationNumber.trim()}
+                        />
+
+                        <LabeledInput
+                          label="Main contact person"
+                          value={mainContactPerson}
+                          onChangeText={setMainContactPerson}
+                          placeholder="Enter contact person name"
+                          autoCapitalize="words"
+                          autoComplete="name"
+                          colorScheme={colorScheme}
+                          placeholderColor={placeholderColor}
+                          returnKeyType="next"
+                          errorMessage={
+                            attemptedSubmit && !mainContactPerson.trim()
+                              ? 'This field is required'
+                              : undefined
+                          }
+                          hasError={attemptedSubmit && !mainContactPerson.trim()}
+                        />
+
+                        <LabeledInput
+                          label="Business phone number"
+                          value={businessPhone}
+                          onChangeText={setBusinessPhone}
+                          placeholder="Enter business phone number"
+                          keyboardType="phone-pad"
+                          autoComplete="tel"
+                          colorScheme={colorScheme}
+                          placeholderColor={placeholderColor}
+                          returnKeyType="next"
+                          errorMessage={
+                            attemptedSubmit && !businessPhone.trim()
+                              ? 'This field is required'
+                              : undefined
+                          }
+                          hasError={attemptedSubmit && !businessPhone.trim()}
+                        />
+
+                        <LabeledInput
+                          label="Physical address"
+                          value={physicalAddress}
+                          onChangeText={setPhysicalAddress}
+                          placeholder="Enter physical address"
+                          autoCapitalize="sentences"
+                          colorScheme={colorScheme}
+                          placeholderColor={placeholderColor}
+                          returnKeyType="next"
+                          errorMessage={
+                            attemptedSubmit && !physicalAddress.trim()
+                              ? 'This field is required'
+                              : undefined
+                          }
+                          hasError={attemptedSubmit && !physicalAddress.trim()}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <View style={{ gap: 8 }}>
+                          <View style={styles.labelErrorContainer}>
+                            <Text style={[styles.inputLabel, { color: palette.text }]}>Title</Text>
+                            {attemptedSubmit && !title && (
+                              <Text style={styles.inputRequired}>This field is required</Text>
+                            )}
+                          </View>
+                          <TouchableOpacity
+                            activeOpacity={0.7}
+                            onPress={() => {
+                              setShowTitlePicker(true);
+                            }}
+                            style={[
+                              styles.authPickerField,
+                              {
+                                backgroundColor: colorScheme === 'dark' ? '#3A3A3C' : '#E5E5EA',
+                                borderColor: colorScheme === 'dark' ? '#4A4A4A' : '#D4D4DA',
+                              },
+                              attemptedSubmit && !title && styles.authErrorBorder,
+                            ]}
+                          >
+                            <Text
                               style={[
-                                styles.socialDividerLine,
-                                { backgroundColor: segmentBorderColor },
+                                styles.authPickerValue,
+                                { color: title ? palette.text : placeholderColor },
                               ]}
-                            />
-                            <Text style={[styles.socialDividerText, { color: palette.text }]}>
-                              Or sign up with
+                            >
+                              {title || 'Select title'}
                             </Text>
-                            <View
-                              style={[
-                                styles.socialDividerLine,
-                                { backgroundColor: segmentBorderColor },
-                              ]}
-                            />
-                          </View>
-                          <View style={styles.socialButtonsRow}>
-                            {socialProviders.map(provider => (
-                              <TouchableOpacity
-                                key={provider.id}
-                                style={styles.socialButton}
-                                onPress={() => handleSocialSignUp(provider.id)}
-                              >
-                                <View
-                                  style={[
-                                    styles.socialIconWrapper,
-                                    {
-                                      backgroundColor:
-                                        provider.id === 'google'
-                                          ? themeMode === 'dark'
-                                            ? 'rgba(219, 68, 55, 0.22)'
-                                            : 'rgba(219, 68, 55, 0.12)'
-                                          : provider.id === 'twitter' && themeMode === 'dark'
-                                            ? '#1F1F1F'
-                                            : `${provider.color}20`,
-                                      borderColor:
-                                        provider.id === 'google'
-                                          ? 'rgba(219, 68, 55, 0.28)'
-                                          : provider.id === 'twitter' && themeMode === 'dark'
-                                            ? '#2E2E2E'
-                                            : `${provider.color}40`,
-                                    },
-                                  ]}
-                                >
-                                  {provider.renderIcon({
-                                    size: 26,
-                                    color: provider.getIconColor
-                                      ? provider.getIconColor(themeMode)
-                                      : provider.color,
-                                  })}
-                                </View>
-                                <Text style={[styles.socialButtonText, { color: palette.text }]}>
-                                  {provider.label}
-                                </Text>
-                              </TouchableOpacity>
-                            ))}
-                          </View>
+                            <Ionicons name="chevron-down" size={20} color={placeholderColor} />
+                          </TouchableOpacity>
                         </View>
-                      )}
-                    </>
-                  )}
 
-                  <View style={styles.actionButtons}>
+                        <LabeledInput
+                          label="Full name"
+                          value={fullName}
+                          onChangeText={setFullName}
+                          placeholder="Enter your full name"
+                          autoCapitalize="words"
+                          autoComplete="name"
+                          colorScheme={colorScheme}
+                          placeholderColor={placeholderColor}
+                          returnKeyType="next"
+                          errorMessage={
+                            attemptedSubmit && !fullName.trim()
+                              ? 'This field is required'
+                              : undefined
+                          }
+                          hasError={attemptedSubmit && !fullName.trim()}
+                        />
+
+                        <View style={{ gap: 8 }}>
+                          <View style={styles.labelErrorContainer}>
+                            <Text style={[styles.inputLabel, { color: palette.text }]}>Gender</Text>
+                            {attemptedSubmit && !gender && (
+                              <Text style={styles.inputRequired}>This field is required</Text>
+                            )}
+                          </View>
+                          <TouchableOpacity
+                            activeOpacity={0.7}
+                            onPress={() => {
+                              setShowGenderPicker(true);
+                            }}
+                            style={[
+                              styles.authPickerField,
+                              {
+                                backgroundColor: colorScheme === 'dark' ? '#3A3A3C' : '#E5E5EA',
+                                borderColor: colorScheme === 'dark' ? '#4A4A4A' : '#D4D4DA',
+                              },
+                              attemptedSubmit && !gender && styles.authErrorBorder,
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.authPickerValue,
+                                { color: gender ? palette.text : placeholderColor },
+                              ]}
+                            >
+                              {gender || 'Select gender'}
+                            </Text>
+                            <Ionicons name="chevron-down" size={20} color={placeholderColor} />
+                          </TouchableOpacity>
+                        </View>
+
+                        <View style={{ gap: 8 }}>
+                          <View style={styles.labelErrorContainer}>
+                            <Text style={[styles.inputLabel, { color: palette.text }]}>
+                              ID Type
+                            </Text>
+                            {attemptedSubmit && !idType && (
+                              <Text style={styles.inputRequired}>This field is required</Text>
+                            )}
+                          </View>
+                          <TouchableOpacity
+                            activeOpacity={0.7}
+                            onPress={() => {
+                              setShowIdTypePicker(true);
+                            }}
+                            style={[
+                              styles.authPickerField,
+                              {
+                                backgroundColor: colorScheme === 'dark' ? '#3A3A3C' : '#E5E5EA',
+                                borderColor: colorScheme === 'dark' ? '#4A4A4A' : '#D4D4DA',
+                              },
+                              attemptedSubmit && !idType && styles.authErrorBorder,
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.authPickerValue,
+                                { color: idType ? palette.text : placeholderColor },
+                              ]}
+                            >
+                              {idType || 'Select ID type'}
+                            </Text>
+                            <Ionicons name="chevron-down" size={20} color={placeholderColor} />
+                          </TouchableOpacity>
+                        </View>
+
+                        <LabeledInput
+                          label="Identity number"
+                          value={identityNumber}
+                          onChangeText={setIdentityNumber}
+                          placeholder="Enter identity number"
+                          autoCapitalize="characters"
+                          colorScheme={colorScheme}
+                          placeholderColor={placeholderColor}
+                          returnKeyType="next"
+                          errorMessage={
+                            attemptedSubmit && !identityNumber.trim()
+                              ? 'This field is required'
+                              : undefined
+                          }
+                          hasError={attemptedSubmit && !identityNumber.trim()}
+                        />
+
+                        <View style={{ gap: 8 }}>
+                          <View style={styles.labelErrorContainer}>
+                            <Text style={[styles.inputLabel, { color: palette.text }]}>
+                              Date of birth
+                            </Text>
+                            {attemptedSubmit && !dateOfBirth && (
+                              <Text style={styles.inputRequired}>This field is required</Text>
+                            )}
+                          </View>
+                          <TouchableOpacity
+                            activeOpacity={0.7}
+                            onPress={() => {
+                              setShowDobPicker(true);
+                            }}
+                            style={[
+                              styles.authPickerField,
+                              {
+                                backgroundColor: colorScheme === 'dark' ? '#3A3A3C' : '#E5E5EA',
+                                borderColor: colorScheme === 'dark' ? '#4A4A4A' : '#D4D4DA',
+                              },
+                              attemptedSubmit && !dateOfBirth && styles.authErrorBorder,
+                            ]}
+                          >
+                            <Text
+                              style={[
+                                styles.authPickerValue,
+                                { color: dateOfBirth ? palette.text : placeholderColor },
+                              ]}
+                            >
+                              {dateOfBirth || 'DD/MM/YYYY'}
+                            </Text>
+                            <Ionicons name="calendar-outline" size={20} color={placeholderColor} />
+                          </TouchableOpacity>
+                        </View>
+
+                        <View style={{ gap: 8 }}>
+                          <View style={styles.labelErrorContainer}>
+                            <Text style={[styles.inputLabel, { color: palette.text }]}>
+                              Nationality
+                            </Text>
+                            {attemptedSubmit && !nationality && (
+                              <Text style={styles.inputRequired}>This field is required</Text>
+                            )}
+                          </View>
+                          <TouchableOpacity
+                            activeOpacity={0.7}
+                            onPress={() => {
+                              setNationalitySearch('');
+                              setShowNationalityPicker(true);
+                            }}
+                            style={[
+                              styles.authPickerField,
+                              {
+                                backgroundColor: colorScheme === 'dark' ? '#3A3A3C' : '#E5E5EA',
+                                borderColor: colorScheme === 'dark' ? '#4A4A4A' : '#D4D4DA',
+                              },
+                              attemptedSubmit && !nationality && styles.authErrorBorder,
+                            ]}
+                          >
+                            <View style={styles.authPickerValueRow}>
+                              {nationality && (
+                                <Text style={styles.authPickerFlag}>
+                                  {countries.find(c => c.name === nationality)?.flag}
+                                </Text>
+                              )}
+                              <Text
+                                style={[
+                                  styles.authPickerValue,
+                                  { color: nationality ? palette.text : placeholderColor },
+                                ]}
+                              >
+                                {nationality || 'Select nationality'}
+                              </Text>
+                            </View>
+                            <Ionicons name="chevron-down" size={20} color={placeholderColor} />
+                          </TouchableOpacity>
+                        </View>
+
+                        <LabeledInput
+                          label="Cell phone number"
+                          value={phone}
+                          onChangeText={setPhone}
+                          placeholder="Enter phone number"
+                          colorScheme={colorScheme}
+                          placeholderColor={placeholderColor}
+                          keyboardType="phone-pad"
+                          autoComplete="tel"
+                          returnKeyType="next"
+                          errorMessage={
+                            attemptedSubmit && !phone.trim() ? 'This field is required' : undefined
+                          }
+                          hasError={attemptedSubmit && !phone.trim()}
+                        />
+                      </>
+                    )}
+
+                    <LabeledInput
+                      label="Email"
+                      value={email}
+                      onChangeText={text => {
+                        setEmail(text);
+                      }}
+                      placeholder="Enter your email"
+                      keyboardType="email-address"
+                      autoCapitalize="none"
+                      autoComplete="email"
+                      textContentType="emailAddress"
+                      colorScheme={colorScheme}
+                      placeholderColor={placeholderColor}
+                      returnKeyType="next"
+                      errorMessage={
+                        attemptedSubmit && !email.trim() ? 'This field is required' : undefined
+                      }
+                      hasError={attemptedSubmit && !email.trim()}
+                    />
+
+                    <PasswordInput
+                      label="Password"
+                      value={password}
+                      onChangeText={text => {
+                        setPassword(text);
+                      }}
+                      placeholder="Enter your password"
+                      colorScheme={colorScheme}
+                      placeholderColor={placeholderColor}
+                      autoComplete="password-new"
+                      textContentType="newPassword"
+                      returnKeyType="next"
+                      errorMessage={
+                        attemptedSubmit && !password.trim() ? 'This field is required' : undefined
+                      }
+                      hasError={attemptedSubmit && !password.trim()}
+                    />
+
+                    <PasswordInput
+                      label="Confirm password"
+                      value={confirmPassword}
+                      onChangeText={text => {
+                        setConfirmPassword(text);
+                      }}
+                      placeholder="Re-enter your password"
+                      colorScheme={colorScheme}
+                      placeholderColor={placeholderColor}
+                      autoComplete="password-new"
+                      textContentType="newPassword"
+                      onSubmitEditing={handleSubmit}
+                      errorMessage={
+                        attemptedSubmit
+                          ? !confirmPassword.trim()
+                            ? 'This field is required'
+                            : password !== confirmPassword
+                              ? 'Passwords do not match'
+                              : undefined
+                          : undefined
+                      }
+                      hasError={
+                        attemptedSubmit && (!confirmPassword.trim() || password !== confirmPassword)
+                      }
+                    />
+
+                    {userType === 'individual' && (
+                      <View style={styles.socialSection}>
+                        <View style={styles.socialDivider}>
+                          <View
+                            style={[
+                              styles.socialDividerLine,
+                              { backgroundColor: segmentBorderColor },
+                            ]}
+                          />
+                          <Text style={[styles.socialDividerText, { color: palette.text }]}>
+                            Or sign up with
+                          </Text>
+                          <View
+                            style={[
+                              styles.socialDividerLine,
+                              { backgroundColor: segmentBorderColor },
+                            ]}
+                          />
+                        </View>
+                        <View style={styles.socialButtonsRow}>
+                          {socialProviders.map(provider => (
+                            <TouchableOpacity
+                              key={provider.id}
+                              style={styles.socialButton}
+                              onPress={() => handleSocialSignUp(provider.id)}
+                            >
+                              <View
+                                style={[
+                                  styles.socialIconWrapper,
+                                  {
+                                    backgroundColor:
+                                      provider.id === 'google'
+                                        ? themeMode === 'dark'
+                                          ? 'rgba(219, 68, 55, 0.22)'
+                                          : 'rgba(219, 68, 55, 0.12)'
+                                        : provider.id === 'twitter' && themeMode === 'dark'
+                                          ? '#1F1F1F'
+                                          : `${provider.color}20`,
+                                    borderColor:
+                                      provider.id === 'google'
+                                        ? 'rgba(219, 68, 55, 0.28)'
+                                        : provider.id === 'twitter' && themeMode === 'dark'
+                                          ? '#2E2E2E'
+                                          : `${provider.color}40`,
+                                  },
+                                ]}
+                              >
+                                {provider.renderIcon({
+                                  size: 26,
+                                  color: provider.getIconColor
+                                    ? provider.getIconColor(themeMode)
+                                    : provider.color,
+                                })}
+                              </View>
+                              <Text style={[styles.socialButtonText, { color: palette.text }]}>
+                                {provider.label}
+                              </Text>
+                            </TouchableOpacity>
+                          ))}
+                        </View>
+                      </View>
+                    )}
+                  </>
+                )}
+
+                <View style={styles.actionButtons}>
+                  <TouchableOpacity
+                    style={[
+                      mode === 'sign-in' ? styles.signInButton : styles.primaryButton,
+                      { backgroundColor: palette.tint },
+                    ]}
+                    onPress={handleSubmit}
+                    activeOpacity={0.5}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                  >
+                    <Text
+                      style={[
+                        mode === 'sign-in' ? styles.signInButtonText : styles.primaryButtonText,
+                        { color: primaryButtonTextColor },
+                      ]}
+                    >
+                      {mode === 'sign-in' ? 'Sign In' : 'CREATE ACCOUNT'}
+                    </Text>
+                  </TouchableOpacity>
+                </View>
+
+                {mode === 'sign-in' && variantConfig.allowGuest && (
+                  <>
+                    <View style={styles.socialDivider}>
+                      <View
+                        style={[styles.socialDividerLine, { backgroundColor: segmentBorderColor }]}
+                      />
+                      <Text style={[styles.socialDividerText, { color: palette.text }]}>Or</Text>
+                      <View
+                        style={[styles.socialDividerLine, { backgroundColor: segmentBorderColor }]}
+                      />
+                    </View>
                     <TouchableOpacity
                       style={[
-                        mode === 'sign-in' ? styles.signInButton : styles.primaryButton,
-                        { backgroundColor: palette.tint },
+                        styles.guestPrimaryButton,
+                        {
+                          backgroundColor: guestButtonBackground,
+                          borderColor: guestButtonBorderColor,
+                        },
                       ]}
-                      onPress={handleSubmit}
-                      activeOpacity={0.5}
-                      hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                      onPress={handleGuest}
                     >
                       <Text
-                        style={[
-                          mode === 'sign-in' ? styles.signInButtonText : styles.primaryButtonText,
-                          { color: primaryButtonTextColor },
-                        ]}
+                        style={[styles.guestPrimaryButtonText, { color: guestButtonTextColor }]}
                       >
-                        {mode === 'sign-in' ? 'Sign In' : 'CREATE ACCOUNT'}
+                        Continue as guest
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+
+                {mode === 'sign-up' && variantConfig.allowSelfSignup && (
+                  <View style={styles.switchAuthRow}>
+                    <Text style={[styles.switchAuthLabel, { color: palette.text }]}>
+                      Already have an account?
+                    </Text>
+                    <TouchableOpacity onPress={() => setMode('sign-in')}>
+                      <Text style={[styles.switchAuthButton, { color: palette.tint }]}>
+                        Sign in
                       </Text>
                     </TouchableOpacity>
                   </View>
-
-                  {mode === 'sign-in' && variantConfig.allowGuest && (
-                    <>
-                      <View style={styles.socialDivider}>
-                        <View
-                          style={[
-                            styles.socialDividerLine,
-                            { backgroundColor: segmentBorderColor },
-                          ]}
-                        />
-                        <Text style={[styles.socialDividerText, { color: palette.text }]}>Or</Text>
-                        <View
-                          style={[
-                            styles.socialDividerLine,
-                            { backgroundColor: segmentBorderColor },
-                          ]}
-                        />
-                      </View>
-                      <TouchableOpacity
-                        style={[
-                          styles.guestPrimaryButton,
-                          {
-                            backgroundColor: guestButtonBackground,
-                            borderColor: guestButtonBorderColor,
-                          },
-                        ]}
-                        onPress={handleGuest}
-                      >
-                        <Text
-                          style={[styles.guestPrimaryButtonText, { color: guestButtonTextColor }]}
-                        >
-                          Continue as guest
-                        </Text>
-                      </TouchableOpacity>
-                    </>
-                  )}
-
-                  {mode === 'sign-up' && variantConfig.allowSelfSignup && (
-                    <View style={styles.switchAuthRow}>
-                      <Text style={[styles.switchAuthLabel, { color: palette.text }]}>
-                        Already have an account?
-                      </Text>
-                      <TouchableOpacity onPress={() => setMode('sign-in')}>
-                        <Text style={[styles.switchAuthButton, { color: palette.tint }]}>
-                          Sign in
-                        </Text>
-                      </TouchableOpacity>
-                    </View>
-                  )}
+                )}
               </>
             </View>
 
@@ -1593,7 +1575,6 @@ export default function AuthScreen() {
                             ]}
                             onPress={e => {
                               e.stopPropagation();
-                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                               setTitle(titleOption);
                               setShowTitlePicker(false);
                             }}
@@ -1689,7 +1670,6 @@ export default function AuthScreen() {
                             ]}
                             onPress={e => {
                               e.stopPropagation();
-                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                               setGender(genderOption);
                               setShowGenderPicker(false);
                             }}
@@ -1785,7 +1765,6 @@ export default function AuthScreen() {
                             ]}
                             onPress={e => {
                               e.stopPropagation();
-                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                               setIdType(idTypeOption);
                               setShowIdTypePicker(false);
                             }}
@@ -1943,7 +1922,6 @@ export default function AuthScreen() {
                               ]}
                               onPress={e => {
                                 e.stopPropagation();
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                                 setNationality(zimbabwe.name);
                                 setShowNationalityPicker(false);
                                 setNationalitySearch('');
@@ -2020,7 +1998,6 @@ export default function AuthScreen() {
                                 ]}
                                 onPress={e => {
                                   e.stopPropagation();
-                                  Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                                   setNationality(country.name);
                                   setShowNationalityPicker(false);
                                   setNationalitySearch('');
@@ -2122,7 +2099,6 @@ export default function AuthScreen() {
                         activeOpacity={0.7}
                         onPress={e => {
                           e?.stopPropagation?.();
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                           setShowDobPicker(false);
                           setTimeout(() => setShowMonthPicker(true), 100);
                         }}
@@ -2137,7 +2113,6 @@ export default function AuthScreen() {
                         activeOpacity={0.7}
                         onPress={e => {
                           e?.stopPropagation?.();
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                           setShowDobPicker(false);
                           setTimeout(() => setShowYearPicker(true), 100);
                         }}

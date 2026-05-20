@@ -25,9 +25,9 @@ import {
 } from '@/utils/favoritesUtils';
 import { getActivityStatus, activityStatusColor } from '@/utils/timeStatus';
 import {
+  ProfileGalleryHeader,
   ProviderHeroCard,
   PushScreenOptions,
-  ViewAllButton,
   WebSlideTransition,
 } from '@/components';
 import { WallpaperPattern } from '@/components/WallpaperPattern';
@@ -206,7 +206,6 @@ export default function ActivityProfileScreen() {
   };
 
   const toggleFavorite = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (activityId) {
       toggleFavoriteUtil(activityId as string);
       setIsFavorited(isFavoritedUtil(activityId as string));
@@ -214,7 +213,6 @@ export default function ActivityProfileScreen() {
   };
 
   const handleShare = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     console.log('Share activity');
   };
 
@@ -473,8 +471,6 @@ export default function ActivityProfileScreen() {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
       return;
     }
-
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     // totalPrice already calculated: price * participants * 1.05 (5% service fee)
     const basePrice = selectedPackage.price * participantCount;
@@ -743,24 +739,21 @@ export default function ActivityProfileScreen() {
                       },
                     ]}
                   >
-                    <View style={styles.sectionHeader}>
-                      <ThemedText style={styles.sectionTitle}>Gallery</ThemedText>
-                      <ViewAllButton
-                        onPress={() =>
-                          router.push({
-                            pathname: '/gallery',
-                            params: {
-                              location: activity.location,
-                              title: activity.name,
-                              galleryType: 'provider',
-                              contextImage: activity.images[0] || galleryImages[0],
-                              images: JSON.stringify(galleryImages),
-                              activityId: activityName,
-                            },
-                          })
-                        }
-                      />
-                    </View>
+                    <ProfileGalleryHeader
+                      onPress={() =>
+                        router.push({
+                          pathname: '/gallery',
+                          params: {
+                            location: activity.location,
+                            title: activity.name,
+                            galleryType: 'provider',
+                            contextImage: activity.images[0] || galleryImages[0],
+                            images: JSON.stringify(galleryImages),
+                            activityId: activityName,
+                          },
+                        })
+                      }
+                    />
                     <View style={styles.gallerySectionContainer}>
                       <View style={styles.galleryRow}>
                         {/* First Image */}
@@ -1117,7 +1110,6 @@ export default function ActivityProfileScreen() {
                             ]}
                             onPress={() => {
                               if (participantCount > 1) {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                 setParticipantCount(prev => prev - 1);
                               }
                             }}
@@ -1157,7 +1149,6 @@ export default function ActivityProfileScreen() {
                             ]}
                             onPress={() => {
                               if (participantCount < selectedPackage.available) {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                 setParticipantCount(prev => prev + 1);
                               }
                             }}

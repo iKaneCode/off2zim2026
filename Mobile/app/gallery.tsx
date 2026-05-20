@@ -23,9 +23,6 @@ import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import { Ionicons } from '@expo/vector-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faHeart as solidHeart } from '@fortawesome/free-solid-svg-icons';
-import { faHeart as regularHeart, faShareFromSquare } from '@fortawesome/free-regular-svg-icons';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Reanimated, {
   Easing as ReanimatedEasing,
@@ -35,11 +32,11 @@ import Reanimated, {
   withSpring,
   withTiming,
 } from 'react-native-reanimated';
-import * as Haptics from 'expo-haptics';
 import { Asset } from 'expo-asset';
 import { LocationPill } from '@/components/LocationPill';
 import { isFavorited as isFavoritedUtil } from '@/utils/favoritesUtils';
 import {
+  IconActionButton,
   PushScreenOptions,
   WallpaperPattern,
   WebSlideTransition,
@@ -68,8 +65,8 @@ const POLAROID_PHOTO_HEIGHT = 480 * POLAROID_ASSET_SCALE;
 // Slot is slightly larger than the opening bounding box so that when rotated by -4.7deg it still covers all 4 corners of the opening
 const POLAROID_SLOT_WIDTH = 600 * POLAROID_ASSET_SCALE;
 const POLAROID_SLOT_HEIGHT = 540 * POLAROID_ASSET_SCALE;
-const POLAROID_SLOT_LEFT = 235 * POLAROID_ASSET_SCALE;  // opening center (535) minus half slot width (300)
-const POLAROID_SLOT_TOP = 176 * POLAROID_ASSET_SCALE;   // opening center (446) minus half slot height (270)
+const POLAROID_SLOT_LEFT = 235 * POLAROID_ASSET_SCALE; // opening center (535) minus half slot width (300)
+const POLAROID_SLOT_TOP = 176 * POLAROID_ASSET_SCALE; // opening center (446) minus half slot height (270)
 
 // Hero transition — approximate polaroid frame center on screen
 // Action buttons row (42px) + marginBottom (16px) sit above the polaroid in fullImageFrame
@@ -156,7 +153,9 @@ export default function GalleryScreen() {
 
   // Preload polaroid PNG so it is decoded before the first photo opens
   useEffect(() => {
-    Asset.fromModule(POLAROID_IMAGE).downloadAsync().catch(() => {});
+    Asset.fromModule(POLAROID_IMAGE)
+      .downloadAsync()
+      .catch(() => {});
   }, []);
 
   // Get images from navigation params or generate samples if not provided
@@ -275,7 +274,6 @@ export default function GalleryScreen() {
     }
   };
 
-
   const closeImage = useCallback(() => {
     // Reverse the hero: polaroid springs back towards the thumbnail origin
     heroProgress.value = withTiming(0, {
@@ -291,7 +289,6 @@ export default function GalleryScreen() {
       setModalVisible(false);
     });
   }, [heroProgress, modalAnim]);
-
 
   const showImageAt = useCallback(
     (index: number) => {
@@ -321,7 +318,17 @@ export default function GalleryScreen() {
         friction: 10,
       }).start();
     },
-    [currentImageIndex, focusFilmstripItem, heroScale, heroX, heroY, imageAnim, images, resetZoom, thumbnailRefs]
+    [
+      currentImageIndex,
+      focusFilmstripItem,
+      heroScale,
+      heroX,
+      heroY,
+      imageAnim,
+      images,
+      resetZoom,
+      thumbnailRefs,
+    ]
   );
 
   const handleSwipeDismiss = useCallback(() => {
@@ -460,7 +467,6 @@ export default function GalleryScreen() {
 
       // Add haptic feedback after refresh completes
       if (Platform.OS === 'ios') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
     }, 500);
   }, [params.images]);
@@ -472,7 +478,9 @@ export default function GalleryScreen() {
 
     return (
       <View
-        ref={(r) => { thumbnailRefs.set(index, r); }}
+        ref={r => {
+          thumbnailRefs.set(index, r);
+        }}
         style={styles.imageContainer}
       >
         <TouchableOpacity
@@ -484,19 +492,15 @@ export default function GalleryScreen() {
         </TouchableOpacity>
 
         {/* Like button */}
-        <TouchableOpacity
+        <IconActionButton
+          variant="like"
+          isActive={isFavorited}
+          size={24}
+          iconSize={12}
           style={styles.thumbnailHeartButton}
           onPress={e => toggleImageFavorite(item, e)}
-          hitSlop={{ top: 8, left: 8, bottom: 8, right: 8 }}
-        >
-          <Animated.View style={{ transform: [{ scale }] }}>
-            <FontAwesomeIcon
-              icon={isFavorited ? solidHeart : regularHeart}
-              size={12}
-              color="#FF4757"
-            />
-          </Animated.View>
-        </TouchableOpacity>
+          iconContainerStyle={{ transform: [{ scale }] }}
+        />
       </View>
     );
   };
@@ -670,10 +674,7 @@ export default function GalleryScreen() {
             {/* Title section with gallery title left-aligned and location pill right-aligned */}
             <View style={styles.titleSection}>
               <ThemedText
-                style={[
-                  styles.galleryTitle,
-                  { color: isDark ? '#FFFFFF' : '#1C1C1E' },
-                ]}
+                style={[styles.galleryTitle, { color: isDark ? '#FFFFFF' : '#1C1C1E' }]}
                 numberOfLines={1}
                 ellipsizeMode="tail"
                 adjustsFontSizeToFit
@@ -681,10 +682,7 @@ export default function GalleryScreen() {
               >
                 Gallery
               </ThemedText>
-              <LocationPill
-                label={resolvedLocation}
-                variant="compact"
-              />
+              <LocationPill label={resolvedLocation} variant="compact" />
             </View>
 
             {/* Photos count below the title - compact spacing */}
@@ -747,13 +745,12 @@ export default function GalleryScreen() {
                   {/* Row 1: close | location */}
                   <View style={styles.viewerTopRow}>
                     {/* 1. Close button */}
-                    <TouchableOpacity
-                      style={[styles.viewerIconButton, { backgroundColor: viewerSurface }]}
+                    <IconActionButton
+                      variant="close"
+                      surfaceColor={viewerSurface}
+                      iconColor={viewerTextColor}
                       onPress={closeImage}
-                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                    >
-                      <Ionicons name="close" size={22} color={viewerTextColor} />
-                    </TouchableOpacity>
+                    />
 
                     {/* 2. Location section — centred across full row width */}
                     <View style={styles.viewerLocationBar} pointerEvents="none">
@@ -781,7 +778,6 @@ export default function GalleryScreen() {
                       </View>
                     </View>
                   </View>
-
                 </Animated.View>
 
                 <View
@@ -791,30 +787,35 @@ export default function GalleryScreen() {
                 >
                   <View style={styles.fullImageFrame}>
                     {/* like | share — just above polaroid */}
-                    <View style={[styles.viewerActionButtons, { marginBottom: 16, width: '100%', paddingHorizontal: 16 }]}>
-                      <TouchableOpacity
-                        style={[styles.viewerIconButton, { backgroundColor: viewerSurface }]}
+                    <View
+                      style={[
+                        styles.viewerActionButtons,
+                        { marginBottom: 16, width: '100%', paddingHorizontal: 16 },
+                      ]}
+                    >
+                      <IconActionButton
+                        variant="like"
+                        isActive={selectedImageIsFavorited}
+                        surfaceColor={viewerSurface}
+                        iconColor={viewerTextColor}
                         onPress={handleToggleFavorite}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      >
-                        <Animated.View style={{ transform: [{ scale: heartScale }] }}>
-                          <FontAwesomeIcon
-                            icon={selectedImageIsFavorited ? solidHeart : regularHeart}
-                            size={20}
-                            color={selectedImageIsFavorited ? '#FF4757' : viewerTextColor}
-                          />
-                        </Animated.View>
-                      </TouchableOpacity>
-                      <TouchableOpacity
-                        style={[styles.viewerIconButton, { backgroundColor: viewerSurface }]}
+                        iconContainerStyle={{ transform: [{ scale: heartScale }] }}
+                      />
+                      <IconActionButton
+                        variant="share"
+                        surfaceColor={viewerSurface}
+                        iconColor={viewerTextColor}
                         onPress={handleShare}
-                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                      >
-                        <FontAwesomeIcon icon={faShareFromSquare} size={19} color={viewerTextColor} />
-                      </TouchableOpacity>
+                      />
                     </View>
                     {selectedImage && (
-                      <Reanimated.View style={[styles.polaroidAssetFrame, { backgroundColor: viewerBackground }, polaroidHeroStyle]}>
+                      <Reanimated.View
+                        style={[
+                          styles.polaroidAssetFrame,
+                          { backgroundColor: viewerBackground },
+                          polaroidHeroStyle,
+                        ]}
+                      >
                         <View style={styles.polaroidAssetPhotoSlot}>
                           <GestureDetector gesture={imageGesture}>
                             <Animated.View
@@ -822,7 +823,10 @@ export default function GalleryScreen() {
                                 styles.polaroidAssetPhotoSurface,
                                 {
                                   opacity: imageAnim,
-                                  transform: [{ translateY: imageTranslateY }, { scale: imageScale }],
+                                  transform: [
+                                    { translateY: imageTranslateY },
+                                    { scale: imageScale },
+                                  ],
                                 },
                               ]}
                             >
@@ -846,45 +850,31 @@ export default function GalleryScreen() {
                     )}
                   </View>
 
-                  <TouchableOpacity
-                    style={[
-                      styles.navButton,
-                      styles.prevButton,
-                      { backgroundColor: viewerSurface },
-                    ]}
+                  <IconActionButton
+                    variant="back"
+                    size={44}
+                    surfaceColor={viewerSurface}
+                    iconColor={viewerTextColor}
+                    disabledIconColor={viewerDisabledColor}
+                    style={[styles.navButton, styles.prevButton]}
                     onPressIn={handleViewerTouchStart}
                     onPressOut={handleViewerTouchEnd}
                     onPress={() => showImageAt(currentImageIndex - 1)}
                     disabled={currentImageIndex <= 0}
-                  >
-                    <Ionicons
-                      name="chevron-back"
-                      size={22}
-                      color={currentImageIndex > 0 ? viewerTextColor : viewerDisabledColor}
-                    />
-                  </TouchableOpacity>
+                  />
 
-                  <TouchableOpacity
-                    style={[
-                      styles.navButton,
-                      styles.nextButton,
-                      { backgroundColor: viewerSurface },
-                    ]}
+                  <IconActionButton
+                    variant="forward"
+                    size={44}
+                    surfaceColor={viewerSurface}
+                    iconColor={viewerTextColor}
+                    disabledIconColor={viewerDisabledColor}
+                    style={[styles.navButton, styles.nextButton]}
                     onPressIn={handleViewerTouchStart}
                     onPressOut={handleViewerTouchEnd}
                     onPress={() => showImageAt(currentImageIndex + 1)}
                     disabled={currentImageIndex >= images.length - 1}
-                  >
-                    <Ionicons
-                      name="chevron-forward"
-                      size={22}
-                      color={
-                        currentImageIndex < images.length - 1
-                          ? viewerTextColor
-                          : viewerDisabledColor
-                      }
-                    />
-                  </TouchableOpacity>
+                  />
                 </View>
 
                 <Animated.View
@@ -901,8 +891,6 @@ export default function GalleryScreen() {
                     {currentImageIndex + 1} / {images.length}
                   </ThemedText>
                 </Animated.View>
-
-
 
                 <Animated.View
                   style={[
@@ -1101,7 +1089,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 2,
-    backgroundColor: 'rgba(255,255,255,0.8)',
   },
   galleryList: {
     flex: 1,
@@ -1166,13 +1153,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'flex-end',
     gap: 8,
-  },
-  viewerIconButton: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   viewerContextImage: {
     width: 52,

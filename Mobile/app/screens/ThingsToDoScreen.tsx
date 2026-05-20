@@ -1,8 +1,15 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { StyleSheet, View, FlatList, useColorScheme, Animated, RefreshControl, StatusBar } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  FlatList,
+  useColorScheme,
+  Animated,
+  RefreshControl,
+  StatusBar,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import * as Haptics from 'expo-haptics';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
@@ -15,7 +22,12 @@ import { getActivityStatus, activityStatusColor, ActivityStatus } from '@/utils/
 import { LocationPill } from '@/components/LocationPill';
 import { RatingPill } from '@/components/RatingPill';
 import { ListImageCard } from '@/components/ListImageCard';
-import { isFavorited as isFavoritedUtil, toggleFavorite as toggleFavoriteUtil, subscribeFavorites, getFavoritedIds } from '@/utils/favoritesUtils';
+import {
+  isFavorited as isFavoritedUtil,
+  toggleFavorite as toggleFavoriteUtil,
+  subscribeFavorites,
+  getFavoritedIds,
+} from '@/utils/favoritesUtils';
 import { StatusPill } from '@/components/StatusPill';
 import { ListImageCardSkeleton } from '@/components/ListImageCardSkeleton';
 
@@ -31,31 +43,40 @@ interface ActivityItem {
 }
 
 function normalizeActivityLocationValue(value: string) {
-  return value.toLowerCase().replace(/,\s*zimbabwe\b/g, '').replace(/\s+/g, ' ').trim();
+  return value
+    .toLowerCase()
+    .replace(/,\s*zimbabwe\b/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function activityMatchesLocationScope(activityLocation: string, scopeLocations: string[]) {
   const location = normalizeActivityLocationValue(activityLocation);
 
-  return scopeLocations.some(scope =>
-    scope.includes(location) || location.includes(scope)
-  );
+  return scopeLocations.some(scope => scope.includes(location) || location.includes(scope));
 }
 
 export default function ThingsToDoScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const params = useLocalSearchParams();
-  const locationParam = typeof params.location === 'string' && params.location.trim().length > 0 ? params.location.trim() : '';
-  const locationsParam = typeof params.locations === 'string' && params.locations.trim().length > 0 ? params.locations.trim() : '';
+  const locationParam =
+    typeof params.location === 'string' && params.location.trim().length > 0
+      ? params.location.trim()
+      : '';
+  const locationsParam =
+    typeof params.locations === 'string' && params.locations.trim().length > 0
+      ? params.locations.trim()
+      : '';
   const scopedLocations = useMemo(
-    () => Array.from(
-      new Set(
-        (locationsParam ? locationsParam.split('|') : locationParam ? [locationParam] : [])
-          .map(normalizeActivityLocationValue)
-          .filter(Boolean)
-      )
-    ),
+    () =>
+      Array.from(
+        new Set(
+          (locationsParam ? locationsParam.split('|') : locationParam ? [locationParam] : [])
+            .map(normalizeActivityLocationValue)
+            .filter(Boolean)
+        )
+      ),
     [locationParam, locationsParam]
   );
 
@@ -135,7 +156,6 @@ export default function ThingsToDoScreen() {
   // Toggle favorite with animation
   const toggleFavorite = useCallback(
     (name: string) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setFavorites(prev => {
         const newFavorites = { ...prev, [name]: !prev[name] };
         const scale = getHeartScale(name);
@@ -178,7 +198,6 @@ export default function ThingsToDoScreen() {
           : 25;
 
       const handleActivityPress = () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         router.push({
           pathname: '/activity-profile',
           params: {
@@ -202,10 +221,7 @@ export default function ThingsToDoScreen() {
           heartBackgroundColor={heartContainerBg}
           topRow={
             <View style={styles.metaRow}>
-              <LocationPill
-                label={item.location}
-                variant="compact"
-              />
+              <LocationPill label={item.location} variant="compact" />
 
               <RatingPill
                 value={item.rating}
@@ -269,9 +285,8 @@ export default function ThingsToDoScreen() {
     [favorites, getHeartScale, toggleFavorite, isDark, nowTick]
   );
 
-  const resolvedLocation = locationParam || (
-    scopedLocations.length > 0 ? 'Selected locations' : 'Zimbabwe'
-  );
+  const resolvedLocation =
+    locationParam || (scopedLocations.length > 0 ? 'Selected locations' : 'Zimbabwe');
   // Custom back navigation (matches gallery)
   const handleGoBack = () => {
     if (typeof router.canGoBack === 'function' && router.canGoBack()) {
@@ -305,20 +320,14 @@ export default function ThingsToDoScreen() {
             {/* Title section with title and location pill */}
             <View style={styles.titleSection}>
               <ThemedText
-                style={[
-                  styles.sectionTitle,
-                  { color: isDark ? '#FFFFFF' : '#1C1C1E' },
-                ]}
+                style={[styles.sectionTitle, { color: isDark ? '#FFFFFF' : '#1C1C1E' }]}
                 adjustsFontSizeToFit
                 minimumFontScale={0.9}
                 numberOfLines={1}
               >
                 Things To Do
               </ThemedText>
-              <LocationPill
-                label={resolvedLocation}
-                variant="compact"
-              />
+              <LocationPill label={resolvedLocation} variant="compact" />
             </View>
 
             {/* Count row below the title */}
@@ -329,7 +338,9 @@ export default function ThingsToDoScreen() {
                 color={isDark ? '#FFFFFF' : '#000000'}
                 style={styles.galleryIcon}
               />
-              <ThemedText style={styles.galleryCount}>{filteredActivities.length} activities</ThemedText>
+              <ThemedText style={styles.galleryCount}>
+                {filteredActivities.length} activities
+              </ThemedText>
             </View>
 
             {searchSection}
@@ -348,7 +359,9 @@ export default function ThingsToDoScreen() {
                 onScroll={handleScroll}
                 onMomentumScrollEnd={handleMomentumScrollEnd}
                 scrollEventThrottle={16}
-                refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
+                refreshControl={
+                  <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
+                }
               />
             ) : (
               <View style={styles.emptyStateContainer}>

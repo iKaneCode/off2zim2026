@@ -15,7 +15,9 @@ import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import {
   DateTimePill,
+  IconActionButton,
   LocationPill,
+  ProfileGalleryHeader,
   PushScreenOptions,
   RatingPill,
   StatusPill,
@@ -28,16 +30,12 @@ import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
 import { CustomHeader } from '@/components/CustomHeader';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { router } from 'expo-router';
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faHeart as solidHeart } from '@fortawesome/free-solid-svg-icons';
-import { faHeart as regularHeart, faShareFromSquare } from '@fortawesome/free-regular-svg-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { staysData, upcomingEventsData, thingsToDoData } from '@/constants/FeaturedData';
 import { cloneStay, getStayById } from '@/constants/StayData';
 import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import { getActivityStatus, activityStatusColor } from '@/utils/timeStatus';
 import type { Stay } from '@/types/Stay';
-import * as Haptics from 'expo-haptics';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
 import { navigateToStayProfile } from '@/utils/navigationUtils';
 import { pickBestImageUrl, normalizeStorageImageUrl } from '@/utils/imageUtils';
@@ -185,7 +183,6 @@ export default function DestinationDetail() {
 
   const handleToggleFavorite = useCallback(() => {
     // Match Featured: selection haptic + quick bump then spring
-    Haptics.selectionAsync().catch(() => {});
     Animated.sequence([
       Animated.timing(heartScale, { toValue: 1.15, duration: 100, useNativeDriver: true }),
       Animated.spring(heartScale, { toValue: 1, useNativeDriver: true, friction: 5 }),
@@ -210,7 +207,6 @@ export default function DestinationDetail() {
     }
 
     try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
       await Share.share({
         message: `Check out ${destination.name} in Zimbabwe! ${destination.weather}`,
         title: `Visit ${destination.name}`,
@@ -225,7 +221,6 @@ export default function DestinationDetail() {
   const toggleFavorite = useCallback(
     (name: string) => {
       setFavorites(prev => ({ ...prev, [name]: !prev[name] }));
-      Haptics.selectionAsync().catch(() => {});
       const scale = getHeartScale(name);
       Animated.sequence([
         Animated.timing(scale, { toValue: 1.15, duration: 100, useNativeDriver: true }),
@@ -499,34 +494,21 @@ export default function DestinationDetail() {
                   />
 
                   <View style={styles.heroActionPills}>
-                    <TouchableOpacity
-                      style={[styles.titleButton, { backgroundColor: pillBg }]}
+                    <IconActionButton
+                      variant="like"
+                      isActive={isFavorited}
                       onPress={handleToggleFavorite}
-                      hitSlop={{ top: 8, left: 8, bottom: 8, right: 8 }}
                       accessibilityRole="button"
                       accessibilityLabel={`Favorite ${destination.name} ${isFavorited ? 'selected' : 'not selected'}`}
-                    >
-                      <Animated.View style={{ transform: [{ scale: heartScale }] }}>
-                        <FontAwesomeIcon
-                          icon={isFavorited ? solidHeart : regularHeart}
-                          size={18}
-                          color="#FF4757"
-                        />
-                      </Animated.View>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={[
-                        styles.titleButton,
-                        styles.heroActionSpacing,
-                        { backgroundColor: pillBg },
-                      ]}
+                      iconContainerStyle={{ transform: [{ scale: heartScale }] }}
+                    />
+                    <IconActionButton
+                      variant="share"
+                      style={styles.heroActionSpacing}
                       onPress={handleShare}
-                      hitSlop={{ top: 8, left: 8, bottom: 8, right: 8 }}
                       accessibilityRole="button"
                       accessibilityLabel={`Share ${destination.name}`}
-                    >
-                      <FontAwesomeIcon icon={faShareFromSquare} size={18} color="#FF3B30" />
-                    </TouchableOpacity>
+                    />
                   </View>
                 </Animated.View>
               </Animated.View>
@@ -579,35 +561,22 @@ export default function DestinationDetail() {
                     />
 
                     <View style={styles.heroActionPills}>
-                      <TouchableOpacity
-                        style={[styles.titleButton, { backgroundColor: pillBg }]}
+                      <IconActionButton
+                        variant="like"
+                        isActive={isFavorited}
                         onPress={handleToggleFavorite}
-                        hitSlop={{ top: 8, left: 8, bottom: 8, right: 8 }}
                         accessibilityRole="button"
                         accessibilityLabel={`Favorite ${destination.name} ${isFavorited ? 'selected' : 'not selected'}`}
-                      >
-                        <Animated.View style={{ transform: [{ scale: heartScale }] }}>
-                          <FontAwesomeIcon
-                            icon={isFavorited ? solidHeart : regularHeart}
-                            size={18}
-                            color="#FF4757"
-                          />
-                        </Animated.View>
-                      </TouchableOpacity>
+                        iconContainerStyle={{ transform: [{ scale: heartScale }] }}
+                      />
 
-                      <TouchableOpacity
-                        style={[
-                          styles.titleButton,
-                          styles.heroActionSpacing,
-                          { backgroundColor: pillBg },
-                        ]}
+                      <IconActionButton
+                        variant="share"
+                        style={styles.heroActionSpacing}
                         onPress={handleShare}
-                        hitSlop={{ top: 8, left: 8, bottom: 8, right: 8 }}
                         accessibilityRole="button"
                         accessibilityLabel={`Share ${destination.name}`}
-                      >
-                        <FontAwesomeIcon icon={faShareFromSquare} size={18} color="#FF3B30" />
-                      </TouchableOpacity>
+                      />
                     </View>
                   </View>
                 </Animated.View>
@@ -674,26 +643,21 @@ export default function DestinationDetail() {
                       },
                     ]}
                   >
-                    <View style={styles.sectionHeader}>
-                      <ThemedText type="sectionTitle" style={styles.sectionTitle}>
-                        Gallery
-                      </ThemedText>
-                      <ViewAllButton
-                        onPress={() =>
-                          router.push({
-                            pathname: '/gallery',
-                            params: {
-                              location: destination.name,
-                              title: destination.name,
-                              galleryType: 'location',
-                              contextImage: galleryImages[0],
-                              images: JSON.stringify(galleryImages),
-                              destinationId: destinationId,
-                            },
-                          })
-                        }
-                      />
-                    </View>
+                    <ProfileGalleryHeader
+                      onPress={() =>
+                        router.push({
+                          pathname: '/gallery',
+                          params: {
+                            location: destination.name,
+                            title: destination.name,
+                            galleryType: 'location',
+                            contextImage: galleryImages[0],
+                            images: JSON.stringify(galleryImages),
+                            destinationId: destinationId,
+                          },
+                        })
+                      }
+                    />
                     <View style={styles.galleryContainer}>
                       <View style={styles.galleryRow}>
                         {/* First Image */}
@@ -833,8 +797,10 @@ export default function DestinationDetail() {
                               style={styles.destinationImage}
                               resizeMode="cover"
                             />
-                            <TouchableOpacity
-                              style={[styles.heartContainer, { backgroundColor: pillBgLocal }]}
+                            <IconActionButton
+                              variant="like"
+                              isActive={isFav}
+                              style={styles.heartContainer}
                               onPress={() => {
                                 // local animation/state
                                 toggleFavorite(s.id);
@@ -844,15 +810,8 @@ export default function DestinationDetail() {
                               hitSlop={{ top: 8, left: 8, bottom: 8, right: 8 }}
                               accessibilityRole="button"
                               accessibilityLabel={`Favorite ${s.name} ${isFav ? 'selected' : 'not selected'}`}
-                            >
-                              <Animated.View style={{ transform: [{ scale }] }}>
-                                <FontAwesomeIcon
-                                  icon={isFav ? solidHeart : regularHeart}
-                                  size={18}
-                                  color="#FF4757"
-                                />
-                              </Animated.View>
-                            </TouchableOpacity>
+                              iconContainerStyle={{ transform: [{ scale }] }}
+                            />
                             <View style={styles.stayInfoContainer}>
                               <View style={styles.stayTopRow}>
                                 <RatingPill
@@ -958,7 +917,6 @@ export default function DestinationDetail() {
                         const scale = getHeartScale(e.name);
                         const isFav = isFavoritedUtil(e.id);
                         const handleEventPress = () => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                           router.push({
                             pathname: '/event-profile',
                             params: {
@@ -983,8 +941,10 @@ export default function DestinationDetail() {
                               style={styles.destinationImage}
                               resizeMode="cover"
                             />
-                            <TouchableOpacity
-                              style={[styles.heartContainer, { backgroundColor: pillBgLocal }]}
+                            <IconActionButton
+                              variant="like"
+                              isActive={isFav}
+                              style={styles.heartContainer}
                               onPress={() => {
                                 toggleFavorite(e.id);
                                 toggleFavoriteUtil(e.id, 'event');
@@ -992,15 +952,8 @@ export default function DestinationDetail() {
                               hitSlop={{ top: 8, left: 8, bottom: 8, right: 8 }}
                               accessibilityRole="button"
                               accessibilityLabel={`Favorite ${e.name} ${isFav ? 'selected' : 'not selected'}`}
-                            >
-                              <Animated.View style={{ transform: [{ scale }] }}>
-                                <FontAwesomeIcon
-                                  icon={isFav ? solidHeart : regularHeart}
-                                  size={18}
-                                  color="#FF4757"
-                                />
-                              </Animated.View>
-                            </TouchableOpacity>
+                              iconContainerStyle={{ transform: [{ scale }] }}
+                            />
                             <View style={styles.eventInfoContainer}>
                               <View style={styles.eventTopRow}>
                                 <RatingPill
@@ -1106,7 +1059,6 @@ export default function DestinationDetail() {
                         const scale = getHeartScale(t.name);
                         const isFav = isFavoritedUtil(t.id);
                         const handleActivityPress = () => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
                           router.push({
                             pathname: '/activity-profile',
                             params: {
@@ -1130,8 +1082,10 @@ export default function DestinationDetail() {
                               style={styles.destinationImage}
                               resizeMode="cover"
                             />
-                            <TouchableOpacity
-                              style={[styles.heartContainer, { backgroundColor: pillBgLocal }]}
+                            <IconActionButton
+                              variant="like"
+                              isActive={isFav}
+                              style={styles.heartContainer}
                               onPress={() => {
                                 toggleFavorite(t.id);
                                 toggleFavoriteUtil(t.id, 'activity');
@@ -1139,15 +1093,8 @@ export default function DestinationDetail() {
                               hitSlop={{ top: 8, left: 8, bottom: 8, right: 8 }}
                               accessibilityRole="button"
                               accessibilityLabel={`Favorite ${t.name} ${isFav ? 'selected' : 'not selected'}`}
-                            >
-                              <Animated.View style={{ transform: [{ scale }] }}>
-                                <FontAwesomeIcon
-                                  icon={isFav ? solidHeart : regularHeart}
-                                  size={18}
-                                  color="#FF4757"
-                                />
-                              </Animated.View>
-                            </TouchableOpacity>
+                              iconContainerStyle={{ transform: [{ scale }] }}
+                            />
                             <View style={styles.eventInfoContainer}>
                               <View style={styles.eventTopRow}>
                                 <RatingPill
@@ -1227,36 +1174,16 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   titleSectionText: { fontSize: responsiveFontSize(18), fontWeight: '700', textAlign: 'left' },
-  titleButtons: {},
-  titleButton: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.1)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
   scrollView: { flex: 1 },
   imageContainer: { position: 'relative', height: 320, overflow: 'hidden' },
   heroImage: { width: '100%', height: '100%' },
-  shareContainer: {
-    position: 'absolute',
-    top: 10,
-    right: 56,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 2,
-  },
   heartContainer: {
     position: 'absolute',
     top: 10,
     right: 10,
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 2,

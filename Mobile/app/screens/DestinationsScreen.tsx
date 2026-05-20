@@ -15,10 +15,9 @@ import {
   Animated,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import { router } from 'expo-router';
 
-import { WallpaperPattern, useCollapsibleSearchSection } from '@/components';
+import { IconActionButton, WallpaperPattern, useCollapsibleSearchSection } from '@/components';
 import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
@@ -28,14 +27,15 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { destinationsService } from '@/services/database';
 import { weatherService, locationMappings } from '@/services/weather';
 import { getCardSurfaceColors } from '@/constants/CardStyles';
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faHeart as solidHeart } from '@fortawesome/free-solid-svg-icons';
-import { faHeart as regularHeart } from '@fortawesome/free-regular-svg-icons';
 import { useDestinations } from '@/context/DestinationsContext';
-import { getFavoritedIds, toggleFavorite as toggleFavoriteUtil, subscribeFavorites } from '@/utils/favoritesUtils';
+import {
+  getFavoritedIds,
+  toggleFavorite as toggleFavoriteUtil,
+  subscribeFavorites,
+} from '@/utils/favoritesUtils';
 
 const { width: screenWidth } = Dimensions.get('window');
-  
+
 type DatabaseDestination = {
   id: string;
   name: string;
@@ -91,13 +91,11 @@ export default function DestinationsScreen() {
   }, [sharedDestinations]);
 
   const handleFilterChange = useCallback((filter: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setActiveFilter(filter);
   }, []);
 
   const handleSortDirectionChange = useCallback((direction: 'asc' | 'desc') => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setSortDirection(direction);
   }, []);
@@ -211,8 +209,6 @@ export default function DestinationsScreen() {
         }),
       ]).start();
 
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-
       setFavorites(prev => {
         const newFavorites = new Set(prev);
         if (newFavorites.has(id)) {
@@ -229,7 +225,6 @@ export default function DestinationsScreen() {
   );
 
   const handleDestinationPress = useCallback((destination: DatabaseDestination) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     // Navigate to destination detail screen
     router.push({
       pathname: '/screens/DestinationDetail',
@@ -241,7 +236,6 @@ export default function DestinationsScreen() {
 
   const handleShare = useCallback(async (destination: DatabaseDestination) => {
     try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
       await Share.share({
         message: `Check out ${destination.name}! ${destination.description || 'An amazing destination in Zimbabwe.'}`,
         title: destination.name,
@@ -292,22 +286,15 @@ export default function DestinationsScreen() {
               </View>
 
               {/* Favorite button */}
-              <TouchableOpacity
-                style={[
-                  styles.heartContainer,
-                  { backgroundColor: isDark ? 'rgba(0,0,0,0.7)' : 'rgba(255,255,255,0.8)' },
-                ]}
+              <IconActionButton
+                variant="like"
+                isActive={isFavorited}
+                size={36}
+                iconSize={16}
+                style={styles.heartContainer}
                 onPress={() => toggleFavorite(item.id, 'destination')}
-                hitSlop={{ top: 8, left: 8, bottom: 8, right: 8 }}
-              >
-                <Animated.View style={{ transform: [{ scale: heartScale }] }}>
-                  <FontAwesomeIcon
-                    icon={isFavorited ? solidHeart : regularHeart}
-                    size={16}
-                    color="#FF4757"
-                  />
-                </Animated.View>
-              </TouchableOpacity>
+                iconContainerStyle={{ transform: [{ scale: heartScale }] }}
+              />
             </View>
 
             {/* Counts as pills */}
@@ -471,9 +458,9 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   heartContainer: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     justifyContent: 'center',
     alignItems: 'center',
   },

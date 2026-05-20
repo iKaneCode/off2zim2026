@@ -4,7 +4,6 @@ import { RectButton } from 'react-native-gesture-handler';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useAppAlert } from '@/context/AppAlertContext';
-import * as Haptics from 'expo-haptics';
 
 export interface SwipeAction {
   icon: string;
@@ -81,11 +80,6 @@ export function SwipeActions({
             style: action.isDestructive ? 'destructive' : 'default',
             onPress: () => {
               if (Platform.OS === 'ios') {
-                Haptics.impactAsync(
-                  action.isDestructive
-                    ? Haptics.ImpactFeedbackStyle.Medium
-                    : Haptics.ImpactFeedbackStyle.Light
-                );
               }
               action.onPress();
             },
@@ -94,7 +88,6 @@ export function SwipeActions({
       });
     } else {
       if (Platform.OS === 'ios') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
       action.onPress();
     }

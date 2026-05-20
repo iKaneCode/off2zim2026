@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { router } from 'expo-router';
-import * as Haptics from 'expo-haptics';
 import { CustomHeader } from '@/components/CustomHeader';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
@@ -34,24 +33,38 @@ export default function TravelInsuranceScreen() {
   );
 
   const handleGoBack = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.back();
   };
 
   const handleMessage = (provider: string) => {
-    showAlert({ title: 'Message', message: `${provider}: Messaging not configured yet.`, buttons: [{ text: 'OK' }] });
+    showAlert({
+      title: 'Message',
+      message: `${provider}: Messaging not configured yet.`,
+      buttons: [{ text: 'OK' }],
+    });
   };
 
   const handleStart = (provider: string) => {
-    showAlert({ title: 'Start', message: `${provider}: Flow not configured yet.`, buttons: [{ text: 'OK' }] });
+    showAlert({
+      title: 'Start',
+      message: `${provider}: Flow not configured yet.`,
+      buttons: [{ text: 'OK' }],
+    });
   };
 
   return (
     <IOSScreenWrapper>
-      <ThemedView style={[styles.container]} lightColor={Colors.light.appBackground} darkColor={Colors.dark.appBackground}>
+      <ThemedView
+        style={[styles.container]}
+        lightColor={Colors.light.appBackground}
+        darkColor={Colors.dark.appBackground}
+      >
         <WallpaperPattern />
 
-        <CustomHeader showLogo leftAction={{ icon: 'chevron-back', onPress: handleGoBack, color: '#FF3B30' }} />
+        <CustomHeader
+          showLogo
+          leftAction={{ icon: 'chevron-back', onPress: handleGoBack, color: '#FF3B30' }}
+        />
 
         <View style={styles.titleSection}>
           <ThemedText type="title1" style={styles.pageTitle}>
@@ -94,12 +107,17 @@ export default function TravelInsuranceScreen() {
                   <TouchableOpacity
                     onPress={() => handleMessage('CBZ')}
                     activeOpacity={0.85}
-                    style={[styles.contactPill, { backgroundColor: contactPillBase.backgroundMessage }]}
+                    style={[
+                      styles.contactPill,
+                      { backgroundColor: contactPillBase.backgroundMessage },
+                    ]}
                   >
-                    <View style={[styles.iconBubble, { backgroundColor: contactPillBase.surface }]}>                    
+                    <View style={[styles.iconBubble, { backgroundColor: contactPillBase.surface }]}>
                       <Ionicons name="chatbubble-ellipses" size={12} color="#007AFF" />
                     </View>
-                    <ThemedText style={[styles.pillText, { color: contactPillBase.textColor }]}>Message</ThemedText>
+                    <ThemedText style={[styles.pillText, { color: contactPillBase.textColor }]}>
+                      Message
+                    </ThemedText>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -110,8 +128,12 @@ export default function TravelInsuranceScreen() {
                       { backgroundColor: isDark ? 'rgba(52,199,89,0.18)' : 'rgba(52,199,89,0.12)' },
                     ]}
                   >
-                    <ThemedText style={[styles.pillText, { color: isDark ? '#FFFFFF' : '#000000' }]}>Start</ThemedText>
-                    <View style={[styles.iconBubbleRight, { backgroundColor: '#FFFFFF' }]}>                    
+                    <ThemedText
+                      style={[styles.pillText, { color: isDark ? '#FFFFFF' : '#000000' }]}
+                    >
+                      Start
+                    </ThemedText>
+                    <View style={[styles.iconBubbleRight, { backgroundColor: '#FFFFFF' }]}>
                       <Ionicons name="chevron-forward" size={14} color="#000000" />
                     </View>
                   </TouchableOpacity>
@@ -154,12 +176,17 @@ export default function TravelInsuranceScreen() {
                   <TouchableOpacity
                     onPress={() => handleMessage('NicozDiamond')}
                     activeOpacity={0.85}
-                    style={[styles.contactPill, { backgroundColor: contactPillBase.backgroundMessage }]}
+                    style={[
+                      styles.contactPill,
+                      { backgroundColor: contactPillBase.backgroundMessage },
+                    ]}
                   >
-                    <View style={[styles.iconBubble, { backgroundColor: contactPillBase.surface }]}>                    
+                    <View style={[styles.iconBubble, { backgroundColor: contactPillBase.surface }]}>
                       <Ionicons name="chatbubble-ellipses" size={12} color="#007AFF" />
                     </View>
-                    <ThemedText style={[styles.pillText, { color: contactPillBase.textColor }]}>Message</ThemedText>
+                    <ThemedText style={[styles.pillText, { color: contactPillBase.textColor }]}>
+                      Message
+                    </ThemedText>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -170,8 +197,12 @@ export default function TravelInsuranceScreen() {
                       { backgroundColor: isDark ? 'rgba(52,199,89,0.18)' : 'rgba(52,199,89,0.12)' },
                     ]}
                   >
-                    <ThemedText style={[styles.pillText, { color: isDark ? '#FFFFFF' : '#000000' }]}>Start</ThemedText>
-                    <View style={[styles.iconBubbleRight, { backgroundColor: '#FFFFFF' }]}>                    
+                    <ThemedText
+                      style={[styles.pillText, { color: isDark ? '#FFFFFF' : '#000000' }]}
+                    >
+                      Start
+                    </ThemedText>
+                    <View style={[styles.iconBubbleRight, { backgroundColor: '#FFFFFF' }]}>
                       <Ionicons name="chevron-forward" size={14} color="#000000" />
                     </View>
                   </TouchableOpacity>
@@ -214,12 +245,17 @@ export default function TravelInsuranceScreen() {
                   <TouchableOpacity
                     onPress={() => handleMessage('Old Mutual')}
                     activeOpacity={0.85}
-                    style={[styles.contactPill, { backgroundColor: contactPillBase.backgroundMessage }]}
+                    style={[
+                      styles.contactPill,
+                      { backgroundColor: contactPillBase.backgroundMessage },
+                    ]}
                   >
-                    <View style={[styles.iconBubble, { backgroundColor: contactPillBase.surface }]}>                    
+                    <View style={[styles.iconBubble, { backgroundColor: contactPillBase.surface }]}>
                       <Ionicons name="chatbubble-ellipses" size={12} color="#007AFF" />
                     </View>
-                    <ThemedText style={[styles.pillText, { color: contactPillBase.textColor }]}>Message</ThemedText>
+                    <ThemedText style={[styles.pillText, { color: contactPillBase.textColor }]}>
+                      Message
+                    </ThemedText>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -230,8 +266,12 @@ export default function TravelInsuranceScreen() {
                       { backgroundColor: isDark ? 'rgba(52,199,89,0.18)' : 'rgba(52,199,89,0.12)' },
                     ]}
                   >
-                    <ThemedText style={[styles.pillText, { color: isDark ? '#FFFFFF' : '#000000' }]}>Start</ThemedText>
-                    <View style={[styles.iconBubbleRight, { backgroundColor: '#FFFFFF' }]}>                    
+                    <ThemedText
+                      style={[styles.pillText, { color: isDark ? '#FFFFFF' : '#000000' }]}
+                    >
+                      Start
+                    </ThemedText>
+                    <View style={[styles.iconBubbleRight, { backgroundColor: '#FFFFFF' }]}>
                       <Ionicons name="chevron-forward" size={14} color="#000000" />
                     </View>
                   </TouchableOpacity>
@@ -287,7 +327,12 @@ const styles = StyleSheet.create({
     marginRight: 8,
     overflow: 'hidden',
   },
-  title: { fontSize: responsiveFontSize(20), lineHeight: 28, fontFamily: Fonts.bold, marginBottom: 10 },
+  title: {
+    fontSize: responsiveFontSize(20),
+    lineHeight: 28,
+    fontFamily: Fonts.bold,
+    marginBottom: 10,
+  },
   pillsRow: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -329,5 +374,10 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 0,
   },
-  pillText: { fontSize: responsiveFontSize(15), lineHeight: 20, fontFamily: Fonts.bold, letterSpacing: 0.2 },
+  pillText: {
+    fontSize: responsiveFontSize(15),
+    lineHeight: 20,
+    fontFamily: Fonts.bold,
+    letterSpacing: 0.2,
+  },
 });

@@ -11,7 +11,6 @@ import {
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { ThemedText } from '@/components/ThemedText';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
-import * as Haptics from 'expo-haptics';
 import { renderEventIcon } from '@/components/EventIcon';
 import { LocationPill } from '@/components/LocationPill';
 import { StatusPill } from '@/components/StatusPill';
@@ -204,7 +203,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                       animateWeekFocus(true, weekIndex);
                     }
                   }
-                  Haptics.selectionAsync();
                 }}
                 disabled={!day.isCurrentMonth}
                 activeOpacity={0.7}
@@ -357,7 +355,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
         ]}
         onPress={() => {
           // Handle event item press - you can pass this as a prop if needed
-          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }}
         activeOpacity={0.6}
       >
@@ -533,7 +530,6 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                         setIsWeekFocused(false);
                         setFocusedWeekIndex(null);
                       });
-                      Haptics.selectionAsync();
                     }}
                   >
                     <FontAwesome6 name="xmark" size={20} color="#FF3B30" />

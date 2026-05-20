@@ -8,10 +8,8 @@ import {
   type ViewStyle,
   Animated,
 } from 'react-native';
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faHeart as solidHeart } from '@fortawesome/free-solid-svg-icons/faHeart';
-import { faHeart as regularHeart } from '@fortawesome/free-regular-svg-icons/faHeart';
 
+import { IconActionButton } from './IconActionButton';
 import { ThemedText } from './ThemedText';
 import { responsiveFontSize, responsiveLineHeight, Fonts } from '@/constants/Fonts';
 
@@ -42,7 +40,6 @@ export function ListImageCard({
   isFavorited,
   heartScale,
   backgroundColor,
-  heartBackgroundColor,
   topRow,
   bottomLeft,
   bottomRight,
@@ -50,15 +47,9 @@ export function ListImageCard({
   imageSize = 90,
   activeOpacity = 0.85,
   testID,
-  heartRender,
 }: ListImageCardProps) {
   const hasBottomLeft = Boolean(bottomLeft);
   const bottomRightStyle = hasBottomLeft ? styles.bottomRight : styles.bottomRightAligned;
-  const renderHeart = heartRender ?? (
-    <Animated.View style={{ transform: [{ scale: heartScale }] }}>
-      <FontAwesomeIcon icon={isFavorited ? solidHeart : regularHeart} size={16} color="#FF4757" />
-    </Animated.View>
-  );
 
   return (
     <TouchableOpacity
@@ -69,13 +60,15 @@ export function ListImageCard({
     >
       <View style={[styles.imageWrapper, { width: imageSize, height: imageSize }]}>
         <Image source={{ uri: imageUri }} style={styles.image} resizeMode="cover" />
-        <TouchableOpacity
-          style={[styles.heartContainer, { backgroundColor: heartBackgroundColor }]}
+        <IconActionButton
+          variant="like"
+          isActive={isFavorited}
+          size={30}
+          iconSize={16}
+          style={styles.heartContainer}
           onPress={onToggleFavorite}
-          hitSlop={{ top: 8, left: 8, bottom: 8, right: 8 }}
-        >
-          {renderHeart}
-        </TouchableOpacity>
+          iconContainerStyle={{ transform: [{ scale: heartScale }] }}
+        />
       </View>
 
       <View style={styles.content}>

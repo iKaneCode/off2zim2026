@@ -273,7 +273,6 @@ export default function FlightPassengerDetails() {
   };
 
   const handleDobSelect = (dateString: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     // Format to DD/MM/YYYY for display
     const [year, month, day] = dateString.split('-');
     setDateOfBirth(`${day}/${month}/${year}`);
@@ -281,7 +280,6 @@ export default function FlightPassengerDetails() {
   };
 
   const handleGoBack = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.back();
   };
 
@@ -306,7 +304,6 @@ export default function FlightPassengerDetails() {
     }
 
     // All fields valid - proceed to payment
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     // Calculate pricing
     const passengersCount = parseInt(normalizedPassengers as string, 10) || 1;
@@ -405,7 +402,6 @@ export default function FlightPassengerDetails() {
                   <Switch
                     value={sameAsAccountHolder}
                     onValueChange={value => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       setSameAsAccountHolder(value);
                       if (value) {
                         setPassengerFullName(accountHolderFullName);
@@ -470,7 +466,6 @@ export default function FlightPassengerDetails() {
                     <TouchableOpacity
                       disabled={sameAsAccountHolder}
                       onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setShowTitlePicker(true);
                       }}
                       style={[
@@ -584,7 +579,6 @@ export default function FlightPassengerDetails() {
                     <TouchableOpacity
                       disabled={sameAsAccountHolder}
                       onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setShowGenderPicker(true);
                       }}
                       style={[
@@ -644,7 +638,6 @@ export default function FlightPassengerDetails() {
                     <TouchableOpacity
                       disabled={sameAsAccountHolder}
                       onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setShowIdTypePicker(true);
                       }}
                       style={[
@@ -744,7 +737,6 @@ export default function FlightPassengerDetails() {
                     <TouchableOpacity
                       disabled={sameAsAccountHolder}
                       onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setShowDobPicker(true);
                       }}
                       style={[
@@ -804,7 +796,6 @@ export default function FlightPassengerDetails() {
                     <TouchableOpacity
                       disabled={sameAsAccountHolder}
                       onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setShowNationalityPicker(true);
                       }}
                       style={[
@@ -1044,7 +1035,6 @@ export default function FlightPassengerDetails() {
                           ]}
                           onPress={e => {
                             e.stopPropagation();
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                             setTitle(titleOption);
                             setShowTitlePicker(false);
                           }}
@@ -1152,7 +1142,6 @@ export default function FlightPassengerDetails() {
                           ]}
                           onPress={e => {
                             e.stopPropagation();
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                             setGender(genderOption);
                             setShowGenderPicker(false);
                           }}
@@ -1260,7 +1249,6 @@ export default function FlightPassengerDetails() {
                           ]}
                           onPress={e => {
                             e.stopPropagation();
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                             setIdType(idTypeOption);
                             setShowIdTypePicker(false);
                           }}
@@ -1429,7 +1417,6 @@ export default function FlightPassengerDetails() {
                             ]}
                             onPress={e => {
                               e.stopPropagation();
-                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                               setNationality(zimbabwe.name);
                               setShowNationalityPicker(false);
                               setNationalitySearch('');
@@ -1437,7 +1424,11 @@ export default function FlightPassengerDetails() {
                           >
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                               <ThemedText
-                                style={{ fontSize: responsiveFontSize(28), lineHeight: 34, includeFontPadding: false }}
+                                style={{
+                                  fontSize: responsiveFontSize(28),
+                                  lineHeight: 34,
+                                  includeFontPadding: false,
+                                }}
                               >
                                 {zimbabwe.flag}
                               </ThemedText>
@@ -1504,7 +1495,6 @@ export default function FlightPassengerDetails() {
                               ]}
                               onPress={e => {
                                 e.stopPropagation();
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                                 setNationality(country.name);
                                 setShowNationalityPicker(false);
                                 setNationalitySearch('');
@@ -1608,7 +1598,6 @@ export default function FlightPassengerDetails() {
                       activeOpacity={0.7}
                       onPress={e => {
                         e?.stopPropagation?.();
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setShowDobPicker(false);
                         setTimeout(() => setShowMonthPicker(true), 100);
                       }}
@@ -1623,7 +1612,6 @@ export default function FlightPassengerDetails() {
                       activeOpacity={0.7}
                       onPress={e => {
                         e?.stopPropagation?.();
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setShowDobPicker(false);
                         setTimeout(() => setShowYearPicker(true), 100);
                       }}
@@ -1885,7 +1873,6 @@ export default function FlightPassengerDetails() {
                             onPress={e => {
                               if (!isFutureMonth) {
                                 e.stopPropagation();
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                                 const newDate = new Date(currentDobCalendarMonth);
                                 newDate.setMonth(index);
                                 setCurrentDobCalendarMonth(newDate);
@@ -2016,7 +2003,6 @@ export default function FlightPassengerDetails() {
                             onPress={e => {
                               if (!isFutureYear) {
                                 e.stopPropagation();
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                                 const newDate = new Date(currentDobCalendarMonth);
                                 newDate.setFullYear(year);
                                 setCurrentDobCalendarMonth(newDate);

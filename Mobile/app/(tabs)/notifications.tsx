@@ -22,7 +22,6 @@ import { useColorScheme } from '@/hooks/useColorScheme';
 import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
 import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import * as Haptics from 'expo-haptics';
 
 // Import reusable components and utilities
 import { CustomHeader, GlassPanel, MessageItem, useCollapsibleSearchSection } from '@/components';
@@ -82,16 +81,27 @@ export default function NotificationsScreen() {
 
   // Keep the tab bar badge in sync with unread notifications
   useEffect(() => {
-    const count = notifications.filter((n) => !n.isRead).length;
+    const count = notifications.filter(n => !n.isRead).length;
     setUnreadCount(count);
   }, [notifications]);
 
   // Helper function to replace all isDark references
   const isDarkMode = () => colorScheme === 'dark';
 
-  const showAppAlert = useCallback((config: { title: string; message: string; buttons: { text: string; style?: 'default' | 'cancel' | 'destructive'; onPress?: () => void }[] }) => {
-    showAlert(config);
-  }, [showAlert]);
+  const showAppAlert = useCallback(
+    (config: {
+      title: string;
+      message: string;
+      buttons: {
+        text: string;
+        style?: 'default' | 'cancel' | 'destructive';
+        onPress?: () => void;
+      }[];
+    }) => {
+      showAlert(config);
+    },
+    [showAlert]
+  );
 
   // Animation value for list transitions (cross-fade between lists)
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -103,7 +113,6 @@ export default function NotificationsScreen() {
   ];
 
   const handleFilterChange = useCallback((filter: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setActiveFilter(filter);
   }, []);
@@ -157,7 +166,6 @@ export default function NotificationsScreen() {
       setRefreshing(false);
       // Add haptic feedback after refresh completes
       if (Platform.OS === 'ios') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
     }, 1000); // Shorter delay since we're not actually doing anything
   };
@@ -234,7 +242,6 @@ export default function NotificationsScreen() {
           style: 'destructive',
           onPress: () => {
             if (Platform.OS === 'ios') {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
             }
 
             LayoutAnimation.configureNext(messageAnimations.batchOperation);
@@ -248,7 +255,6 @@ export default function NotificationsScreen() {
   // Handle swipe with better haptic timing
   const handleSwipeStart = () => {
     if (Platform.OS === 'ios') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
   };
 
@@ -439,8 +445,12 @@ export default function NotificationsScreen() {
                     styles.alertGlass,
                     {
                       backgroundColor: isDarkMode()
-                        ? Platform.OS === 'android' ? 'rgba(38, 38, 40, 0.97)' : 'rgba(44, 44, 46, 0.82)'
-                        : Platform.OS === 'android' ? 'rgba(248, 248, 250, 0.98)' : 'rgba(246, 246, 248, 0.88)',
+                        ? Platform.OS === 'android'
+                          ? 'rgba(38, 38, 40, 0.97)'
+                          : 'rgba(44, 44, 46, 0.82)'
+                        : Platform.OS === 'android'
+                          ? 'rgba(248, 248, 250, 0.98)'
+                          : 'rgba(246, 246, 248, 0.88)',
                       borderColor: isDarkMode()
                         ? 'rgba(255,255,255,0.16)'
                         : 'rgba(255,255,255,0.82)',
@@ -452,7 +462,11 @@ export default function NotificationsScreen() {
                       <View
                         style={[
                           styles.notifAvatar,
-                          { backgroundColor: activeNotification?.avatarImage ? 'transparent' : getNotificationAvatarColor(activeNotification?.avatar ?? '') },
+                          {
+                            backgroundColor: activeNotification?.avatarImage
+                              ? 'transparent'
+                              : getNotificationAvatarColor(activeNotification?.avatar ?? ''),
+                          },
                         ]}
                       >
                         {activeNotification?.avatarImage ? (
@@ -541,7 +555,6 @@ export default function NotificationsScreen() {
               </Pressable>
             </Pressable>
           </Modal>
-
         </ThemedView>
       </IOSScreenWrapper>
     </GestureHandlerRootView>
@@ -632,7 +645,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: responsiveSize(16, 14, 20),
   },
   alertCard: {
-    width: Math.min(Dimensions.get('window').width - responsiveSize(48, 40, 60), responsiveSize(320, 304, 340)),
+    width: Math.min(
+      Dimensions.get('window').width - responsiveSize(48, 40, 60),
+      responsiveSize(320, 304, 340)
+    ),
     borderRadius: responsiveSize(22, 20, 26),
     overflow: 'hidden',
   },

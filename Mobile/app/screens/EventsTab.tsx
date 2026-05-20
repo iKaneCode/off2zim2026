@@ -2,7 +2,6 @@
 import { StyleSheet, View, FlatList, useColorScheme, Animated, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import * as Haptics from 'expo-haptics';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
@@ -14,7 +13,12 @@ import { LocationPill } from '@/components/LocationPill';
 import { RatingPill } from '@/components/RatingPill';
 import { DateTimePill } from '@/components/DateTimePill';
 import { ListImageCard } from '@/components/ListImageCard';
-import { isFavorited as isFavoritedUtil, toggleFavorite as toggleFavoriteUtil, subscribeFavorites, getFavoritedIds } from '@/utils/favoritesUtils';
+import {
+  isFavorited as isFavoritedUtil,
+  toggleFavorite as toggleFavoriteUtil,
+  subscribeFavorites,
+  getFavoritedIds,
+} from '@/utils/favoritesUtils';
 
 export default function EventsTab() {
   const colorScheme = useColorScheme();
@@ -28,8 +32,14 @@ export default function EventsTab() {
   const [favorites, setFavorites] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    setFavorites(Object.fromEntries(getFavoritedIds().map(id => [id, true])) as Record<string, boolean>);
-    const unsub = subscribeFavorites(() => setFavorites(Object.fromEntries(getFavoritedIds().map(id => [id, true])) as Record<string, boolean>));
+    setFavorites(
+      Object.fromEntries(getFavoritedIds().map(id => [id, true])) as Record<string, boolean>
+    );
+    const unsub = subscribeFavorites(() =>
+      setFavorites(
+        Object.fromEntries(getFavoritedIds().map(id => [id, true])) as Record<string, boolean>
+      )
+    );
     return unsub;
   }, []);
   const [heartScales] = useState<Record<string, Animated.Value>>({});
@@ -168,7 +178,6 @@ export default function EventsTab() {
   // Toggle favorite with animation
   const toggleFavorite = useCallback(
     (name: string) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setFavorites(prev => {
         const newFavorites = { ...prev, [name]: !prev[name] };
         const scale = getHeartScale(name);
@@ -203,7 +212,6 @@ export default function EventsTab() {
         item.ticketPrice > 0 ? Math.max(1, Math.round(item.ticketPrice)) : undefined;
 
       const handleEventPress = () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         router.push({
           pathname: '/event-profile',
           params: {

@@ -18,12 +18,7 @@ import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Ionicons, FontAwesome6 } from '@expo/vector-icons';
 import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import {
-  faHeart as solidHeart,
-  faShareFromSquare,
-  faChair,
-} from '@fortawesome/free-solid-svg-icons';
-import { faHeart as regularHeart } from '@fortawesome/free-regular-svg-icons';
+import { faChair } from '@fortawesome/free-solid-svg-icons';
 import * as Haptics from 'expo-haptics';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import { responsiveFontSize, Fonts } from '@/constants/Fonts';
@@ -33,11 +28,11 @@ import {
   toggleFavorite as toggleFavoriteUtil,
 } from '@/utils/favoritesUtils';
 import {
-  ViewAllButton,
-  WebSlideTransition,
-  LocationPill,
   BusSearchForm,
+  LocationPill,
+  ProfileGalleryHeader,
   ProviderHeroCard,
+  WebSlideTransition,
 } from '@/components';
 
 const { width } = Dimensions.get('window');
@@ -219,18 +214,15 @@ export default function FlightProfile() {
   }, [opacityAnim]);
 
   const handleGoBack = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.back();
   };
 
   const toggleFavorite = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     const newState = toggleFavoriteUtil(normalizedFlightId);
     setIsFavorited(newState);
   };
 
   const handleShare = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     console.log('Share flight');
   };
 
@@ -263,7 +255,6 @@ export default function FlightProfile() {
       return;
     }
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setTripType(type);
 
     if (type === 'oneWay') {
@@ -272,27 +263,22 @@ export default function FlightProfile() {
   };
 
   const openFromPicker = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShowFromPicker(true);
   };
 
   const openToPicker = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShowToPicker(true);
   };
 
   const openDepartureDatePicker = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShowDatePicker(true);
   };
 
   const openReturnDatePicker = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setShowReturnDatePicker(true);
   };
 
   const incrementPassengers = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setPassengers(prev => prev + 1);
   };
 
@@ -301,7 +287,6 @@ export default function FlightProfile() {
       return;
     }
 
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     setPassengers(prev => Math.max(1, prev - 1));
   };
 
@@ -452,8 +437,6 @@ export default function FlightProfile() {
         return;
       }
     }
-
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     router.push({
       pathname: '/flight-search',
@@ -649,24 +632,21 @@ export default function FlightProfile() {
                       },
                     ]}
                   >
-                    <View style={styles.sectionHeader}>
-                      <ThemedText style={styles.sectionTitle}>Gallery</ThemedText>
-                      <ViewAllButton
-                        onPress={() =>
-                          router.push({
-                            pathname: '/gallery',
-                            params: {
-                              location: flight.name,
-                              title: flight.name,
-                              galleryType: 'provider',
-                              contextImage: flight.images[0] || galleryImages[0],
-                              images: JSON.stringify(galleryImages),
-                              flightId: normalizedFlightId,
-                            },
-                          })
-                        }
-                      />
-                    </View>
+                    <ProfileGalleryHeader
+                      onPress={() =>
+                        router.push({
+                          pathname: '/gallery',
+                          params: {
+                            location: flight.name,
+                            title: flight.name,
+                            galleryType: 'provider',
+                            contextImage: flight.images[0] || galleryImages[0],
+                            images: JSON.stringify(galleryImages),
+                            flightId: normalizedFlightId,
+                          },
+                        })
+                      }
+                    />
                     <View style={styles.gallerySectionContainer}>
                       <View style={styles.galleryRow}>
                         {/* First Image */}
@@ -917,7 +897,6 @@ export default function FlightProfile() {
                             ]}
                             onPress={e => {
                               e.stopPropagation();
-                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                               setSelectedFromLocation(destination);
                               setShowFromPicker(false);
                             }}
@@ -1032,7 +1011,6 @@ export default function FlightProfile() {
                               ]}
                               onPress={e => {
                                 e.stopPropagation();
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                                 setSelectedToLocation(destination);
                                 setShowToPicker(false);
                               }}

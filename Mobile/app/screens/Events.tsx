@@ -1,8 +1,15 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { StyleSheet, View, FlatList, useColorScheme, Animated, RefreshControl, StatusBar } from 'react-native';
+import {
+  StyleSheet,
+  View,
+  FlatList,
+  useColorScheme,
+  Animated,
+  RefreshControl,
+  StatusBar,
+} from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router, useLocalSearchParams } from 'expo-router';
-import * as Haptics from 'expo-haptics';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
@@ -17,34 +24,48 @@ import { RatingPill } from '@/components/RatingPill';
 import { DateTimePill } from '@/components/DateTimePill';
 import { ListImageCard } from '@/components/ListImageCard';
 import { ListImageCardSkeleton } from '@/components/ListImageCardSkeleton';
-import { isFavorited as isFavoritedUtil, toggleFavorite as toggleFavoriteUtil, subscribeFavorites, getFavoritedIds } from '@/utils/favoritesUtils';
+import {
+  isFavorited as isFavoritedUtil,
+  toggleFavorite as toggleFavoriteUtil,
+  subscribeFavorites,
+  getFavoritedIds,
+} from '@/utils/favoritesUtils';
 
 function normalizeEventLocationValue(value: string) {
-  return value.toLowerCase().replace(/,\s*zimbabwe\b/g, '').replace(/\s+/g, ' ').trim();
+  return value
+    .toLowerCase()
+    .replace(/,\s*zimbabwe\b/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function eventMatchesLocationScope(eventLocation: string, scopeLocations: string[]) {
   const location = normalizeEventLocationValue(eventLocation);
 
-  return scopeLocations.some(scope =>
-    scope.includes(location) || location.includes(scope)
-  );
+  return scopeLocations.some(scope => scope.includes(location) || location.includes(scope));
 }
 
 export default function EventsScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const params = useLocalSearchParams();
-  const locationParam = typeof params.location === 'string' && params.location.trim().length > 0 ? params.location.trim() : '';
-  const locationsParam = typeof params.locations === 'string' && params.locations.trim().length > 0 ? params.locations.trim() : '';
+  const locationParam =
+    typeof params.location === 'string' && params.location.trim().length > 0
+      ? params.location.trim()
+      : '';
+  const locationsParam =
+    typeof params.locations === 'string' && params.locations.trim().length > 0
+      ? params.locations.trim()
+      : '';
   const scopedLocations = useMemo(
-    () => Array.from(
-      new Set(
-        (locationsParam ? locationsParam.split('|') : locationParam ? [locationParam] : [])
-          .map(normalizeEventLocationValue)
-          .filter(Boolean)
-      )
-    ),
+    () =>
+      Array.from(
+        new Set(
+          (locationsParam ? locationsParam.split('|') : locationParam ? [locationParam] : [])
+            .map(normalizeEventLocationValue)
+            .filter(Boolean)
+        )
+      ),
     [locationParam, locationsParam]
   );
 
@@ -55,8 +76,14 @@ export default function EventsScreen() {
   const [favorites, setFavorites] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    setFavorites(Object.fromEntries(getFavoritedIds().map(id => [id, true])) as Record<string, boolean>);
-    const unsub = subscribeFavorites(() => setFavorites(Object.fromEntries(getFavoritedIds().map(id => [id, true])) as Record<string, boolean>));
+    setFavorites(
+      Object.fromEntries(getFavoritedIds().map(id => [id, true])) as Record<string, boolean>
+    );
+    const unsub = subscribeFavorites(() =>
+      setFavorites(
+        Object.fromEntries(getFavoritedIds().map(id => [id, true])) as Record<string, boolean>
+      )
+    );
     return unsub;
   }, []);
   const [heartScales] = useState<Record<string, Animated.Value>>({});
@@ -196,7 +223,6 @@ export default function EventsScreen() {
   // Toggle favorite with animation
   const toggleFavorite = useCallback(
     (name: string) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setFavorites(prev => {
         const newFavorites = { ...prev, [name]: !prev[name] };
         const scale = getHeartScale(name);
@@ -231,7 +257,6 @@ export default function EventsScreen() {
         item.ticketPrice > 0 ? Math.max(1, Math.round(item.ticketPrice)) : undefined;
 
       const handleEventPress = () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         router.push({
           pathname: '/event-profile',
           params: {
@@ -258,10 +283,7 @@ export default function EventsScreen() {
           heartBackgroundColor={heartContainerBg}
           topRow={
             <View style={styles.metaRow}>
-              <LocationPill
-                label={item.location}
-                variant="compact"
-              />
+              <LocationPill label={item.location} variant="compact" />
 
               <RatingPill
                 value={item.rating}
@@ -326,9 +348,8 @@ export default function EventsScreen() {
     [favorites, getHeartScale, toggleFavorite, isDark]
   );
 
-  const resolvedLocation = locationParam || (
-    scopedLocations.length > 0 ? 'Selected locations' : 'Zimbabwe'
-  );
+  const resolvedLocation =
+    locationParam || (scopedLocations.length > 0 ? 'Selected locations' : 'Zimbabwe');
   const handleGoBack = () => {
     if (typeof router.canGoBack === 'function' && router.canGoBack()) {
       router.back();
@@ -366,10 +387,7 @@ export default function EventsScreen() {
               >
                 Events
               </ThemedText>
-              <LocationPill
-                label={resolvedLocation}
-                variant="compact"
-              />
+              <LocationPill label={resolvedLocation} variant="compact" />
             </View>
 
             <View style={styles.galleryCountWrapper}>
@@ -398,7 +416,9 @@ export default function EventsScreen() {
                 onScroll={handleScroll}
                 onMomentumScrollEnd={handleMomentumScrollEnd}
                 scrollEventThrottle={16}
-                refreshControl={<RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />}
+                refreshControl={
+                  <RefreshControl refreshing={isRefreshing} onRefresh={handleRefresh} />
+                }
               />
             ) : (
               <View style={styles.emptyStateContainer}>
@@ -407,7 +427,9 @@ export default function EventsScreen() {
                   size={64}
                   color={isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.3)'}
                 />
-                <ThemedText style={styles.emptyStateText}>No events matching your search</ThemedText>
+                <ThemedText style={styles.emptyStateText}>
+                  No events matching your search
+                </ThemedText>
               </View>
             )}
           </ThemedView>

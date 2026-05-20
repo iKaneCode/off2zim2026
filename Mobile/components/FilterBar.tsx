@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { useColorScheme } from '@/hooks/useColorScheme';
-import * as Haptics from 'expo-haptics';
 import { FontAwesome6 } from '@expo/vector-icons';
 import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import { getFilterPillColors } from '@/utils/filterPillStyles';
@@ -107,7 +106,6 @@ export function FilterBar({
   const handleFilterPress = (filter: string) => {
     if (filter !== activeFilter) {
       if (Platform.OS === 'ios') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
       onFilterChange(filter);
     }
@@ -117,7 +115,6 @@ export function FilterBar({
     if (onSortDirectionChange) {
       const newDirection = sortDirection === 'asc' ? 'desc' : 'asc';
       if (Platform.OS === 'ios') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       }
       onSortDirectionChange(newDirection);
     }
@@ -161,7 +158,9 @@ export function FilterBar({
             return (
               <TouchableOpacity
                 key={option.key}
-                onLayout={e => { pillOffsets.current[option.key] = e.nativeEvent.layout.x; }}
+                onLayout={e => {
+                  pillOffsets.current[option.key] = e.nativeEvent.layout.x;
+                }}
                 style={[
                   styles.filterButton,
                   isActive && styles.filterButtonActive,
@@ -186,7 +185,9 @@ export function FilterBar({
                       styles.filterText,
                       isActive && styles.filterTextActive,
                       {
-                        color: isActive ? (activePillTextColor ?? pillColors.activeText) : pillColors.inactiveText,
+                        color: isActive
+                          ? (activePillTextColor ?? pillColors.activeText)
+                          : pillColors.inactiveText,
                       },
                     ]}
                   >

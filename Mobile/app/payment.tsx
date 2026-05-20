@@ -1,13 +1,6 @@
 import React, { useCallback, useMemo, useState } from 'react';
 import type { ComponentProps } from 'react';
-import {
-  Image,
-  Platform,
-  ScrollView,
-  StyleSheet,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { Image, Platform, ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
@@ -507,7 +500,6 @@ const PaymentScreen = () => {
   );
 
   const handleSelectGateway = useCallback((gatewayId: string) => {
-    Haptics.selectionAsync().catch(() => {});
     setSelectedGateway(current => (current === gatewayId ? null : gatewayId));
   }, []);
 
@@ -518,14 +510,22 @@ const PaymentScreen = () => {
 
     if (!selectedGatewayDetails) {
       await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-      showAlert({ title: 'Select a payment partner', message: 'Choose your preferred payment gateway to proceed.', buttons: [{ text: 'OK' }] });
+      showAlert({
+        title: 'Select a payment partner',
+        message: 'Choose your preferred payment gateway to proceed.',
+        buttons: [{ text: 'OK' }],
+      });
       return;
     }
 
     if (serviceType === 'stay') {
       if (!user?.id || isGuest) {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-        showAlert({ title: 'Sign in required', message: 'Please sign in to save your stay booking.', buttons: [{ text: 'OK' }] });
+        showAlert({
+          title: 'Sign in required',
+          message: 'Please sign in to save your stay booking.',
+          buttons: [{ text: 'OK' }],
+        });
         return;
       }
 
@@ -539,7 +539,11 @@ const PaymentScreen = () => {
 
       if (!checkInDate || !checkOutDate) {
         await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => {});
-        showAlert({ title: 'Dates required', message: 'Please select valid check-in and check-out dates.', buttons: [{ text: 'OK' }] });
+        showAlert({
+          title: 'Dates required',
+          message: 'Please select valid check-in and check-out dates.',
+          buttons: [{ text: 'OK' }],
+        });
         return;
       }
 
@@ -583,10 +587,10 @@ const PaymentScreen = () => {
           throw error;
         }
 
-        await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
         showAlert({
           title: 'Booking saved',
-          message: 'Your stay booking details have been saved. Payment gateway integration is coming soon.',
+          message:
+            'Your stay booking details have been saved. Payment gateway integration is coming soon.',
           buttons: [
             {
               text: 'Orders',
@@ -619,7 +623,6 @@ const PaymentScreen = () => {
       return;
     }
 
-    await Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
     showAlert({
       title: `${selectedGatewayDetails.name} coming soon`,
       message: 'We will redirect you to a secure checkout in the next release.',
@@ -658,8 +661,6 @@ const PaymentScreen = () => {
   ]);
 
   const handleContactSupport = useCallback(() => {
-    Haptics.selectionAsync().catch(() => {});
-
     // Navigate to message-detail with Off2Zim as the service provider
     const messageData = {
       id: 'off2zim-support',

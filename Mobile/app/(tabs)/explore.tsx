@@ -29,6 +29,7 @@ import {
   CustomHeader,
   EventCard,
   FilterBar,
+  IconActionButton,
   ListImageCard,
   LocationPill,
   RatingPill,
@@ -57,10 +58,6 @@ import { router } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SvgUri } from 'react-native-svg';
 import { Asset } from 'expo-asset';
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faHeart as solidHeart } from '@fortawesome/free-solid-svg-icons';
-import { faHeart as regularHeart } from '@fortawesome/free-regular-svg-icons';
-import * as Haptics from 'expo-haptics';
 
 type StorySlide = {
   id: string;
@@ -5688,7 +5685,6 @@ export default function ExploreScreen() {
   const handleToggleAtlasFavorite = useCallback(
     (id: string) => {
       const scale = getAtlasHeartScale(id);
-      Haptics.selectionAsync().catch(() => {});
       Animated.sequence([
         Animated.timing(scale, {
           toValue: 1.15,
@@ -6085,16 +6081,10 @@ export default function ExploreScreen() {
                           resizeMode="cover"
                         >
                           <View style={styles.atlasDetailScrim} />
-                          <TouchableOpacity
-                            style={[
-                              styles.atlasHeroHeartButton,
-                              {
-                                backgroundColor:
-                                  colorScheme === 'dark'
-                                    ? 'rgba(0,0,0,0.7)'
-                                    : 'rgba(255,255,255,0.8)',
-                              },
-                            ]}
+                          <IconActionButton
+                            variant="like"
+                            isActive={isFavoritedUtil(detailSpot.id)}
+                            style={styles.atlasHeroHeartButton}
                             onPress={() => handleToggleAtlasFavorite(detailSpot.id)}
                             hitSlop={{
                               top: FEATURED_DESTINATION_OVERLAY_PADDING,
@@ -6104,17 +6094,10 @@ export default function ExploreScreen() {
                             }}
                             accessibilityRole="button"
                             accessibilityLabel={`Favorite ${detailSpot.name} ${isFavoritedUtil(detailSpot.id) ? 'selected' : 'not selected'}`}
-                          >
-                            <Animated.View
-                              style={{ transform: [{ scale: getAtlasHeartScale(detailSpot.id) }] }}
-                            >
-                              <FontAwesomeIcon
-                                icon={isFavoritedUtil(detailSpot.id) ? solidHeart : regularHeart}
-                                size={18}
-                                color="#FF4757"
-                              />
-                            </Animated.View>
-                          </TouchableOpacity>
+                            iconContainerStyle={{
+                              transform: [{ scale: getAtlasHeartScale(detailSpot.id) }],
+                            }}
+                          />
                           <View style={styles.atlasDetailHeroContent}>
                             <ThemedText
                               style={styles.atlasHeroTitle}
@@ -6524,10 +6507,7 @@ export default function ExploreScreen() {
                           ]}
                           topRow={
                             <View style={styles.activityMetaRow}>
-                              <LocationPill
-                                label={item.location}
-                                variant="compact"
-                              />
+                              <LocationPill label={item.location} variant="compact" />
                               <RatingPill
                                 value={item.rating}
                                 backgroundColor={pillBg}
@@ -7206,7 +7186,6 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingHorizontal: 16,
     paddingTop: 16,
-
   },
   staysHeaderIcon: {
     width: 36,

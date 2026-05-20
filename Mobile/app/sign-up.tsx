@@ -164,7 +164,11 @@ export default function SignUpScreen() {
             buttons: [{ text: 'OK' }],
           });
         } else if (lower.includes('network')) {
-          showAlert({ title: 'Network issue', message: 'Please check your internet connection and try again.', buttons: [{ text: 'OK' }] });
+          showAlert({
+            title: 'Network issue',
+            message: 'Please check your internet connection and try again.',
+            buttons: [{ text: 'OK' }],
+          });
         } else {
           showAlert({ title: 'Sign up failed', message, buttons: [{ text: 'OK' }] });
         }
@@ -327,7 +331,6 @@ export default function SignUpScreen() {
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     setShowTitlePicker(true);
                   }}
                   style={[
@@ -388,7 +391,6 @@ export default function SignUpScreen() {
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     setShowGenderPicker(true);
                   }}
                   style={[
@@ -422,7 +424,6 @@ export default function SignUpScreen() {
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     setShowIdTypePicker(true);
                   }}
                   style={[
@@ -484,7 +485,6 @@ export default function SignUpScreen() {
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     setShowDobPicker(true);
                   }}
                   style={[
@@ -518,7 +518,6 @@ export default function SignUpScreen() {
                 <TouchableOpacity
                   activeOpacity={0.7}
                   onPress={() => {
-                    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                     setShowNationalityPicker(true);
                   }}
                   style={[
@@ -763,7 +762,6 @@ export default function SignUpScreen() {
                       },
                     ]}
                     onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                       setTitle(titleOption);
                       setShowTitlePicker(false);
                     }}
@@ -819,7 +817,6 @@ export default function SignUpScreen() {
                       },
                     ]}
                     onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                       setGender(genderOption);
                       setShowGenderPicker(false);
                     }}
@@ -875,7 +872,6 @@ export default function SignUpScreen() {
                       },
                     ]}
                     onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                       setIdType(idTypeOption);
                       setShowIdTypePicker(false);
                     }}
@@ -931,7 +927,6 @@ export default function SignUpScreen() {
                       },
                     ]}
                     onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                       setNationality(country.name);
                       setShowNationalityPicker(false);
                     }}

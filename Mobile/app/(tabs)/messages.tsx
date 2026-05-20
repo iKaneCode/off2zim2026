@@ -19,7 +19,6 @@ import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
 import { GestureHandlerRootView, Swipeable } from 'react-native-gesture-handler';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import * as Haptics from 'expo-haptics';
 
 // Import reusable components and utilities
 import { CustomHeader, MessageItem, useCollapsibleSearchSection } from '@/components';
@@ -73,9 +72,20 @@ export default function MessagesScreen() {
     setUnreadCount(count);
   }, [messages]);
 
-  const showAppAlert = useCallback((config: { title: string; message: string; buttons: { text: string; style?: 'default' | 'cancel' | 'destructive'; onPress?: () => void }[] }) => {
-    showAlert(config);
-  }, [showAlert]);
+  const showAppAlert = useCallback(
+    (config: {
+      title: string;
+      message: string;
+      buttons: {
+        text: string;
+        style?: 'default' | 'cancel' | 'destructive';
+        onPress?: () => void;
+      }[];
+    }) => {
+      showAlert(config);
+    },
+    [showAlert]
+  );
 
   // Animation value for list transitions (cross-fade between lists)
   const fadeAnim = useRef(new Animated.Value(1)).current;
@@ -130,7 +140,6 @@ export default function MessagesScreen() {
   );
 
   const handleFilterChange = useCallback((filter: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setActiveFilter(filter);
   }, []);
@@ -185,7 +194,6 @@ export default function MessagesScreen() {
       setRefreshing(false);
       // Add haptic feedback after refresh completes
       if (Platform.OS === 'ios') {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
     }, 1500); // Slightly longer delay for more natural feel
   }; // Pre-classify messages into categories for instant filtering
@@ -254,7 +262,6 @@ export default function MessagesScreen() {
           style: 'destructive',
           onPress: () => {
             if (Platform.OS === 'ios') {
-              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
             }
             LayoutAnimation.configureNext(messageAnimations.batchOperation);
             setMessages([]);
@@ -264,11 +271,9 @@ export default function MessagesScreen() {
     });
   };
 
-
   // Handle swipe with better haptic timing
   const handleSwipeStart = () => {
     if (Platform.OS === 'ios') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
   };
 
@@ -296,8 +301,7 @@ export default function MessagesScreen() {
         onPress: () =>
           showAppAlert({
             title: 'Delete Message',
-            message:
-              'Are you sure you want to delete this message? This action cannot be undone.',
+            message: 'Are you sure you want to delete this message? This action cannot be undone.',
             buttons: [
               { text: 'Close', style: 'cancel' },
               {

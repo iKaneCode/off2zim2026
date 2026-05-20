@@ -2,7 +2,6 @@
 import { StyleSheet, View, FlatList, useColorScheme, Animated, RefreshControl } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
-import * as Haptics from 'expo-haptics';
 import { ThemedText } from '@/components/ThemedText';
 import { ThemedView } from '@/components/ThemedView';
 import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
@@ -13,7 +12,12 @@ import { getActivityStatus, activityStatusColor, ActivityStatus } from '@/utils/
 import { LocationPill } from '@/components/LocationPill';
 import { RatingPill } from '@/components/RatingPill';
 import { ListImageCard } from '@/components/ListImageCard';
-import { isFavorited as isFavoritedUtil, toggleFavorite as toggleFavoriteUtil, subscribeFavorites, getFavoritedIds } from '@/utils/favoritesUtils';
+import {
+  isFavorited as isFavoritedUtil,
+  toggleFavorite as toggleFavoriteUtil,
+  subscribeFavorites,
+  getFavoritedIds,
+} from '@/utils/favoritesUtils';
 import { StatusPill } from '@/components/StatusPill';
 
 interface ActivityItem {
@@ -108,7 +112,6 @@ export default function ThingsToDoTab() {
   // Toggle favorite with animation
   const toggleFavorite = useCallback(
     (name: string) => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       setFavorites(prev => {
         const newFavorites = { ...prev, [name]: !prev[name] };
         const scale = getHeartScale(name);
@@ -151,7 +154,6 @@ export default function ThingsToDoTab() {
           : 25;
 
       const handleActivityPress = () => {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         router.push({
           pathname: '/activity-profile',
           params: {

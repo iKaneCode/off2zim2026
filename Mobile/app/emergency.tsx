@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import { View, StyleSheet, ScrollView, TouchableOpacity, Image } from 'react-native';
 import { router } from 'expo-router';
-import * as Haptics from 'expo-haptics';
 import { CustomHeader } from '@/components/CustomHeader';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
@@ -22,7 +21,6 @@ export default function EmergencyScreen() {
   const { showAlert } = useAppAlert();
 
   const handleGoBack = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.back();
   };
 
@@ -39,18 +37,33 @@ export default function EmergencyScreen() {
   );
 
   const handleCall = () => {
-    showAlert({ title: 'Call', message: 'Phone number not configured yet.', buttons: [{ text: 'OK' }] });
+    showAlert({
+      title: 'Call',
+      message: 'Phone number not configured yet.',
+      buttons: [{ text: 'OK' }],
+    });
   };
 
   const handleMessage = () => {
-    showAlert({ title: 'Message', message: 'Messaging number not configured yet.', buttons: [{ text: 'OK' }] });
+    showAlert({
+      title: 'Message',
+      message: 'Messaging number not configured yet.',
+      buttons: [{ text: 'OK' }],
+    });
   };
 
   return (
     <IOSScreenWrapper>
-      <ThemedView style={[styles.container]} lightColor={Colors.light.appBackground} darkColor={Colors.dark.appBackground}>
+      <ThemedView
+        style={[styles.container]}
+        lightColor={Colors.light.appBackground}
+        darkColor={Colors.dark.appBackground}
+      >
         <WallpaperPattern />
-        <CustomHeader showLogo leftAction={{ icon: 'chevron-back', onPress: handleGoBack, color: '#FF3B30' }} />
+        <CustomHeader
+          showLogo
+          leftAction={{ icon: 'chevron-back', onPress: handleGoBack, color: '#FF3B30' }}
+        />
 
         <View style={styles.titleSection}>
           <ThemedText type="title1" style={styles.pageTitle}>
@@ -92,23 +105,33 @@ export default function EmergencyScreen() {
                   <TouchableOpacity
                     onPress={handleCall}
                     activeOpacity={0.85}
-                    style={[styles.contactPill, { backgroundColor: contactPillBase.backgroundCall }]}
+                    style={[
+                      styles.contactPill,
+                      { backgroundColor: contactPillBase.backgroundCall },
+                    ]}
                   >
-                    <View style={[styles.iconBubble, { backgroundColor: contactPillBase.surface }]}>                    
+                    <View style={[styles.iconBubble, { backgroundColor: contactPillBase.surface }]}>
                       <Ionicons name="call" size={12} color="#34C759" />
                     </View>
-                    <ThemedText style={[styles.pillText, { color: contactPillBase.textColor }]}>Call</ThemedText>
+                    <ThemedText style={[styles.pillText, { color: contactPillBase.textColor }]}>
+                      Call
+                    </ThemedText>
                   </TouchableOpacity>
 
                   <TouchableOpacity
                     onPress={handleMessage}
                     activeOpacity={0.85}
-                    style={[styles.contactPill, { backgroundColor: contactPillBase.backgroundMessage }]}
+                    style={[
+                      styles.contactPill,
+                      { backgroundColor: contactPillBase.backgroundMessage },
+                    ]}
                   >
-                    <View style={[styles.iconBubble, { backgroundColor: contactPillBase.surface }]}>                    
+                    <View style={[styles.iconBubble, { backgroundColor: contactPillBase.surface }]}>
                       <Ionicons name="chatbubble-ellipses" size={12} color="#007AFF" />
                     </View>
-                    <ThemedText style={[styles.pillText, { color: contactPillBase.textColor }]}>Message</ThemedText>
+                    <ThemedText style={[styles.pillText, { color: contactPillBase.textColor }]}>
+                      Message
+                    </ThemedText>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -147,7 +170,12 @@ const styles = StyleSheet.create({
     marginRight: 8,
     overflow: 'hidden',
   },
-  title: { fontSize: responsiveFontSize(20), lineHeight: 28, fontFamily: Fonts.bold, marginBottom: 10 },
+  title: {
+    fontSize: responsiveFontSize(20),
+    lineHeight: 28,
+    fontFamily: Fonts.bold,
+    marginBottom: 10,
+  },
   pillsRow: { flexDirection: 'row', gap: 12 },
   contactPill: {
     flexDirection: 'row',
@@ -171,5 +199,10 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 0,
   },
-  pillText: { fontSize: responsiveFontSize(15), lineHeight: 20, fontFamily: Fonts.bold, letterSpacing: 0.2 },
+  pillText: {
+    fontSize: responsiveFontSize(15),
+    lineHeight: 20,
+    fontFamily: Fonts.bold,
+    letterSpacing: 0.2,
+  },
 });

@@ -14,6 +14,12 @@ export { PushScreenOptions } from './PushScreenOptions';
 export { WebSlideTransition } from './WebSlideTransition';
 export { WallpaperPattern } from './WallpaperPattern';
 export { DestinationCardShimmer } from './DestinationCardShimmer';
+export {
+  IconActionButton,
+  ICON_ACTION_BUTTON_ACTIVE_COLOR,
+  ICON_ACTION_BUTTON_SIZE,
+  getIconActionButtonColors,
+} from './IconActionButton';
 export { CarouselShimmer } from './CarouselShimmer';
 export { ShimmerPlaceholder } from './ShimmerPlaceholder';
 export { default as StayCardShimmer } from './StayCardShimmer';
@@ -37,6 +43,7 @@ export { RatingPill } from './RatingPill';
 export { DateTimePill } from './DateTimePill';
 export { EventCard } from './EventCard';
 export type { EventCardProps } from './EventCard';
+export { ProfileGalleryHeader } from './ProfileGalleryHeader';
 export { ListImageCard } from './ListImageCard';
 export { ListImageCardSkeleton } from './ListImageCardSkeleton';
 export { StatusPill } from './StatusPill';

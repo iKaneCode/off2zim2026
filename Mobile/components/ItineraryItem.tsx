@@ -10,7 +10,6 @@ import {
   type ViewStyle,
 } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
-import * as Haptics from 'expo-haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
@@ -320,7 +319,6 @@ function ItineraryItem({
 
   const handleSwipeStart = () => {
     if (Platform.OS === 'ios') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
 
     onSwipeStart?.();

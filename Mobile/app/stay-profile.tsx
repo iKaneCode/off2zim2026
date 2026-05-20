@@ -22,11 +22,7 @@ import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { useAppAlert } from '@/context/AppAlertContext';
 import { FontAwesome6, Ionicons } from '@expo/vector-icons';
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
-import { faHeart as solidHeart, faShareFromSquare } from '@fortawesome/free-solid-svg-icons';
-import { faHeart as regularHeart } from '@fortawesome/free-regular-svg-icons';
-import * as Haptics from 'expo-haptics';
 import {
   isFavorited as isFavoritedUtil,
   toggleFavorite as toggleFavoriteUtil,
@@ -35,9 +31,9 @@ import { getStayById, cloneStay } from '@/constants/StayData';
 import type { Stay, RoomType } from '@/types/Stay';
 import { goBackToDestination } from '@/utils/navigationUtils';
 import {
+  ProfileGalleryHeader,
   ProviderHeroCard,
   PushScreenOptions,
-  ViewAllButton,
   WebSlideTransition,
 } from '@/components';
 import { WallpaperPattern } from '@/components/WallpaperPattern';
@@ -414,8 +410,6 @@ export default function StayProfileScreen() {
   }, [stay?.images]);
 
   const toggleFavorite = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-
     if (normalizedStayId) {
       toggleFavoriteUtil(normalizedStayId);
       setIsFavorited(isFavoritedUtil(normalizedStayId));
@@ -574,8 +568,6 @@ export default function StayProfileScreen() {
   };
 
   const handleProceedToPayment = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => {});
-
     const resolvedCheckIn = checkInDate ?? getTodayDateString();
     const resolvedCheckOut = checkOutDate ?? getTomorrowDateString();
 
@@ -759,7 +751,6 @@ export default function StayProfileScreen() {
   };
 
   const handleShare = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     // Implement share functionality
   };
 
@@ -991,26 +982,23 @@ export default function StayProfileScreen() {
                       },
                     ]}
                   >
-                    <View style={styles.sectionHeader}>
-                      <ThemedText style={styles.sectionTitle}>Gallery</ThemedText>
-                      <ViewAllButton
-                        onPress={() =>
-                          !isGuest &&
-                          router.push({
-                            pathname: '/gallery',
-                            params: {
-                              location: stay.location || stay.name,
-                              title: stay.name,
-                              galleryType: 'provider',
-                              contextImage: stay.imageUrl || galleryImages[0],
-                              images: JSON.stringify(galleryImages),
-                              stayId: stayName,
-                            },
-                          })
-                        }
-                        disabled={isGuest}
-                      />
-                    </View>
+                    <ProfileGalleryHeader
+                      onPress={() =>
+                        !isGuest &&
+                        router.push({
+                          pathname: '/gallery',
+                          params: {
+                            location: stay.location || stay.name,
+                            title: stay.name,
+                            galleryType: 'provider',
+                            contextImage: stay.imageUrl || galleryImages[0],
+                            images: JSON.stringify(galleryImages),
+                            stayId: stayName,
+                          },
+                        })
+                      }
+                      disabled={isGuest}
+                    />
                     <View style={styles.gallerySectionContainer}>
                       <View style={styles.galleryRow}>
                         {/* First Image */}

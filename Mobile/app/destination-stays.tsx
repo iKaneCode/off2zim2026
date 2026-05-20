@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import { useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 
 import {
   ListImageCardSkeleton,
@@ -43,15 +42,17 @@ const filterOptions = [
 ];
 
 function normalizeStayLocationValue(value: string) {
-  return value.toLowerCase().replace(/,\s*zimbabwe\b/g, '').replace(/\s+/g, ' ').trim();
+  return value
+    .toLowerCase()
+    .replace(/,\s*zimbabwe\b/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 function stayMatchesLocationScope(stayLocation: string, scopeLocations: string[]) {
   const location = normalizeStayLocationValue(stayLocation);
 
-  return scopeLocations.some(scope =>
-    scope.includes(location) || location.includes(scope)
-  );
+  return scopeLocations.some(scope => scope.includes(location) || location.includes(scope));
 }
 
 export default function DestinationStaysScreen() {
@@ -64,9 +65,7 @@ export default function DestinationStaysScreen() {
       ? rawLocation.trim()
       : undefined;
   const locationsParam =
-    typeof rawLocations === 'string' && rawLocations.trim().length > 0
-      ? rawLocations.trim()
-      : '';
+    typeof rawLocations === 'string' && rawLocations.trim().length > 0 ? rawLocations.trim() : '';
   const resolvedLocation = normalizedLocation ?? 'All locations';
   const dataLocation =
     normalizedLocation &&
@@ -75,13 +74,14 @@ export default function DestinationStaysScreen() {
       ? normalizedLocation
       : undefined;
   const scopedLocations = useMemo(
-    () => Array.from(
-      new Set(
-        (locationsParam ? locationsParam.split('|') : dataLocation ? [dataLocation] : [])
-          .map(normalizeStayLocationValue)
-          .filter(Boolean)
-      )
-    ),
+    () =>
+      Array.from(
+        new Set(
+          (locationsParam ? locationsParam.split('|') : dataLocation ? [dataLocation] : [])
+            .map(normalizeStayLocationValue)
+            .filter(Boolean)
+        )
+      ),
     [dataLocation, locationsParam]
   );
   const colorScheme = useColorScheme();
@@ -96,13 +96,11 @@ export default function DestinationStaysScreen() {
   const [favoritesRefreshKey, setFavoritesRefreshKey] = useState(0);
 
   const handleFilterChange = useCallback((filter: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setActiveFilter(filter);
   }, []);
 
   const handleSortDirectionChange = useCallback((direction: 'asc' | 'desc') => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setSortDirection(direction);
   }, []);
@@ -121,9 +119,12 @@ export default function DestinationStaysScreen() {
 
   const loadStays = useCallback(() => {
     setLoading(true);
-    const staysByLocation = scopedLocations.length > 0
-      ? getStaysByLocation().filter(stay => stayMatchesLocationScope(stay.location, scopedLocations))
-      : getStaysByLocation();
+    const staysByLocation =
+      scopedLocations.length > 0
+        ? getStaysByLocation().filter(stay =>
+            stayMatchesLocationScope(stay.location, scopedLocations)
+          )
+        : getStaysByLocation();
     setStays(staysByLocation.map(cloneStay));
     setLoading(false);
   }, [scopedLocations]);
@@ -138,7 +139,6 @@ export default function DestinationStaysScreen() {
 
   const handleShare = useCallback(async (stay: Stay) => {
     try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
       await Share.share({
         message: `Check out ${stay.name} in ${stay.location}! It looks amazing.`,
         title: `${stay.name} in ${stay.location}`,
@@ -228,7 +228,6 @@ export default function DestinationStaysScreen() {
 
   const handleBookStay = useCallback((selectedStay: Stay) => {
     console.log(`Booking ${selectedStay.name}`);
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => {});
   }, []);
 
   const handleFavoriteToggle = useCallback((_stay: Stay, _isFavorite: boolean) => {
@@ -284,10 +283,7 @@ export default function DestinationStaysScreen() {
               >
                 Stays
               </ThemedText>
-              <LocationPill
-                label={resolvedLocation}
-                variant="compact"
-              />
+              <LocationPill label={resolvedLocation} variant="compact" />
             </View>
 
             <View style={styles.galleryCountWrapper}>

@@ -10,7 +10,6 @@ import {
   RefreshControl,
 } from 'react-native';
 import { router } from 'expo-router';
-import * as Haptics from 'expo-haptics';
 import { CustomHeader } from '@/components/CustomHeader';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
@@ -109,12 +108,10 @@ export default function LikesScreen() {
   }, []);
 
   const handleGoBack = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.back();
   };
 
   const handleFilterChange = useCallback((filter: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setActiveFilter(filter);
   }, []);
 
@@ -150,37 +147,79 @@ export default function LikesScreen() {
 
     destinations.forEach(d => {
       if (isMarkedFavorite(d)) {
-        items.push({ id: d.id, type: 'destination', name: d.name, description: d.description, image_url: d.image_url, meta: d });
+        items.push({
+          id: d.id,
+          type: 'destination',
+          name: d.name,
+          description: d.description,
+          image_url: d.image_url,
+          meta: d,
+        });
       }
     });
 
     stays.forEach(s => {
       if (isMarkedFavorite(s)) {
-        items.push({ id: s.id, type: 'stay', name: s.name, description: s.description, image_url: s.stay_gallery?.[0]?.image_url || s.images?.[0], meta: s });
+        items.push({
+          id: s.id,
+          type: 'stay',
+          name: s.name,
+          description: s.description,
+          image_url: s.stay_gallery?.[0]?.image_url || s.images?.[0],
+          meta: s,
+        });
       }
     });
 
     events.forEach(e => {
       if (isMarkedFavorite(e)) {
-        items.push({ id: e.id, type: 'event', name: e.name, description: e.description, image_url: e.event_gallery?.[0]?.image_url || null, meta: e });
+        items.push({
+          id: e.id,
+          type: 'event',
+          name: e.name,
+          description: e.description,
+          image_url: e.event_gallery?.[0]?.image_url || null,
+          meta: e,
+        });
       }
     });
 
     activities.forEach(a => {
       if (isMarkedFavorite(a)) {
-        items.push({ id: a.id, type: 'activity', name: a.name, description: a.location, image_url: `https://picsum.photos/300/200?random=${a.imageRandom}`, meta: a });
+        items.push({
+          id: a.id,
+          type: 'activity',
+          name: a.name,
+          description: a.location,
+          image_url: `https://picsum.photos/300/200?random=${a.imageRandom}`,
+          meta: a,
+        });
       }
     });
 
     buses.forEach(b => {
       if (isMarkedFavorite(b)) {
-        items.push({ id: b.id, type: 'bus', name: b.name, description: b.route, image_url: `https://picsum.photos/300/200?random=${b.imageRandom}`, meta: b });
+        items.push({
+          id: b.id,
+          type: 'bus',
+          name: b.name,
+          description: b.route,
+          image_url: `https://picsum.photos/300/200?random=${b.imageRandom}`,
+          meta: b,
+        });
       }
     });
 
     flights.forEach(f => {
       if (isMarkedFavorite(f)) {
-        items.push({ id: f.id, type: 'flight', name: f.name, description: f.route, image_url: `https://picsum.photos/300/200?random=${f.imageRandom}`, meta: f });
+        items.push({
+          id: f.id,
+          type: 'flight',
+          name: f.name,
+          description: f.route,
+          image_url: `https://picsum.photos/300/200?random=${f.imageRandom}`,
+          meta: f,
+        });
       }
     });
 
@@ -190,7 +229,11 @@ export default function LikesScreen() {
     let result = items;
     if (searchQuery.trim() !== '') {
       const q = searchQuery.toLowerCase().trim();
-      result = result.filter(it => (it.name || '').toLowerCase().includes(q) || (it.description || '').toLowerCase().includes(q));
+      result = result.filter(
+        it =>
+          (it.name || '').toLowerCase().includes(q) ||
+          (it.description || '').toLowerCase().includes(q)
+      );
     }
 
     switch (activeFilter) {
@@ -229,11 +272,16 @@ export default function LikesScreen() {
     ({ item }: { item: LikedItem }) => {
       return (
         <TouchableOpacity
-          style={[styles.destinationCard, { backgroundColor: cardColors.background, borderColor: cardColors.border }]}
+          style={[
+            styles.destinationCard,
+            { backgroundColor: cardColors.background, borderColor: cardColors.border },
+          ]}
           onPress={() => {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
             if (item.type === 'destination') {
-              router.push({ pathname: '/screens/DestinationDetail', params: { destinationId: item.id } });
+              router.push({
+                pathname: '/screens/DestinationDetail',
+                params: { destinationId: item.id },
+              });
             } else if (item.type === 'stay') {
               router.push({ pathname: '/stay-profile', params: { id: item.id } });
             } else if (item.type === 'event') {
@@ -247,43 +295,83 @@ export default function LikesScreen() {
             }
           }}
         >
-          <Image source={{ uri: item.image_url || `https://picsum.photos/400/300?random=${item.id}` }} style={styles.destinationImage} />
+          <Image
+            source={{ uri: item.image_url || `https://picsum.photos/400/300?random=${item.id}` }}
+            style={styles.destinationImage}
+          />
 
           <View style={styles.destinationContent}>
             <View style={styles.destinationHeader}>
               <View style={styles.destinationTitleSection}>
-                <ThemedText style={styles.destinationName} numberOfLines={1}>{item.name}</ThemedText>
+                <ThemedText style={styles.destinationName} numberOfLines={1}>
+                  {item.name}
+                </ThemedText>
               </View>
             </View>
 
             <View style={styles.countsRow}>
-              <View style={[styles.countPill, { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)' }]}>
+              <View
+                style={[
+                  styles.countPill,
+                  { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)' },
+                ]}
+              >
                 {item.type === 'stay' ? (
-                  <Ionicons name="bed-outline" size={12} color={isDark ? '#FFFFFF' : '#000000'} style={styles.pillIcon} />
+                  <Ionicons
+                    name="bed-outline"
+                    size={12}
+                    color={isDark ? '#FFFFFF' : '#000000'}
+                    style={styles.pillIcon}
+                  />
                 ) : item.type === 'destination' ? (
-                  <Ionicons name="location-outline" size={12} color={isDark ? '#FFFFFF' : '#000000'} style={styles.pillIcon} />
+                  <Ionicons
+                    name="location-outline"
+                    size={12}
+                    color={isDark ? '#FFFFFF' : '#000000'}
+                    style={styles.pillIcon}
+                  />
                 ) : item.type === 'event' ? (
-                  <Ionicons name="calendar-outline" size={12} color={isDark ? '#FFFFFF' : '#000000'} style={styles.pillIcon} />
+                  <Ionicons
+                    name="calendar-outline"
+                    size={12}
+                    color={isDark ? '#FFFFFF' : '#000000'}
+                    style={styles.pillIcon}
+                  />
                 ) : item.type === 'activity' ? (
-                  <Ionicons name="trail-sign-outline" size={12} color={isDark ? '#FFFFFF' : '#000000'} style={styles.pillIcon} />
+                  <Ionicons
+                    name="trail-sign-outline"
+                    size={12}
+                    color={isDark ? '#FFFFFF' : '#000000'}
+                    style={styles.pillIcon}
+                  />
                 ) : item.type === 'bus' ? (
-                  <Ionicons name="bus" size={12} color={isDark ? '#FFFFFF' : '#000000'} style={styles.pillIcon} />
+                  <Ionicons
+                    name="bus"
+                    size={12}
+                    color={isDark ? '#FFFFFF' : '#000000'}
+                    style={styles.pillIcon}
+                  />
                 ) : (
-                  <Ionicons name="airplane-outline" size={12} color={isDark ? '#FFFFFF' : '#000000'} style={styles.pillIcon} />
+                  <Ionicons
+                    name="airplane-outline"
+                    size={12}
+                    color={isDark ? '#FFFFFF' : '#000000'}
+                    style={styles.pillIcon}
+                  />
                 )}
 
                 <ThemedText style={[styles.pillText, { color: isDark ? '#FFFFFF' : '#000000' }]}>
                   {item.type === 'stay'
                     ? 'Stay'
                     : item.type === 'destination'
-                    ? 'Destination'
-                    : item.type === 'event'
-                    ? 'Event'
-                    : item.type === 'activity'
-                    ? 'Activity'
-                    : item.type === 'bus'
-                    ? 'Bus'
-                    : 'Flight'}
+                      ? 'Destination'
+                      : item.type === 'event'
+                        ? 'Event'
+                        : item.type === 'activity'
+                          ? 'Activity'
+                          : item.type === 'bus'
+                            ? 'Bus'
+                            : 'Flight'}
                 </ThemedText>
               </View>
             </View>
@@ -296,13 +384,22 @@ export default function LikesScreen() {
 
   return (
     <IOSScreenWrapper>
-      <ThemedView style={styles.container} lightColor={Colors.light.appBackground} darkColor={Colors.dark.appBackground}>
+      <ThemedView
+        style={styles.container}
+        lightColor={Colors.light.appBackground}
+        darkColor={Colors.dark.appBackground}
+      >
         <WallpaperPattern />
 
-        <CustomHeader showLogo leftAction={{ icon: 'chevron-back', onPress: handleGoBack, color: '#FF3B30' }} />
+        <CustomHeader
+          showLogo
+          leftAction={{ icon: 'chevron-back', onPress: handleGoBack, color: '#FF3B30' }}
+        />
 
         <View style={styles.titleSection}>
-          <ThemedText type="title1" style={styles.pageTitle}>Likes</ThemedText>
+          <ThemedText type="title1" style={styles.pageTitle}>
+            Likes
+          </ThemedText>
         </View>
 
         {searchSection}
@@ -316,7 +413,11 @@ export default function LikesScreen() {
             scrollEventThrottle={16}
             onMomentumScrollEnd={handleMomentumScrollEnd}
           >
-            <EmptyState icon="heart-outline" title="No Likes Yet" description="Items and places you like will appear here for easy access." />
+            <EmptyState
+              icon="heart-outline"
+              title="No Likes Yet"
+              description="Items and places you like will appear here for easy access."
+            />
           </ScrollView>
         ) : (
           <FlatList
@@ -341,16 +442,39 @@ const styles = StyleSheet.create({
   titleSection: { paddingHorizontal: 20, paddingVertical: 8, borderBottomWidth: 0 },
   pageTitle: { fontSize: responsiveFontSize(24), textAlign: 'left' },
   content: { flex: 1 },
-  contentContainer: { flexGrow: 1, justifyContent: 'center', paddingHorizontal: 20, paddingBottom: 100 },
+  contentContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    paddingHorizontal: 20,
+    paddingBottom: 100,
+  },
   listContent: { paddingHorizontal: 16, paddingBottom: 100 },
-  destinationCard: { flexDirection: 'row', borderRadius: 12, marginBottom: 12, overflow: 'hidden', padding: 16, gap: 16, alignItems: 'center' },
+  destinationCard: {
+    flexDirection: 'row',
+    borderRadius: 12,
+    marginBottom: 12,
+    overflow: 'hidden',
+    padding: 16,
+    gap: 16,
+    alignItems: 'center',
+  },
   destinationImage: { width: 90, height: 90, borderRadius: 12 },
   destinationContent: { flex: 1, justifyContent: 'center', gap: 8 },
-  destinationHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between' },
+  destinationHeader: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
   destinationTitleSection: { flex: 1, marginRight: 12 },
   destinationName: { fontSize: responsiveFontSize(18), fontWeight: '700' },
   countsRow: { flexDirection: 'row', gap: 8, marginTop: 8 },
-  countPill: { flexDirection: 'row', alignItems: 'center', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
+  countPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
   pillIcon: { marginRight: 4 },
   pillText: { fontSize: responsiveFontSize(12), fontWeight: '700' },
 });

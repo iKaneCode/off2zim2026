@@ -322,7 +322,6 @@ export default function PassengerDetails() {
   };
 
   const handleDobSelect = (dateString: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     // Format to DD/MM/YYYY for display
     const [year, month, day] = dateString.split('-');
     setDateOfBirth(`${day}/${month}/${year}`);
@@ -330,7 +329,6 @@ export default function PassengerDetails() {
   };
 
   const handleGoBack = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     router.back();
   };
 
@@ -355,7 +353,6 @@ export default function PassengerDetails() {
     }
 
     // All fields valid - proceed to payment
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     if (normalizedType === 'stay') {
       // For stays, pass the pricing and details received from stay-profile
@@ -502,7 +499,6 @@ export default function PassengerDetails() {
                   <Switch
                     value={sameAsAccountHolder}
                     onValueChange={value => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       setSameAsAccountHolder(value);
                       if (value) {
                         setPassengerFullName(accountHolderFullName);
@@ -569,7 +565,6 @@ export default function PassengerDetails() {
                     <TouchableOpacity
                       disabled={sameAsAccountHolder}
                       onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setShowTitlePicker(true);
                       }}
                       style={[
@@ -684,7 +679,6 @@ export default function PassengerDetails() {
                     <TouchableOpacity
                       disabled={sameAsAccountHolder}
                       onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setShowGenderPicker(true);
                       }}
                       style={[
@@ -745,7 +739,6 @@ export default function PassengerDetails() {
                     <TouchableOpacity
                       disabled={sameAsAccountHolder}
                       onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setShowIdTypePicker(true);
                       }}
                       style={[
@@ -846,7 +839,6 @@ export default function PassengerDetails() {
                     <TouchableOpacity
                       disabled={sameAsAccountHolder}
                       onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setShowDobPicker(true);
                       }}
                       style={[
@@ -907,7 +899,6 @@ export default function PassengerDetails() {
                     <TouchableOpacity
                       disabled={sameAsAccountHolder}
                       onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setShowNationalityPicker(true);
                       }}
                       style={[
@@ -1149,7 +1140,6 @@ export default function PassengerDetails() {
                           ]}
                           onPress={e => {
                             e.stopPropagation();
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                             setTitle(titleOption);
                             setShowTitlePicker(false);
                           }}
@@ -1257,7 +1247,6 @@ export default function PassengerDetails() {
                           ]}
                           onPress={e => {
                             e.stopPropagation();
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                             setGender(genderOption);
                             setShowGenderPicker(false);
                           }}
@@ -1365,7 +1354,6 @@ export default function PassengerDetails() {
                           ]}
                           onPress={e => {
                             e.stopPropagation();
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                             setIdType(idTypeOption);
                             setShowIdTypePicker(false);
                           }}
@@ -1534,7 +1522,6 @@ export default function PassengerDetails() {
                             ]}
                             onPress={e => {
                               e.stopPropagation();
-                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                               setNationality(zimbabwe.name);
                               setShowNationalityPicker(false);
                               setNationalitySearch('');
@@ -1542,7 +1529,11 @@ export default function PassengerDetails() {
                           >
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                               <ThemedText
-                                style={{ fontSize: responsiveFontSize(28), lineHeight: 34, includeFontPadding: false }}
+                                style={{
+                                  fontSize: responsiveFontSize(28),
+                                  lineHeight: 34,
+                                  includeFontPadding: false,
+                                }}
                               >
                                 {zimbabwe.flag}
                               </ThemedText>
@@ -1609,7 +1600,6 @@ export default function PassengerDetails() {
                               ]}
                               onPress={e => {
                                 e.stopPropagation();
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                                 setNationality(country.name);
                                 setShowNationalityPicker(false);
                                 setNationalitySearch('');
@@ -1713,7 +1703,6 @@ export default function PassengerDetails() {
                       activeOpacity={0.7}
                       onPress={e => {
                         e?.stopPropagation?.();
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setShowDobPicker(false);
                         setTimeout(() => setShowMonthPicker(true), 100);
                       }}
@@ -1728,7 +1717,6 @@ export default function PassengerDetails() {
                       activeOpacity={0.7}
                       onPress={e => {
                         e?.stopPropagation?.();
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setShowDobPicker(false);
                         setTimeout(() => setShowYearPicker(true), 100);
                       }}
@@ -1990,7 +1978,6 @@ export default function PassengerDetails() {
                             onPress={e => {
                               if (!isFutureMonth) {
                                 e.stopPropagation();
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                                 const newDate = new Date(currentDobCalendarMonth);
                                 newDate.setMonth(index);
                                 setCurrentDobCalendarMonth(newDate);
@@ -2121,7 +2108,6 @@ export default function PassengerDetails() {
                             onPress={e => {
                               if (!isFutureYear) {
                                 e.stopPropagation();
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                                 const newDate = new Date(currentDobCalendarMonth);
                                 newDate.setFullYear(year);
                                 setCurrentDobCalendarMonth(newDate);

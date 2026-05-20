@@ -1,12 +1,11 @@
 import React from 'react';
-import { View, TouchableOpacity, StyleSheet, Platform, Dimensions } from 'react-native';
+import { View, StyleSheet, Platform, Dimensions } from 'react-native';
 import { ThemedText } from '@/components/ThemedText';
 import { Logo } from '@/components/Logo';
 import Ionicons from '@expo/vector-icons/Ionicons';
-import { FontAwesome6 } from '@expo/vector-icons';
-import { useColorScheme } from '@/hooks/useColorScheme';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Fonts, responsiveFontSize } from '@/constants/Fonts';
+import { IconActionButton, ICON_ACTION_BUTTON_SIZE } from './IconActionButton';
 
 const { width: _screenWidth } = Dimensions.get('window');
 const _BASE = 390;
@@ -16,8 +15,6 @@ const rh = (size: number, min = size * 0.88, max = size * 1.12) =>
 
 const HEADER_H_PADDING = rh(16, 14, 20);
 const ACTION_BTN_SIZE = rh(44, 40, 48);
-const ICON_CIRCLE_SIZE = rh(36, 32, 40);
-const ICON_SIZE = rh(20, 18, 22);
 const TITLE_FONT_SIZE = responsiveFontSize(22);
 const TITLE_CONTAINER_HEIGHT = rh(44, 40, 48);
 const HEADER_MARGIN_BOTTOM = rh(15, 12, 18);
@@ -49,8 +46,6 @@ export function CustomHeader({
   titleStyle,
   expandedTitle = false,
 }: CustomHeaderProps) {
-  const colorScheme = useColorScheme();
-  const isDarkMode = colorScheme === 'dark';
   const insets = useSafeAreaInsets();
 
   const notchHeight = insets.top;
@@ -66,7 +61,7 @@ export function CustomHeader({
   };
 
   const renderActionButton = (action: HeaderAction, isLeft: boolean) => (
-    <TouchableOpacity
+    <View
       style={[
         styles.actionButton,
         {
@@ -74,25 +69,19 @@ export function CustomHeader({
           marginTop: Platform.OS === 'ios' ? -6 : 0,
         },
       ]}
-      onPress={() => handleActionPress(action)}
     >
-      <View
-        style={[
-          styles.headerIconCircle,
-          {
-            backgroundColor: isDarkMode ? '#402221' : '#F3E0E3',
-          },
-        ]}
-      >
-        {action.icon === 'chevron-back' ? (
-          <FontAwesome6 name="chevron-left" size={ICON_SIZE} color={action.color || '#FF3B30'} />
-        ) : action.icon === 'chevron-forward' ? (
-          <FontAwesome6 name="chevron-right" size={ICON_SIZE} color={action.color || '#FF3B30'} />
-        ) : (
-          <Ionicons name={action.icon as any} size={ICON_SIZE} color={action.color || '#FF3B30'} />
-        )}
-      </View>
-    </TouchableOpacity>
+      <IconActionButton
+        variant={
+          action.icon === 'chevron-back'
+            ? 'back'
+            : action.icon === 'chevron-forward'
+              ? 'forward'
+              : 'custom'
+        }
+        iconName={action.icon as keyof typeof Ionicons.glyphMap}
+        onPress={() => handleActionPress(action)}
+      />
+    </View>
   );
 
   return (
@@ -114,7 +103,7 @@ export function CustomHeader({
         renderActionButton(leftAction, true)
       ) : (
         <View style={styles.actionButton}>
-          <View style={{ width: ICON_CIRCLE_SIZE, height: ICON_CIRCLE_SIZE }} />
+          <View style={{ width: ICON_ACTION_BUTTON_SIZE, height: ICON_ACTION_BUTTON_SIZE }} />
         </View>
       )}
 
@@ -137,7 +126,7 @@ export function CustomHeader({
         renderActionButton(rightAction, false)
       ) : (
         <View style={styles.actionButton}>
-          <View style={{ width: ICON_CIRCLE_SIZE, height: ICON_CIRCLE_SIZE }} />
+          <View style={{ width: ICON_ACTION_BUTTON_SIZE, height: ICON_ACTION_BUTTON_SIZE }} />
         </View>
       )}
     </View>
@@ -168,13 +157,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     zIndex: 2,
     paddingBottom: 0,
-  },
-  headerIconCircle: {
-    width: ICON_CIRCLE_SIZE,
-    height: ICON_CIRCLE_SIZE,
-    borderRadius: Math.round(ICON_CIRCLE_SIZE / 2),
-    justifyContent: 'center',
-    alignItems: 'center',
   },
   titleContainer: {
     flex: 1,

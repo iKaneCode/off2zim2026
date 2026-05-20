@@ -17,15 +17,14 @@ import { CustomHeader } from '@/components/CustomHeader';
 import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Ionicons } from '@expo/vector-icons';
-import * as Haptics from 'expo-haptics';
 import {
   isFavorited as isFavoritedUtil,
   toggleFavorite as toggleFavoriteUtil,
 } from '@/utils/favoritesUtils';
 import {
+  ProfileGalleryHeader,
   ProviderHeroCard,
   PushScreenOptions,
-  ViewAllButton,
   WebSlideTransition,
 } from '@/components';
 import { WallpaperPattern } from '@/components/WallpaperPattern';
@@ -193,7 +192,6 @@ export default function EventProfileScreen() {
   };
 
   const toggleFavorite = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     if (eventId) {
       toggleFavoriteUtil(eventId as string);
       setIsFavorited(isFavoritedUtil(eventId as string));
@@ -201,7 +199,6 @@ export default function EventProfileScreen() {
   };
 
   const handleShare = async () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     console.log('Share event');
   };
 
@@ -248,8 +245,6 @@ export default function EventProfileScreen() {
 
   const handleBuyTickets = useCallback(() => {
     if (!selectedTicketType) return;
-
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
 
     // totalPrice already calculated: price * quantity * 1.05 (5% service fee)
     const basePrice = selectedTicketType.price * ticketQuantity;
@@ -566,24 +561,21 @@ export default function EventProfileScreen() {
                       },
                     ]}
                   >
-                    <View style={styles.sectionHeader}>
-                      <ThemedText style={styles.sectionTitle}>Gallery</ThemedText>
-                      <ViewAllButton
-                        onPress={() =>
-                          router.push({
-                            pathname: '/gallery',
-                            params: {
-                              location: event.location,
-                              title: event.name,
-                              galleryType: 'provider',
-                              contextImage: event.images[0] || galleryImages[0],
-                              images: JSON.stringify(galleryImages),
-                              eventId: eventName,
-                            },
-                          })
-                        }
-                      />
-                    </View>
+                    <ProfileGalleryHeader
+                      onPress={() =>
+                        router.push({
+                          pathname: '/gallery',
+                          params: {
+                            location: event.location,
+                            title: event.name,
+                            galleryType: 'provider',
+                            contextImage: event.images[0] || galleryImages[0],
+                            images: JSON.stringify(galleryImages),
+                            eventId: eventName,
+                          },
+                        })
+                      }
+                    />
                     <View style={styles.gallerySectionContainer}>
                       <View style={styles.galleryRow}>
                         {/* First Image */}
@@ -891,7 +883,6 @@ export default function EventProfileScreen() {
                             ]}
                             onPress={() => {
                               if (ticketQuantity > 1) {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                 setTicketQuantity(prev => prev - 1);
                               }
                             }}
@@ -931,7 +922,6 @@ export default function EventProfileScreen() {
                             ]}
                             onPress={() => {
                               if (ticketQuantity < selectedTicketType.available) {
-                                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                                 setTicketQuantity(prev => prev + 1);
                               }
                             }}
@@ -1139,7 +1129,6 @@ export default function EventProfileScreen() {
                       ]}
                       onPress={e => {
                         e.stopPropagation();
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setSelectedTicketType(ticket);
                         setShowTicketPicker(false);
                       }}

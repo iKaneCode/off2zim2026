@@ -122,7 +122,6 @@ export default function FlightSearchScreen() {
   };
 
   const handleDateSelect = (dateString: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSelectedDate(dateString);
   };
 
@@ -158,7 +157,6 @@ export default function FlightSearchScreen() {
   };
 
   const handleReturnDateSelect = (dateString: string) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     setSelectedReturnDate(dateString);
   };
 
@@ -264,8 +262,6 @@ export default function FlightSearchScreen() {
 
   // Function to perform search with updated criteria
   const performSearch = () => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-
     // Set loading state
     setLoading(true);
 
@@ -278,12 +274,10 @@ export default function FlightSearchScreen() {
       setLoading(false);
 
       // Show success feedback
-      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     }, 1000);
   };
 
   const handleSelectFlight = (flight: FlightResult) => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
     router.push({
       pathname: '/payment',
       params: {
@@ -377,7 +371,6 @@ export default function FlightSearchScreen() {
                       },
                     ]}
                     onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       setSelectedTripType('oneWay');
                     }}
                     disabled={selectedTripType === 'oneWay'}
@@ -415,7 +408,6 @@ export default function FlightSearchScreen() {
                       },
                     ]}
                     onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       setSelectedTripType('return');
                     }}
                     disabled={selectedTripType === 'return'}
@@ -454,7 +446,6 @@ export default function FlightSearchScreen() {
                   </ThemedText>
                   <TouchableOpacity
                     onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       setShowFromPicker(true);
                     }}
                     activeOpacity={0.7}
@@ -493,7 +484,6 @@ export default function FlightSearchScreen() {
                   </ThemedText>
                   <TouchableOpacity
                     onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       setShowToPicker(true);
                     }}
                     activeOpacity={0.7}
@@ -532,7 +522,6 @@ export default function FlightSearchScreen() {
                   </ThemedText>
                   <TouchableOpacity
                     onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       setShowDatePicker(true);
                     }}
                     activeOpacity={0.7}
@@ -572,7 +561,6 @@ export default function FlightSearchScreen() {
                     </ThemedText>
                     <TouchableOpacity
                       onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setShowReturnDatePicker(true);
                       }}
                       activeOpacity={0.7}
@@ -622,7 +610,6 @@ export default function FlightSearchScreen() {
                   </ThemedText>
                   <TouchableOpacity
                     onPress={() => {
-                      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                       setShowPassengerPicker(true);
                     }}
                     activeOpacity={0.7}
@@ -731,7 +718,6 @@ export default function FlightSearchScreen() {
                         },
                       ]}
                       onPress={() => {
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                         setselectedDepartureFlight(
                           selectedDepartureFlight === bus.id ? null : bus.id
                         );
@@ -805,7 +791,6 @@ export default function FlightSearchScreen() {
                           Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
                           return;
                         }
-                        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                         router.push({
                           pathname: '/passenger-details',
                           params: {
@@ -868,7 +853,6 @@ export default function FlightSearchScreen() {
                           },
                         ]}
                         onPress={() => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                           setselectedReturnFlight(selectedReturnFlight === bus.id ? null : bus.id);
                           if (showReturnError) setShowReturnError(false);
                         }}
@@ -941,7 +925,6 @@ export default function FlightSearchScreen() {
                             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
                             return;
                           }
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                           router.push({
                             pathname: '/passenger-details',
                             params: {
@@ -1058,7 +1041,6 @@ export default function FlightSearchScreen() {
                             ]}
                             onPress={e => {
                               e.stopPropagation();
-                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                               setSelectedFromLocation(location);
                               setShowFromPicker(false);
                             }}
@@ -1171,7 +1153,6 @@ export default function FlightSearchScreen() {
                             ]}
                             onPress={e => {
                               e.stopPropagation();
-                              Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
                               setSelectedToLocation(location);
                               setShowToPicker(false);
                             }}
@@ -1741,7 +1722,6 @@ export default function FlightSearchScreen() {
                         ]}
                         onPress={() => {
                           if (selectedPassengers > 1) {
-                            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                             setSelectedPassengers(prev => prev - 1);
                           }
                         }}
@@ -1768,7 +1748,6 @@ export default function FlightSearchScreen() {
                           },
                         ]}
                         onPress={() => {
-                          Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
                           setSelectedPassengers(prev => prev + 1);
                         }}
                         activeOpacity={0.8}

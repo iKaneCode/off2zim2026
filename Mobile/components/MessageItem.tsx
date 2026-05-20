@@ -1,10 +1,17 @@
 import React, { useRef } from 'react';
-import { View, TouchableOpacity, StyleSheet, Animated, Platform, Dimensions, Image } from 'react-native';
+import {
+  View,
+  TouchableOpacity,
+  StyleSheet,
+  Animated,
+  Platform,
+  Dimensions,
+  Image,
+} from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { ThemedText } from '@/components/ThemedText';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { SwipeActions, SwipeAction } from './SwipeActions';
-import * as Haptics from 'expo-haptics';
 import { Fonts, responsiveFontSize, responsiveLineHeight } from '@/constants/Fonts';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -97,7 +104,6 @@ export function MessageItem({
 
   const handleSwipeStart = () => {
     if (Platform.OS === 'ios') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
     onSwipeStart?.();
   };
@@ -139,7 +145,11 @@ export function MessageItem({
           <View
             style={[
               styles.avatarContainer,
-              { backgroundColor: item.avatarImage ? 'transparent' : avatarColorFunction(item.avatar) },
+              {
+                backgroundColor: item.avatarImage
+                  ? 'transparent'
+                  : avatarColorFunction(item.avatar),
+              },
             ]}
           >
             {item.avatarImage ? (

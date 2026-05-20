@@ -35,6 +35,7 @@ import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
 import { useFeaturedData } from '@/context/FeaturedDataContext';
 import {
   CarouselIndicators,
+  IconActionButton,
   ViewAllButton,
   WallpaperPattern,
   DestinationCardShimmer,
@@ -45,12 +46,10 @@ import {
   StatusPill,
   EventCard,
 } from '@/components';
-import { FontAwesomeIcon } from '@fortawesome/react-native-fontawesome';
-import { faHeart as solidHeart } from '@fortawesome/free-solid-svg-icons';
-import { faHeart as regularHeart } from '@fortawesome/free-regular-svg-icons';
-import * as Haptics from 'expo-haptics';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import FontAwesome6 from '@expo/vector-icons/FontAwesome6';
+import { SvgUri } from 'react-native-svg';
+import { Asset } from 'expo-asset';
 import {
   subscribeFavorites,
   getFavoritedIds,
@@ -94,6 +93,9 @@ const OVERLAY_PADDING = responsiveSize(8, 7, 10);
 const HEART_SIZE = responsiveSize(36, 32, 42);
 const HEART_ICON_SIZE = responsiveSize(18, 16, 20);
 const FEATURED_BOTTOM_NAV_GAP = responsiveSize(16, 12, 22);
+const ACCOMMODATION_ICON_ASSET = require('@/assets/icons/accommodation.svg');
+const EVENTS_ICON_ASSET = require('@/assets/icons/events.svg');
+const THINGS_ICON_ASSET = require('@/assets/icons/things.svg');
 
 // Types for carousel data
 interface CarouselItem {
@@ -202,6 +204,69 @@ const FeaturedSectionCardShimmer = React.memo(
 
 FeaturedSectionCardShimmer.displayName = 'FeaturedSectionCardShimmer';
 
+function SvgAssetIcon({
+  asset,
+  color,
+  size = 18,
+}: {
+  asset: ReturnType<typeof Asset.fromModule>;
+  color: string;
+  size?: number;
+}) {
+  const [uri, setUri] = useState<string | null>(
+    asset.localUri ?? (asset.downloaded ? asset.uri : null)
+  );
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const prepareAsset = async () => {
+      if (!asset.localUri && !asset.downloaded) {
+        await asset.downloadAsync();
+      }
+
+      if (isMounted) {
+        setUri(asset.localUri ?? asset.uri);
+      }
+    };
+
+    prepareAsset();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [asset]);
+
+  if (!uri) {
+    return <View style={{ width: size, height: size }} />;
+  }
+
+  return <SvgUri uri={uri} width={size} height={size} color={color} fill={color} />;
+}
+
+function AccommodationIcon({ color, size = 18 }: { color: string; size?: number }) {
+  const asset = useMemo(() => Asset.fromModule(ACCOMMODATION_ICON_ASSET), []);
+  return <SvgAssetIcon asset={asset} color={color} size={size} />;
+}
+
+function EventsIcon({ color, size = 18 }: { color: string; size?: number }) {
+  const asset = useMemo(() => Asset.fromModule(EVENTS_ICON_ASSET), []);
+  return <SvgAssetIcon asset={asset} color={color} size={size} />;
+}
+
+function ThingsIcon({ color, size = 18 }: { color: string; size?: number }) {
+  const asset = useMemo(() => Asset.fromModule(THINGS_ICON_ASSET), []);
+  return <SvgAssetIcon asset={asset} color={color} size={size} />;
+}
+
+function FeaturedSectionTitle({ children, color }: { children: React.ReactNode; color: string }) {
+  return (
+    <ThemedText type="caption" style={[styles.featuredSectionTitleText, { color }]}>
+      {children}
+    </ThemedText>
+  );
+}
+
 // Database destination type
 type DatabaseDestination = {
   id: string;
@@ -285,8 +350,11 @@ const DestinationCard = React.memo(
           onLoad={handleImageLoadComplete}
           onError={handleImageErrorComplete}
         />
-        <TouchableOpacity
-          style={[styles.heartContainer, { backgroundColor: pillBg }]}
+        <IconActionButton
+          variant="like"
+          isActive={isFavorited}
+          size={HEART_SIZE}
+          style={styles.heartContainer}
           onPress={handleFavoritePress}
           hitSlop={{
             top: OVERLAY_PADDING,
@@ -296,15 +364,8 @@ const DestinationCard = React.memo(
           }}
           accessibilityRole="button"
           accessibilityLabel={`Favorite ${item.name} ${isFavorited ? 'selected' : 'not selected'}`}
-        >
-          <Animated.View style={{ transform: [{ scale: heartScale }] }}>
-            <FontAwesomeIcon
-              icon={isFavorited ? solidHeart : regularHeart}
-              size={18}
-              color="#FF4757"
-            />
-          </Animated.View>
-        </TouchableOpacity>
+          iconContainerStyle={{ transform: [{ scale: heartScale }] }}
+        />
         <View style={styles.destinationInfo}>
           <ThemedText
             style={styles.destinationName}
@@ -372,8 +433,11 @@ const StayCard = React.memo(
         onPress={handleStayPress}
       >
         <Image source={{ uri: displayImage }} style={styles.destinationImage} resizeMode="cover" />
-        <TouchableOpacity
-          style={[styles.heartContainer, { backgroundColor: pillBg }]}
+        <IconActionButton
+          variant="like"
+          isActive={isFavorited}
+          size={HEART_SIZE}
+          style={styles.heartContainer}
           onPress={handleFavoritePress}
           hitSlop={{
             top: OVERLAY_PADDING,
@@ -383,15 +447,8 @@ const StayCard = React.memo(
           }}
           accessibilityRole="button"
           accessibilityLabel={`Favorite ${item.name} ${isFavorited ? 'selected' : 'not selected'}`}
-        >
-          <Animated.View style={{ transform: [{ scale: heartScale }] }}>
-            <FontAwesomeIcon
-              icon={isFavorited ? solidHeart : regularHeart}
-              size={18}
-              color="#FF4757"
-            />
-          </Animated.View>
-        </TouchableOpacity>
+          iconContainerStyle={{ transform: [{ scale: heartScale }] }}
+        />
         <View style={styles.stayInfoContainer}>
           {/* Rating above overlay, right-aligned */}
           <View style={styles.stayTopRow}>
@@ -492,8 +549,11 @@ const ThingsCard = React.memo(
           style={styles.destinationImage}
           resizeMode="cover"
         />
-        <TouchableOpacity
-          style={[styles.heartContainer, { backgroundColor: pillBg }]}
+        <IconActionButton
+          variant="like"
+          isActive={isFavorited}
+          size={HEART_SIZE}
+          style={styles.heartContainer}
           onPress={() => onToggleFavorite(item.id, 'activity')}
           hitSlop={{
             top: OVERLAY_PADDING,
@@ -503,15 +563,8 @@ const ThingsCard = React.memo(
           }}
           accessibilityRole="button"
           accessibilityLabel={`Favorite ${item.name} ${isFavorited ? 'selected' : 'not selected'}`}
-        >
-          <Animated.View style={{ transform: [{ scale: heartScale }] }}>
-            <FontAwesomeIcon
-              icon={isFavorited ? solidHeart : regularHeart}
-              size={18}
-              color="#FF4757"
-            />
-          </Animated.View>
-        </TouchableOpacity>
+          iconContainerStyle={{ transform: [{ scale: heartScale }] }}
+        />
         <View style={styles.eventInfoContainer}>
           {/* Rating above overlay, right-aligned */}
           <View style={styles.eventTopRow}>
@@ -578,7 +631,6 @@ const BusCard = React.memo(
     const pillTextColor = colorScheme === 'dark' ? '#FFFFFF' : '#000000';
 
     const handleBusPress = useCallback(() => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       router.push({
         pathname: '/bus-profile',
         params: {
@@ -596,8 +648,11 @@ const BusCard = React.memo(
           style={styles.destinationImage}
           resizeMode="cover"
         />
-        <TouchableOpacity
-          style={[styles.heartContainer, { backgroundColor: pillBg }]}
+        <IconActionButton
+          variant="like"
+          isActive={isFavorited}
+          size={HEART_SIZE}
+          style={styles.heartContainer}
           onPress={() => onToggleFavorite(item.id, 'bus')}
           hitSlop={{
             top: OVERLAY_PADDING,
@@ -607,15 +662,8 @@ const BusCard = React.memo(
           }}
           accessibilityRole="button"
           accessibilityLabel={`Favorite ${item.name} ${isFavorited ? 'selected' : 'not selected'}`}
-        >
-          <Animated.View style={{ transform: [{ scale: heartScale }] }}>
-            <FontAwesomeIcon
-              icon={isFavorited ? solidHeart : regularHeart}
-              size={18}
-              color="#FF4757"
-            />
-          </Animated.View>
-        </TouchableOpacity>
+          iconContainerStyle={{ transform: [{ scale: heartScale }] }}
+        />
         <View style={styles.eventInfoContainer}>
           {/* Rating above overlay, right-aligned */}
           <View style={styles.eventTopRow}>
@@ -664,7 +712,6 @@ const FlightCard = React.memo(
     const pillTextColor = colorScheme === 'dark' ? '#FFFFFF' : '#000000';
 
     const handleFlightPress = useCallback(() => {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
       router.push({
         pathname: '/flight-profile',
         params: {
@@ -682,8 +729,11 @@ const FlightCard = React.memo(
           style={styles.destinationImage}
           resizeMode="cover"
         />
-        <TouchableOpacity
-          style={[styles.heartContainer, { backgroundColor: pillBg }]}
+        <IconActionButton
+          variant="like"
+          isActive={isFavorited}
+          size={HEART_SIZE}
+          style={styles.heartContainer}
           onPress={() => onToggleFavorite(item.id, 'flight')}
           hitSlop={{
             top: OVERLAY_PADDING,
@@ -693,15 +743,8 @@ const FlightCard = React.memo(
           }}
           accessibilityRole="button"
           accessibilityLabel={`Favorite ${item.name} ${isFavorited ? 'selected' : 'not selected'}`}
-        >
-          <Animated.View style={{ transform: [{ scale: heartScale }] }}>
-            <FontAwesomeIcon
-              icon={isFavorited ? solidHeart : regularHeart}
-              size={18}
-              color="#FF4757"
-            />
-          </Animated.View>
-        </TouchableOpacity>
+          iconContainerStyle={{ transform: [{ scale: heartScale }] }}
+        />
         <View style={styles.eventInfoContainer}>
           {/* Rating above overlay, right-aligned */}
           <View style={styles.eventTopRow}>
@@ -736,6 +779,7 @@ FlightCard.displayName = 'FeaturedFlightCard';
 
 export default function Featured() {
   const colorScheme = useColorScheme();
+  const sectionIconColor = colorScheme === 'dark' ? '#FFFFFF' : '#1C1C1E';
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const bottomTabBarHeight = useBottomTabBarHeight();
@@ -1185,7 +1229,6 @@ export default function Featured() {
       setFavorites(prev => ({ ...prev, [id]: !prev[id] }));
 
       // Haptics + bounce animation using id as key
-      Haptics.selectionAsync().catch(() => {});
       const scale = getHeartScale(id);
       Animated.sequence([
         Animated.timing(scale, { toValue: 1.15, duration: 100, useNativeDriver: true }),
@@ -1682,10 +1725,13 @@ export default function Featured() {
                 },
               ]}
             >
-              <View style={styles.sectionHeader}>
-                <ThemedText type="sectionTitle" style={styles.sectionTitle}>
-                  Stays
-                </ThemedText>
+              <View style={styles.featuredSectionHeader}>
+                <View style={styles.featuredHeaderIcon}>
+                  <AccommodationIcon size={24} color={sectionIconColor} />
+                </View>
+                <View style={styles.featuredHeaderTitleGroup}>
+                  <FeaturedSectionTitle color={sectionIconColor}>Stays</FeaturedSectionTitle>
+                </View>
                 <ViewAllButton onPress={() => navigation.navigate('Stays' as never)} />
               </View>
 
@@ -1727,10 +1773,15 @@ export default function Featured() {
                 },
               ]}
             >
-              <View style={styles.sectionHeader}>
-                <ThemedText type="sectionTitle" style={styles.sectionTitle}>
-                  Upcoming Events
-                </ThemedText>
+              <View style={styles.featuredSectionHeader}>
+                <View style={styles.featuredHeaderIcon}>
+                  <EventsIcon size={24} color={sectionIconColor} />
+                </View>
+                <View style={styles.featuredHeaderTitleGroup}>
+                  <FeaturedSectionTitle color={sectionIconColor}>
+                    Upcoming Events
+                  </FeaturedSectionTitle>
+                </View>
                 <ViewAllButton onPress={() => navigation.navigate('Events' as never)} />
               </View>
 
@@ -1771,10 +1822,13 @@ export default function Featured() {
                 },
               ]}
             >
-              <View style={styles.sectionHeader}>
-                <ThemedText type="sectionTitle" style={styles.sectionTitle}>
-                  Things To Do
-                </ThemedText>
+              <View style={styles.featuredSectionHeader}>
+                <View style={styles.featuredHeaderIcon}>
+                  <ThingsIcon size={24} color={sectionIconColor} />
+                </View>
+                <View style={styles.featuredHeaderTitleGroup}>
+                  <FeaturedSectionTitle color={sectionIconColor}>Things To Do</FeaturedSectionTitle>
+                </View>
                 <ViewAllButton onPress={() => navigation.navigate('ThingsToDo' as never)} />
               </View>
 
@@ -1990,6 +2044,31 @@ const styles = StyleSheet.create({
   sectionTitle: {
     marginBottom: 0,
   },
+  featuredSectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+    gap: 12,
+    marginBottom: responsiveSize(12, 10, 16),
+    paddingHorizontal: GALLERY_CONTAINER_PADDING,
+    paddingTop: SECTION_HORIZONTAL_MARGIN,
+  },
+  featuredHeaderIcon: {
+    width: 36,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  featuredHeaderTitleGroup: {
+    flex: 1,
+  },
+  featuredSectionTitleText: {
+    fontSize: responsiveFontSize(20),
+    lineHeight: responsiveLineHeight(21),
+    fontFamily: Fonts.bold,
+    letterSpacing: 0,
+  },
   destinationsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -2034,7 +2113,6 @@ const styles = StyleSheet.create({
     width: HEART_SIZE,
     height: HEART_SIZE,
     borderRadius: HEART_SIZE / 2,
-    backgroundColor: 'rgba(255, 255, 255, 0.3)', // overridden per card with pillBg
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 2,

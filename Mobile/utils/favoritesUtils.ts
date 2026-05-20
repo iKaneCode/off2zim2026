@@ -3,6 +3,7 @@ import { buildSession } from '@/lib/api';
 
 // In-memory favorites store (IDs)
 let favorites = new Set<string>();
+let favoriteTypes = new Map<string, string>();
 
 // Subscribers to notify on changes (simple pub/sub for React reactivity)
 type Subscriber = () => void;
@@ -31,6 +32,7 @@ export const subscribeFavorites = (cb: Subscriber) => {
  */
 export const initFavorites = async (userId?: string) => {
   favorites.clear();
+  favoriteTypes.clear();
   if (!userId) return;
 
   try {
@@ -41,7 +43,12 @@ export const initFavorites = async (userId?: string) => {
     }
 
     (data || []).forEach((row: any) => {
-      if (row && row.item_id) favorites.add(row.item_id);
+      if (row && row.item_id) {
+        favorites.add(row.item_id);
+        if (row.item_type) {
+          favoriteTypes.set(row.item_id, row.item_type);
+        }
+      }
     });
 
     console.debug(`initFavorites: loaded ${favorites.size} favorites for user ${userId}`);
@@ -65,7 +72,14 @@ export const isFavorited = (itemId: string): boolean => {
  */
 export const toggleFavorite = (itemId: string, itemType?: string): boolean => {
   const nowFavorited = !favorites.has(itemId);
-  if (nowFavorited) favorites.add(itemId); else favorites.delete(itemId);
+  const previousType = itemType ?? favoriteTypes.get(itemId);
+  if (nowFavorited) {
+    favorites.add(itemId);
+    if (itemType) favoriteTypes.set(itemId, itemType);
+  } else {
+    favorites.delete(itemId);
+    favoriteTypes.delete(itemId);
+  }
 
   // Notify subscribers immediately so UI can update
   notifySubscribers();
@@ -79,8 +93,9 @@ export const toggleFavorite = (itemId: string, itemType?: string): boolean => {
       if (nowFavorited) {
         await favoritesService.add(user.id, itemType ?? 'unknown', itemId);
       } else {
-        if (itemType) {
-          await favoritesService.remove(user.id, itemType, itemId);
+        const resolvedType = previousType;
+        if (resolvedType) {
+          await favoritesService.remove(user.id, resolvedType, itemId);
         } else {
           await favoritesService.remove(user.id, 'unknown', itemId);
         }
@@ -95,6 +110,7 @@ export const toggleFavorite = (itemId: string, itemType?: string): boolean => {
 
 export const addToFavorites = (itemId: string, itemType?: string) => {
   favorites.add(itemId);
+  if (itemType) favoriteTypes.set(itemId, itemType);
   notifySubscribers();
   (async () => {
     try {
@@ -109,6 +125,7 @@ export const addToFavorites = (itemId: string, itemType?: string) => {
 
 export const removeFromFavorites = (itemId: string, itemType?: string) => {
   favorites.delete(itemId);
+  favoriteTypes.delete(itemId);
   notifySubscribers();
   (async () => {
     try {
@@ -133,9 +150,26 @@ export const getAllFavorites = (): Record<string, boolean> => {
 
 export const clearAllFavorites = (): void => {
   favorites.clear();
+  favoriteTypes.clear();
   notifySubscribers();
 };
 
 export const getFavoritedIds = (): string[] => {
   return Array.from(favorites);
+};
+
+export const getFavoriteType = (itemId: string): string | undefined => {
+  return favoriteTypes.get(itemId);
+};
+
+export const getFavoritesByType = (): Record<string, string[]> => {
+  const grouped: Record<string, string[]> = {};
+  favorites.forEach(id => {
+    const type = favoriteTypes.get(id) ?? 'unknown';
+    if (!grouped[type]) {
+      grouped[type] = [];
+    }
+    grouped[type].push(id);
+  });
+  return grouped;
 };

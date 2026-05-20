@@ -1,14 +1,8 @@
 import React, { memo } from 'react';
-import {
-  View,
-  TouchableOpacity,
-  StyleSheet,
-  Image,
-  type StyleProp,
-  type ViewStyle,
-} from 'react-native';
+import { View, StyleSheet, Image, type StyleProp, type ViewStyle } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
+import { ActionPillButton } from './ActionPillButton';
 import { IconActionButton } from './IconActionButton';
 import { ThemedText } from './ThemedText';
 import { useColorScheme } from '@/hooks/useColorScheme';
@@ -86,9 +80,6 @@ function ProviderHeroCardComponent({
   const subtleBackground = isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)';
   const accentSurface = isDark ? '#1C1C1E' : '#FFFFFF';
   const textColor = isDark ? '#FFFFFF' : '#1C1C1E';
-  const directionsBackground = isDark ? 'rgba(0,122,255,0.15)' : 'rgba(0,122,255,0.08)';
-  const callBackground = isDark ? 'rgba(52,199,89,0.15)' : 'rgba(52,199,89,0.1)';
-  const messageBackground = isDark ? 'rgba(0,122,255,0.15)' : 'rgba(0,122,255,0.1)';
 
   const initial = (avatarInitial ?? title.charAt(0) ?? '').toUpperCase();
   const fallbackLogoUrl = `https://api.dicebear.com/8.x/shapes/png?seed=${encodeURIComponent(title)}&size=128&backgroundColor=FF4757`;
@@ -190,61 +181,37 @@ function ProviderHeroCardComponent({
       {hasFooter ? (
         <View style={styles.footer}>
           {onCallPress ? (
-            <TouchableOpacity
-              style={[
-                styles.contactPill,
-                { backgroundColor: callBackground, opacity: callDisabled ? 0.5 : 1 },
-              ]}
+            <ActionPillButton
+              label={callLabel}
+              iconName={callIconName}
               onPress={onCallPress}
               disabled={callDisabled}
-              activeOpacity={0.85}
-            >
-              <View style={[styles.footerIconBubble, { backgroundColor: accentSurface }]}>
-                <Ionicons name={callIconName} size={12} color={callIconColor} />
-              </View>
-              <ThemedText style={[styles.contactText, { color: textColor }]}>
-                {callLabel}
-              </ThemedText>
-            </TouchableOpacity>
+              isDark={isDark}
+              tone="call"
+              iconColor={callIconColor}
+            />
           ) : null}
 
-          <TouchableOpacity
-            style={[
-              styles.contactPill,
-              { backgroundColor: directionsBackground, opacity: onDirectionsPress ? 1 : 0.4 },
-            ]}
+          <ActionPillButton
+            label={directionsLabel}
+            iconName="navigate"
             onPress={onDirectionsPress}
             disabled={!onDirectionsPress}
-            activeOpacity={0.85}
-          >
-            <View style={[styles.footerIconBubble, { backgroundColor: accentSurface }]}>
-              <Ionicons name="navigate" size={12} color="#0A84FF" />
-            </View>
-            <ThemedText
-              style={[styles.directionsText, { color: isDark ? '#FFFFFF' : '#0A84FF' }]}
-              numberOfLines={1}
-            >
-              {directionsLabel}
-            </ThemedText>
-          </TouchableOpacity>
+            isDark={isDark}
+            tone="directions"
+            iconColor="#0A84FF"
+          />
 
           {onMessagePress ? (
-            <TouchableOpacity
-              style={[
-                styles.contactPill,
-                { backgroundColor: messageBackground, opacity: messageDisabled ? 0.5 : 1 },
-              ]}
+            <ActionPillButton
+              label={messageLabel}
+              iconName={messageIconName}
               onPress={onMessagePress}
               disabled={messageDisabled}
-              activeOpacity={0.85}
-            >
-              <View style={[styles.footerIconBubble, { backgroundColor: accentSurface }]}>
-                <Ionicons name={messageIconName} size={12} color={messageIconColor} />
-              </View>
-              <ThemedText style={[styles.contactText, { color: textColor }]}>
-                {messageLabel}
-              </ThemedText>
-            </TouchableOpacity>
+              isDark={isDark}
+              tone="message"
+              iconColor={messageIconColor}
+            />
           ) : null}
         </View>
       ) : null}
@@ -335,26 +302,12 @@ const styles = StyleSheet.create({
     shadowRadius: 2,
     elevation: 0,
   },
-  footerIconBubble: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: 4,
-    elevation: 0,
-  },
   locationStatusRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 12,
     flexWrap: 'wrap',
-  },
-  directionsText: {
-    fontSize: responsiveFontSize(14),
-    fontFamily: Fonts.bold,
-    letterSpacing: 0.2,
   },
   ratingPill: {
     flexDirection: 'row',
@@ -376,19 +329,5 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: responsiveSize(12, 10, 16),
     marginHorizontal: -10,
-  },
-  contactPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: responsiveSize(12, 10, 14),
-    paddingVertical: responsiveSize(7, 5, 9),
-    borderRadius: 999,
-    flex: 1,
-  },
-  contactText: {
-    fontSize: responsiveFontSize(14),
-    fontFamily: Fonts.bold,
-    letterSpacing: 0.2,
   },
 });

@@ -9,6 +9,7 @@ import {
   StatusBar,
   Animated,
   Modal,
+  Linking,
 } from 'react-native';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ThemedView } from '@/components/ThemedView';
@@ -29,6 +30,7 @@ import {
 } from '@/components';
 import { WallpaperPattern } from '@/components/WallpaperPattern';
 import { responsiveFontSize, Fonts } from '@/constants/Fonts';
+import { buildProviderMessage, openProviderMessagesTab } from '@/utils/messageNavigation';
 
 const { width } = Dimensions.get('window');
 const HEADER_HEIGHT = 340;
@@ -193,7 +195,7 @@ export default function EventProfileScreen() {
 
   const toggleFavorite = () => {
     if (eventId) {
-      toggleFavoriteUtil(eventId as string);
+      toggleFavoriteUtil(eventId as string, 'event');
       setIsFavorited(isFavoritedUtil(eventId as string));
     }
   };
@@ -207,41 +209,28 @@ export default function EventProfileScreen() {
   }, []);
 
   const handleCallOrganizer = useCallback(() => {
-    console.log('Call organizer');
-  }, []);
+    if (!event?.organizer?.contact) {
+      return;
+    }
+
+    Linking.openURL(`tel:${event.organizer.contact}`).catch(() => {});
+  }, [event?.organizer?.contact]);
 
   const handleMessageOrganizer = useCallback(() => {
     if (!event?.organizer) {
       return;
     }
 
-    const messageData = {
+    const messageData = buildProviderMessage({
       id: `organizer-${eventId || 'unknown'}`,
-      name: event.name || 'Event',
-      message: '',
-      time: new Date().toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-      }),
-      isRead: true,
-      avatar: event.name.charAt(0).toUpperCase(),
+      name: event.organizer.name || event.name || 'Event',
       avatarImage: `https://api.dicebear.com/8.x/shapes/png?seed=${encodeURIComponent(event.name)}&size=128&backgroundColor=FF4757`,
-      avatarBgColor: isDark ? 'rgba(255, 71, 87, 0.18)' : 'rgba(255, 71, 87, 0.08)',
-      avatarBorderColor: '#FF4757',
-      status: 'received' as const,
-      isNewConversation: true,
-      organizerName: event.organizer.name,
-      eventId,
-    };
-
-    router.push({
-      pathname: '/message-detail',
-      params: {
-        message: JSON.stringify(messageData),
-      },
+      sourceType: 'event',
+      providerId: String(eventId || ''),
     });
-  }, [event, eventId, isDark, router]);
+
+    openProviderMessagesTab(messageData);
+  }, [event, eventId]);
 
   const handleBuyTickets = useCallback(() => {
     if (!selectedTicketType) return;
@@ -474,6 +463,7 @@ export default function EventProfileScreen() {
                     isFavorited={isFavorited}
                     onDirectionsPress={handleDirections}
                     onCallPress={handleCallOrganizer}
+                    callDisabled={!event.organizer?.contact}
                     onMessagePress={event.organizer ? handleMessageOrganizer : undefined}
                   />
                 </View>

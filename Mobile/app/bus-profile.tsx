@@ -38,6 +38,7 @@ import {
   ProviderHeroCard,
   WebSlideTransition,
 } from '@/components';
+import { buildProviderMessage, openProviderMessagesTab } from '@/utils/messageNavigation';
 
 const { width } = Dimensions.get('window');
 const HEADER_HEIGHT = 340;
@@ -166,32 +167,16 @@ export default function BusProfile() {
   }, []);
 
   const handleMessageOperator = useCallback(() => {
-    const messageData = {
+    const messageData = buildProviderMessage({
       id: `bus-${normalizedBusId || 'unknown'}`,
       name: bus.name || 'Bus Operator',
-      message: '',
-      time: new Date().toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-      }),
-      isRead: true,
-      avatar: bus.name.charAt(0).toUpperCase(),
       avatarImage: `https://api.dicebear.com/8.x/shapes/png?seed=${encodeURIComponent(bus.name)}&size=128&backgroundColor=FF4757`,
-      avatarBgColor: isDark ? 'rgba(255, 71, 87, 0.18)' : 'rgba(255, 71, 87, 0.08)',
-      avatarBorderColor: '#FF4757',
-      status: 'received' as const,
-      isNewConversation: true,
-      busId: normalizedBusId,
-    };
-
-    router.push({
-      pathname: '/message-detail',
-      params: {
-        message: JSON.stringify(messageData),
-      },
+      sourceType: 'bus',
+      providerId: normalizedBusId,
     });
-  }, [bus.name, isDark, normalizedBusId]);
+
+    openProviderMessagesTab(messageData);
+  }, [bus.name, normalizedBusId]);
 
   useEffect(() => {
     if (normalizedBusId) {
@@ -220,7 +205,7 @@ export default function BusProfile() {
   };
 
   const toggleFavorite = () => {
-    const newState = toggleFavoriteUtil(normalizedBusId);
+    const newState = toggleFavoriteUtil(normalizedBusId, 'bus');
     setIsFavorited(newState);
   };
 

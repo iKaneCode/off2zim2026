@@ -41,6 +41,7 @@ import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import { getAmenityIcon } from '@/utils/amenityUtils';
 import { staysService } from '@/services/database';
 import { useAuth } from '@/context/AuthContext';
+import { buildProviderMessage, openProviderMessagesTab } from '@/utils/messageNavigation';
 
 const { width } = Dimensions.get('window');
 const HEADER_HEIGHT = 340;
@@ -411,7 +412,7 @@ export default function StayProfileScreen() {
 
   const toggleFavorite = () => {
     if (normalizedStayId) {
-      toggleFavoriteUtil(normalizedStayId);
+      toggleFavoriteUtil(normalizedStayId, 'stay');
       setIsFavorited(isFavoritedUtil(normalizedStayId));
     }
   };
@@ -459,38 +460,18 @@ export default function StayProfileScreen() {
 
     // Use service provider name if available, otherwise fall back to stay name
     const providerName = stay.providerName || stay.name || 'Property';
-    const displayAvatar = stay.providerLogo ? undefined : providerName.charAt(0).toUpperCase();
-
-    const messageData = {
+    const messageData = buildProviderMessage({
       id: `provider-${stay.providerId || normalizedStayId || 'unknown'}`,
       name: providerName,
-      message: '',
-      time: new Date().toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-      }),
-      isRead: true,
-      avatar: displayAvatar,
       avatarImage:
         stay.providerLogo ||
         `https://api.dicebear.com/8.x/shapes/png?seed=${encodeURIComponent(stay.name || 'Property')}&size=128&backgroundColor=FF4757`,
-      avatarBgColor: isDark ? 'rgba(255, 71, 87, 0.18)' : 'rgba(255, 71, 87, 0.08)',
-      avatarBorderColor: '#FF4757',
-      status: 'received' as const,
-      isNewConversation: true,
-      hostName: stay.host?.name,
-      stayId: normalizedStayId,
+      sourceType: 'stay',
       providerId: stay.providerId,
-    };
-
-    router.push({
-      pathname: '/message-detail',
-      params: {
-        message: JSON.stringify(messageData),
-      },
     });
-  }, [stay, normalizedStayId, isDark]);
+
+    openProviderMessagesTab(messageData);
+  }, [stay, normalizedStayId]);
 
   // Booking helper functions
   const calculateNights = (checkIn: string, checkOut: string): number => {

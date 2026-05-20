@@ -139,6 +139,48 @@ export default function MessagesScreen() {
     }, [params.returnMessage])
   );
 
+  // Provider cards and drawer entry points land on the Messages tab without adding a back stack.
+  useFocusEffect(
+    useCallback(() => {
+      if (!params.providerMessage) {
+        return;
+      }
+
+      try {
+        const providerMessageData = JSON.parse(params.providerMessage as string) as MessageData;
+
+        setActiveFilter('all');
+        setSearchQuery('');
+        setMessages(prevMessages => {
+          const existingIndex = prevMessages.findIndex(m => m.id === providerMessageData.id);
+          const normalizedMessage = {
+            ...providerMessageData,
+            message: providerMessageData.message || 'Tap to start a conversation',
+            timestamp: Date.now(),
+            isRead: true,
+            unreadCount: 0,
+          };
+
+          if (existingIndex >= 0) {
+            const updatedMessages = [...prevMessages];
+            updatedMessages[existingIndex] = {
+              ...updatedMessages[existingIndex],
+              ...normalizedMessage,
+            };
+            const [updated] = updatedMessages.splice(existingIndex, 1);
+            return [updated, ...updatedMessages];
+          }
+
+          return [normalizedMessage, ...prevMessages];
+        });
+
+        router.setParams({ providerMessage: undefined });
+      } catch (error) {
+        console.error('Error parsing provider message:', error);
+      }
+    }, [params.providerMessage])
+  );
+
   const handleFilterChange = useCallback((filter: string) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setActiveFilter(filter);

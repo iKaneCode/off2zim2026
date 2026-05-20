@@ -4,7 +4,6 @@ import {
   View,
   StyleSheet,
   ScrollView,
-  FlatList,
   Image,
   TouchableOpacity,
   RefreshControl,
@@ -16,18 +15,17 @@ import { ThemedText } from '@/components/ThemedText';
 import { IOSScreenWrapper } from '@/components/IOSScreenWrapper';
 import { WallpaperPattern, useCollapsibleSearchSection } from '@/components';
 import { EmptyState } from '@/components/EmptyState';
-import { useThemeColor } from '@/hooks/useThemeColor';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { Colors } from '@/constants/Colors';
 import { destinationsService, staysService, eventsService } from '@/services/database';
-import { getFavoritedIds, subscribeFavorites } from '@/utils/favoritesUtils';
+import { getFavoritedIds, getFavoritesByType, subscribeFavorites } from '@/utils/favoritesUtils';
 import { thingsToDoData, busOperatorsData, flightOperatorsData } from '@/constants/FeaturedData';
 import { Ionicons } from '@expo/vector-icons';
 import { getCardSurfaceColors } from '@/constants/CardStyles';
 
 type LikedItem = {
   id: string;
-  type: 'destination' | 'stay' | 'event' | 'activity' | 'bus' | 'flight';
+  type: 'destination' | 'stay' | 'event' | 'activity' | 'bus' | 'flight' | 'gallery';
   name: string;
   description?: string | null;
   image_url?: string | null;
@@ -38,14 +36,37 @@ const filterOptions = [
   { key: 'all', label: 'All' },
   { key: 'destinations', label: 'Destinations' },
   { key: 'stays', label: 'Stays' },
-  { key: 'events', label: 'Events' },
+  { key: 'events', label: 'Upcoming Events' },
   { key: 'things', label: 'Things To Do' },
+  { key: 'gallery', label: 'Gallery' },
   { key: 'bus', label: 'Bus' },
   { key: 'flights', label: 'Flights' },
 ];
 
+const categoryOrder: LikedItem['type'][] = [
+  'stay',
+  'event',
+  'activity',
+  'gallery',
+  'bus',
+  'flight',
+  'destination',
+];
+
+const categoryMeta: Record<
+  LikedItem['type'],
+  { title: string; icon: keyof typeof Ionicons.glyphMap; label: string }
+> = {
+  stay: { title: 'Stays', icon: 'bed-outline', label: 'Stay' },
+  event: { title: 'Upcoming Events', icon: 'calendar-outline', label: 'Upcoming Event' },
+  activity: { title: 'Things To Do', icon: 'trail-sign-outline', label: 'Thing To Do' },
+  gallery: { title: 'Gallery', icon: 'images-outline', label: 'Gallery' },
+  bus: { title: 'Bus', icon: 'bus-outline', label: 'Bus' },
+  flight: { title: 'Flights', icon: 'airplane-outline', label: 'Flight' },
+  destination: { title: 'Destinations', icon: 'location-outline', label: 'Destination' },
+};
+
 export default function LikesScreen() {
-  const backgroundColor = useThemeColor({}, 'background');
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const cardColors = getCardSurfaceColors(colorScheme);
@@ -144,9 +165,12 @@ export default function LikesScreen() {
 
   const likedItems: LikedItem[] = useMemo(() => {
     const items: LikedItem[] = [];
+    const matchedFavoriteIds = new Set<string>();
+    const groupedFavoriteIds = getFavoritesByType();
 
     destinations.forEach(d => {
       if (isMarkedFavorite(d)) {
+        matchedFavoriteIds.add(d.id);
         items.push({
           id: d.id,
           type: 'destination',
@@ -160,6 +184,7 @@ export default function LikesScreen() {
 
     stays.forEach(s => {
       if (isMarkedFavorite(s)) {
+        matchedFavoriteIds.add(s.id);
         items.push({
           id: s.id,
           type: 'stay',
@@ -173,6 +198,7 @@ export default function LikesScreen() {
 
     events.forEach(e => {
       if (isMarkedFavorite(e)) {
+        matchedFavoriteIds.add(e.id);
         items.push({
           id: e.id,
           type: 'event',
@@ -186,6 +212,7 @@ export default function LikesScreen() {
 
     activities.forEach(a => {
       if (isMarkedFavorite(a)) {
+        matchedFavoriteIds.add(a.id);
         items.push({
           id: a.id,
           type: 'activity',
@@ -199,6 +226,7 @@ export default function LikesScreen() {
 
     buses.forEach(b => {
       if (isMarkedFavorite(b)) {
+        matchedFavoriteIds.add(b.id);
         items.push({
           id: b.id,
           type: 'bus',
@@ -212,6 +240,7 @@ export default function LikesScreen() {
 
     flights.forEach(f => {
       if (isMarkedFavorite(f)) {
+        matchedFavoriteIds.add(f.id);
         items.push({
           id: f.id,
           type: 'flight',
@@ -223,7 +252,26 @@ export default function LikesScreen() {
       }
     });
 
-    // Flights currently not supported; placeholder
+    const galleryFavoriteIds = [
+      ...(groupedFavoriteIds.gallery ?? []),
+      ...(groupedFavoriteIds.unknown ?? []).filter(id => /^https?:\/\//i.test(id)),
+    ];
+
+    galleryFavoriteIds.forEach((imageUrl, index) => {
+      if (matchedFavoriteIds.has(imageUrl)) {
+        return;
+      }
+
+      matchedFavoriteIds.add(imageUrl);
+      items.push({
+        id: imageUrl,
+        type: 'gallery',
+        name: `Gallery Image ${index + 1}`,
+        description: 'Saved gallery photo',
+        image_url: imageUrl,
+        meta: { imageUrl },
+      });
+    });
 
     // Apply search and filter
     let result = items;
@@ -249,6 +297,9 @@ export default function LikesScreen() {
       case 'things':
         result = result.filter(it => it.type === 'activity');
         break;
+      case 'gallery':
+        result = result.filter(it => it.type === 'gallery');
+        break;
       case 'bus':
         result = result.filter(it => it.type === 'bus');
         break;
@@ -266,7 +317,31 @@ export default function LikesScreen() {
     }
 
     return result;
-  }, [destinations, stays, searchQuery, activeFilter, sortDirection, favoritesVersion]);
+  }, [
+    destinations,
+    stays,
+    events,
+    activities,
+    buses,
+    flights,
+    searchQuery,
+    activeFilter,
+    sortDirection,
+    favoritesVersion,
+    isMarkedFavorite,
+  ]);
+
+  const likedSections = useMemo(
+    () =>
+      categoryOrder
+        .map(type => ({
+          type,
+          ...categoryMeta[type],
+          data: likedItems.filter(item => item.type === type),
+        }))
+        .filter(section => section.data.length > 0),
+    [likedItems]
+  );
 
   const renderLikedCard = useCallback(
     ({ item }: { item: LikedItem }) => {
@@ -283,15 +358,23 @@ export default function LikesScreen() {
                 params: { destinationId: item.id },
               });
             } else if (item.type === 'stay') {
-              router.push({ pathname: '/stay-profile', params: { id: item.id } });
+              router.push({ pathname: '/stay-profile', params: { stayId: item.id } });
             } else if (item.type === 'event') {
-              router.push({ pathname: '/event-profile', params: { id: item.id } });
+              router.push({ pathname: '/event-profile', params: { eventId: item.id } });
             } else if (item.type === 'activity') {
-              router.push({ pathname: '/activity-profile', params: { id: item.id } });
+              router.push({ pathname: '/activity-profile', params: { activityId: item.id } });
             } else if (item.type === 'bus') {
-              router.push({ pathname: '/bus-profile', params: { id: item.id } });
+              router.push({ pathname: '/bus-profile', params: { busName: item.name } });
             } else if (item.type === 'flight') {
-              router.push({ pathname: '/flight-profile', params: { id: item.id } });
+              router.push({ pathname: '/flight-profile', params: { flightName: item.name } });
+            } else if (item.type === 'gallery') {
+              router.push({
+                pathname: '/gallery',
+                params: {
+                  images: JSON.stringify([item.image_url || item.id]),
+                  title: 'Gallery',
+                },
+              });
             }
           }}
         >
@@ -316,62 +399,15 @@ export default function LikesScreen() {
                   { backgroundColor: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)' },
                 ]}
               >
-                {item.type === 'stay' ? (
-                  <Ionicons
-                    name="bed-outline"
-                    size={12}
-                    color={isDark ? '#FFFFFF' : '#000000'}
-                    style={styles.pillIcon}
-                  />
-                ) : item.type === 'destination' ? (
-                  <Ionicons
-                    name="location-outline"
-                    size={12}
-                    color={isDark ? '#FFFFFF' : '#000000'}
-                    style={styles.pillIcon}
-                  />
-                ) : item.type === 'event' ? (
-                  <Ionicons
-                    name="calendar-outline"
-                    size={12}
-                    color={isDark ? '#FFFFFF' : '#000000'}
-                    style={styles.pillIcon}
-                  />
-                ) : item.type === 'activity' ? (
-                  <Ionicons
-                    name="trail-sign-outline"
-                    size={12}
-                    color={isDark ? '#FFFFFF' : '#000000'}
-                    style={styles.pillIcon}
-                  />
-                ) : item.type === 'bus' ? (
-                  <Ionicons
-                    name="bus"
-                    size={12}
-                    color={isDark ? '#FFFFFF' : '#000000'}
-                    style={styles.pillIcon}
-                  />
-                ) : (
-                  <Ionicons
-                    name="airplane-outline"
-                    size={12}
-                    color={isDark ? '#FFFFFF' : '#000000'}
-                    style={styles.pillIcon}
-                  />
-                )}
+                <Ionicons
+                  name={categoryMeta[item.type].icon}
+                  size={12}
+                  color={isDark ? '#FFFFFF' : '#000000'}
+                  style={styles.pillIcon}
+                />
 
                 <ThemedText style={[styles.pillText, { color: isDark ? '#FFFFFF' : '#000000' }]}>
-                  {item.type === 'stay'
-                    ? 'Stay'
-                    : item.type === 'destination'
-                      ? 'Destination'
-                      : item.type === 'event'
-                        ? 'Event'
-                        : item.type === 'activity'
-                          ? 'Activity'
-                          : item.type === 'bus'
-                            ? 'Bus'
-                            : 'Flight'}
+                  {categoryMeta[item.type].label}
                 </ThemedText>
               </View>
             </View>
@@ -420,16 +456,41 @@ export default function LikesScreen() {
             />
           </ScrollView>
         ) : (
-          <FlatList
-            data={likedItems}
-            renderItem={renderLikedCard}
-            keyExtractor={i => `${i.type}-${i.id}`}
+          <ScrollView
+            style={styles.content}
             contentContainerStyle={styles.listContent}
             refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
             onScroll={handleScroll}
             scrollEventThrottle={16}
             onMomentumScrollEnd={handleMomentumScrollEnd}
-          />
+          >
+            {likedSections.map(section => (
+              <View key={section.type} style={styles.categorySection}>
+                <View style={styles.categoryHeader}>
+                  <View
+                    style={[
+                      styles.categoryIconBubble,
+                      {
+                        backgroundColor: isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)',
+                      },
+                    ]}
+                  >
+                    <Ionicons
+                      name={section.icon}
+                      size={18}
+                      color={isDark ? '#FFFFFF' : '#000000'}
+                    />
+                  </View>
+                  <ThemedText style={styles.categoryTitle}>{section.title}</ThemedText>
+                </View>
+                {section.data.map(item => (
+                  <React.Fragment key={`${item.type}-${item.id}`}>
+                    {renderLikedCard({ item })}
+                  </React.Fragment>
+                ))}
+              </View>
+            ))}
+          </ScrollView>
         )}
       </ThemedView>
     </IOSScreenWrapper>
@@ -449,6 +510,27 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   listContent: { paddingHorizontal: 16, paddingBottom: 100 },
+  categorySection: {
+    marginBottom: 18,
+  },
+  categoryHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 2,
+    marginBottom: 10,
+  },
+  categoryIconBubble: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  categoryTitle: {
+    fontSize: responsiveFontSize(20),
+    fontWeight: '800',
+  },
   destinationCard: {
     flexDirection: 'row',
     borderRadius: 12,

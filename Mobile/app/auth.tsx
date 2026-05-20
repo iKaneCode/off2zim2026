@@ -20,7 +20,7 @@ import { Asset } from 'expo-asset';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 import * as Haptics from 'expo-haptics';
 
-import { Logo } from '@/components';
+import { AuthActionButton, AuthPasswordField, AuthTextField, Logo } from '@/components';
 import { ThemedText } from '@/components/ThemedText';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { Colors } from '@/constants/Colors';
@@ -241,7 +241,6 @@ export default function AuthScreen() {
   const inactiveTabTextColor = colorScheme === 'dark' ? 'rgba(255,255,255,0.7)' : 'rgba(0,0,0,0.7)';
   const segmentBackground = colorScheme === 'dark' ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)';
   const segmentBorderColor = colorScheme === 'dark' ? 'rgba(255,255,255,0.16)' : 'rgba(0,0,0,0.08)';
-  const primaryButtonTextColor = colorScheme === 'dark' ? '#000000' : '#ffffff';
   const guestButtonBackground = colorScheme === 'dark' ? 'rgba(255,255,255,0.05)' : '#ffffff';
   const guestButtonBorderColor =
     colorScheme === 'dark' ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
@@ -1444,24 +1443,13 @@ export default function AuthScreen() {
                 )}
 
                 <View style={styles.actionButtons}>
-                  <TouchableOpacity
-                    style={[
-                      mode === 'sign-in' ? styles.signInButton : styles.primaryButton,
-                      { backgroundColor: palette.tint },
-                    ]}
+                  <AuthActionButton
+                    label={mode === 'sign-in' ? 'Sign In' : 'Create Account'}
+                    iconName={mode === 'sign-in' ? 'log-in-outline' : 'person-add-outline'}
+                    colorScheme={colorScheme}
                     onPress={handleSubmit}
-                    activeOpacity={0.5}
-                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                  >
-                    <Text
-                      style={[
-                        mode === 'sign-in' ? styles.signInButtonText : styles.primaryButtonText,
-                        { color: primaryButtonTextColor },
-                      ]}
-                    >
-                      {mode === 'sign-in' ? 'Sign In' : 'CREATE ACCOUNT'}
-                    </Text>
-                  </TouchableOpacity>
+                    uppercase={mode === 'sign-up'}
+                  />
                 </View>
 
                 {mode === 'sign-in' && variantConfig.allowGuest && (
@@ -2541,46 +2529,8 @@ type LabeledInputProps = BaseInputProps &
     | 'onSubmitEditing'
   >;
 
-function LabeledInput({
-  label,
-  placeholder,
-  value,
-  onChangeText,
-  placeholderColor,
-  colorScheme,
-  errorMessage,
-  hasError,
-  ...rest
-}: LabeledInputProps & { errorMessage?: string }) {
-  const textColor = colorScheme === 'dark' ? Colors.dark.text : Colors.light.text;
-  const isDarkMode = colorScheme === 'dark';
-  const backgroundColor = isDarkMode ? '#3A3A3C' : '#E5E5EA';
-  const borderColor = isDarkMode ? '#4A4A4A' : '#D4D4DA';
-
-  return (
-    <View style={{ gap: 8 }}>
-      <View style={styles.labelErrorContainer}>
-        <Text style={[styles.inputLabel, { color: textColor }]}>{label}</Text>
-        {errorMessage && <Text style={styles.inputRequired}>{errorMessage}</Text>}
-      </View>
-      <View
-        style={[
-          styles.inputWrapper,
-          { backgroundColor, borderColor },
-          hasError && styles.authErrorBorder,
-        ]}
-      >
-        <TextInput
-          style={[styles.textInput, { color: textColor }]}
-          placeholder={placeholder}
-          placeholderTextColor={placeholderColor}
-          value={value}
-          onChangeText={onChangeText}
-          {...rest}
-        />
-      </View>
-    </View>
-  );
+function LabeledInput({ errorMessage, ...props }: LabeledInputProps & { errorMessage?: string }) {
+  return <AuthTextField {...props} errorMessage={errorMessage} />;
 }
 
 interface PasswordInputProps extends BaseInputProps {
@@ -2590,57 +2540,8 @@ interface PasswordInputProps extends BaseInputProps {
   returnKeyType?: React.ComponentProps<typeof TextInput>['returnKeyType'];
 }
 
-function PasswordInput({
-  label,
-  placeholder,
-  value,
-  onChangeText,
-  placeholderColor,
-  colorScheme,
-  onSubmitEditing,
-  textContentType,
-  autoComplete,
-  returnKeyType,
-  errorMessage,
-  hasError,
-}: PasswordInputProps & { errorMessage?: string }) {
-  const [showPassword, setShowPassword] = useState(false);
-  const textColor = colorScheme === 'dark' ? Colors.dark.text : Colors.light.text;
-  const isDarkMode = colorScheme === 'dark';
-  const backgroundColor = isDarkMode ? '#3A3A3C' : '#E5E5EA';
-  const borderColor = isDarkMode ? '#4A4A4A' : '#D4D4DA';
-
-  return (
-    <View style={{ gap: 8 }}>
-      <View style={styles.labelErrorContainer}>
-        <Text style={[styles.inputLabel, { color: textColor }]}>{label}</Text>
-        {errorMessage && <Text style={styles.inputRequired}>{errorMessage}</Text>}
-      </View>
-      <View
-        style={[
-          styles.inputWrapper,
-          { backgroundColor, borderColor },
-          hasError && styles.authErrorBorder,
-        ]}
-      >
-        <TextInput
-          style={[styles.textInput, { color: textColor }]}
-          placeholder={placeholder}
-          placeholderTextColor={placeholderColor}
-          value={value}
-          onChangeText={onChangeText}
-          secureTextEntry={!showPassword}
-          textContentType={textContentType ?? 'password'}
-          autoComplete={autoComplete}
-          returnKeyType={returnKeyType ?? 'go'}
-          onSubmitEditing={onSubmitEditing}
-        />
-        <TouchableOpacity style={styles.passwordEye} onPress={() => setShowPassword(prev => !prev)}>
-          <Ionicons name={showPassword ? 'eye-off' : 'eye'} size={22} color={textColor} />
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
+function PasswordInput({ errorMessage, ...props }: PasswordInputProps & { errorMessage?: string }) {
+  return <AuthPasswordField {...props} errorMessage={errorMessage} />;
 }
 
 const styles = StyleSheet.create({

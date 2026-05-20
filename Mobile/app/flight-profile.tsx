@@ -34,6 +34,7 @@ import {
   ProviderHeroCard,
   WebSlideTransition,
 } from '@/components';
+import { buildProviderMessage, openProviderMessagesTab } from '@/utils/messageNavigation';
 
 const { width } = Dimensions.get('window');
 const HEADER_HEIGHT = 340;
@@ -164,32 +165,16 @@ export default function FlightProfile() {
   }, []);
 
   const handleMessageAirline = useCallback(() => {
-    const messageData = {
+    const messageData = buildProviderMessage({
       id: `flight-${normalizedFlightId || 'unknown'}`,
       name: flight.name || 'Airline',
-      message: '',
-      time: new Date().toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-      }),
-      isRead: true,
-      avatar: flight.name.charAt(0).toUpperCase(),
       avatarImage: `https://api.dicebear.com/8.x/shapes/png?seed=${encodeURIComponent(flight.name)}&size=128&backgroundColor=FF4757`,
-      avatarBgColor: isDark ? 'rgba(255, 71, 87, 0.18)' : 'rgba(255, 71, 87, 0.08)',
-      avatarBorderColor: '#FF4757',
-      status: 'received' as const,
-      isNewConversation: true,
-      flightId: normalizedFlightId,
-    };
-
-    router.push({
-      pathname: '/message-detail',
-      params: {
-        message: JSON.stringify(messageData),
-      },
+      sourceType: 'flight',
+      providerId: normalizedFlightId,
     });
-  }, [flight.name, isDark, normalizedFlightId, router]);
+
+    openProviderMessagesTab(messageData);
+  }, [flight.name, normalizedFlightId]);
 
   useEffect(() => {
     if (normalizedFlightId) {
@@ -218,7 +203,7 @@ export default function FlightProfile() {
   };
 
   const toggleFavorite = () => {
-    const newState = toggleFavoriteUtil(normalizedFlightId);
+    const newState = toggleFavoriteUtil(normalizedFlightId, 'flight');
     setIsFavorited(newState);
   };
 

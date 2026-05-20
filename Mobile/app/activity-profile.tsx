@@ -9,6 +9,7 @@ import {
   StatusBar,
   Animated,
   Modal,
+  Linking,
 } from 'react-native';
 import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
 import { ThemedView } from '@/components/ThemedView';
@@ -32,6 +33,7 @@ import {
 } from '@/components';
 import { WallpaperPattern } from '@/components/WallpaperPattern';
 import { responsiveFontSize, Fonts } from '@/constants/Fonts';
+import { buildProviderMessage, openProviderMessagesTab } from '@/utils/messageNavigation';
 
 const { width } = Dimensions.get('window');
 const HEADER_HEIGHT = 340;
@@ -207,7 +209,7 @@ export default function ActivityProfileScreen() {
 
   const toggleFavorite = () => {
     if (activityId) {
-      toggleFavoriteUtil(activityId as string);
+      toggleFavoriteUtil(activityId as string, 'activity');
       setIsFavorited(isFavoritedUtil(activityId as string));
     }
   };
@@ -326,41 +328,28 @@ export default function ActivityProfileScreen() {
   }, []);
 
   const handleCallProvider = useCallback(() => {
-    console.log('Call provider');
-  }, []);
+    if (!activity?.provider?.contact) {
+      return;
+    }
+
+    Linking.openURL(`tel:${activity.provider.contact}`).catch(() => {});
+  }, [activity?.provider?.contact]);
 
   const handleMessageProvider = useCallback(() => {
     if (!activity?.provider) {
       return;
     }
 
-    const messageData = {
+    const messageData = buildProviderMessage({
       id: `provider-${activityId || 'unknown'}`,
-      name: activity.name || 'Activity',
-      message: '',
-      time: new Date().toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true,
-      }),
-      isRead: true,
-      avatar: activity.name.charAt(0).toUpperCase(),
+      name: activity.provider.name || activity.name || 'Activity',
       avatarImage: `https://api.dicebear.com/8.x/shapes/png?seed=${encodeURIComponent(activity.name)}&size=128&backgroundColor=FF4757`,
-      avatarBgColor: isDark ? 'rgba(255, 71, 87, 0.18)' : 'rgba(255, 71, 87, 0.08)',
-      avatarBorderColor: '#FF4757',
-      status: 'received' as const,
-      isNewConversation: true,
-      providerName: activity.provider.name,
-      activityId,
-    };
-
-    router.push({
-      pathname: '/message-detail',
-      params: {
-        message: JSON.stringify(messageData),
-      },
+      sourceType: 'activity',
+      providerId: String(activityId || ''),
     });
-  }, [activity, activityId, isDark, router]);
+
+    openProviderMessagesTab(messageData);
+  }, [activity, activityId]);
 
   // Date picker functions
   const handleDatePress = () => {
@@ -645,6 +634,7 @@ export default function ActivityProfileScreen() {
                     isFavorited={isFavorited}
                     onDirectionsPress={handleDirections}
                     onCallPress={handleCallProvider}
+                    callDisabled={!activity.provider?.contact}
                     onMessagePress={activity.provider ? handleMessageProvider : undefined}
                     statusPillProps={{
                       label: activityStatus.status,

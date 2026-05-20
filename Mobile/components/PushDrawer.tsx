@@ -29,7 +29,13 @@ import { faHeart as solidHeart } from '@fortawesome/free-solid-svg-icons/faHeart
 import { router } from 'expo-router';
 import { responsiveFontSize, responsiveSize, responsiveLineHeight, Fonts } from '@/constants/Fonts';
 import { useAuth } from '@/context/AuthContext';
-import { Logo } from '@/components';
+import {
+  AuthActionButton,
+  AuthPasswordField,
+  AuthTextField,
+  CalendarDatePickerModal,
+  Logo,
+} from '@/components';
 import { Ionicons } from '@expo/vector-icons';
 import { getProfile } from '@/context/AuthContext';
 import { countries } from '@/countries-fixed';
@@ -60,6 +66,20 @@ const FlagIcon = ({ size, color }: { size: number; color: string }) => {
 
   if (!uri) return null;
   return <SvgUri uri={uri} width={size} height={size} color={color} fill={color} />;
+};
+
+const formatDateForDisplay = (isoDate: string) => {
+  const [year, month, day] = isoDate.split('-');
+  return `${day}/${month}/${year}`;
+};
+
+const parseDisplayDate = (value?: string) => {
+  if (!value) return null;
+  const trimmed = value.trim();
+  const match = trimmed.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!match) return null;
+  const [, day, month, year] = match;
+  return `${year}-${month}-${day}`;
 };
 
 interface PushDrawerProps {
@@ -122,7 +142,6 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
   // Login form state
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
   // Sign-up form state
@@ -1147,48 +1166,25 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
               </TouchableOpacity>
             ) : (
               <View style={styles.guestButtonRow}>
-                <TouchableOpacity
-                  style={[
-                    styles.drawerLoginButton,
-                    { backgroundColor: isDark ? '#FFFFFF' : '#000000' },
-                  ]}
+                <AuthActionButton
+                  label="Login"
+                  iconName="log-in-outline"
+                  colorScheme={colorScheme}
                   onPress={showModal}
-                  activeOpacity={0.68}
-                >
-                  <Text
-                    style={[
-                      styles.drawerLoginButtonText,
-                      { color: isDark ? '#000000' : '#FFFFFF' },
-                    ]}
-                  >
-                    Login
-                  </Text>
-                </TouchableOpacity>
+                  style={styles.drawerAuthButton}
+                />
 
-                <TouchableOpacity
-                  style={[
-                    styles.drawerSignUpButton,
-                    {
-                      backgroundColor: isDark ? '#000000' : '#FFFFFF',
-                      borderWidth: 2,
-                      borderColor: isDark ? '#FFFFFF' : '#000000',
-                    },
-                  ]}
+                <AuthActionButton
+                  label="Sign Up"
+                  iconName="person-add-outline"
+                  colorScheme={colorScheme}
+                  variant="secondary"
                   onPress={() => {
                     onClose();
                     router.push('/sign-up');
                   }}
-                  activeOpacity={0.68}
-                >
-                  <Text
-                    style={[
-                      styles.drawerSignUpButtonText,
-                      { color: isDark ? '#FFFFFF' : '#000000' },
-                    ]}
-                  >
-                    Sign Up
-                  </Text>
-                </TouchableOpacity>
+                  style={styles.drawerAuthButton}
+                />
               </View>
             )}
           </View>
@@ -1269,63 +1265,38 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
               >
                 <View style={styles.modalForm}>
                   {/* Email Input */}
-                  <View style={styles.modalInputContainer}>
-                    <Text style={[styles.modalLabel, { color: themeTextColor }]}>Email</Text>
-                    <TextInput
-                      style={[
-                        styles.modalInput,
-                        {
-                          color: themeTextColor,
-                          backgroundColor: isDark ? '#2C2C2E' : '#f8f9fa',
-                        },
-                      ]}
-                      value={email}
-                      onChangeText={setEmail}
-                      placeholder="Enter your email"
-                      placeholderTextColor={isDark ? '#8E8E93' : '#999'}
-                      keyboardType="email-address"
-                      autoCapitalize="none"
-                      autoComplete="email"
-                      autoCorrect={false}
-                      textContentType="emailAddress"
-                      importantForAutofill="yes"
-                      autoFocus={false}
-                      enablesReturnKeyAutomatically
-                      returnKeyType="next"
-                      blurOnSubmit={false}
-                    />
-                  </View>
+                  <AuthTextField
+                    label="Email"
+                    value={email}
+                    onChangeText={setEmail}
+                    placeholder="Enter your email"
+                    placeholderColor={isDark ? '#8E8E93' : '#999'}
+                    colorScheme={colorScheme}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                    autoComplete="email"
+                    autoCorrect={false}
+                    textContentType="emailAddress"
+                    importantForAutofill="yes"
+                    autoFocus={false}
+                    enablesReturnKeyAutomatically
+                    returnKeyType="next"
+                    blurOnSubmit={false}
+                  />
 
                   {/* Password Input */}
-                  <View style={styles.modalInputContainer}>
-                    <Text style={[styles.modalLabel, { color: themeTextColor }]}>Password</Text>
-                    <View
-                      style={[
-                        styles.modalPasswordContainer,
-                        { backgroundColor: isDark ? '#2C2C2E' : '#f8f9fa' },
-                      ]}
-                    >
-                      <TextInput
-                        style={[styles.modalPasswordInput, { color: themeTextColor }]}
-                        value={password}
-                        onChangeText={setPassword}
-                        placeholder="Enter your password"
-                        placeholderTextColor={isDark ? '#8E8E93' : '#999'}
-                        secureTextEntry={!showPassword}
-                        autoComplete="password"
-                      />
-                      <TouchableOpacity
-                        style={styles.modalEyeIcon}
-                        onPress={() => setShowPassword(!showPassword)}
-                      >
-                        <Ionicons
-                          name={showPassword ? 'eye-off' : 'eye'}
-                          size={24}
-                          color={themeTextColor}
-                        />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
+                  <AuthPasswordField
+                    label="Password"
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="Enter your password"
+                    placeholderColor={isDark ? '#8E8E93' : '#999'}
+                    colorScheme={colorScheme}
+                    autoComplete="password"
+                    textContentType="password"
+                    returnKeyType="go"
+                    onSubmitEditing={handleLogin}
+                  />
 
                   {/* Forgot Password */}
                   <TouchableOpacity onPress={handleForgotPassword}>
@@ -1340,40 +1311,23 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
                   </TouchableOpacity>
 
                   {/* Login Button */}
-                  <TouchableOpacity
-                    style={[
-                      styles.modalLoginButton,
-                      { backgroundColor: isDark ? Colors.dark.tint : Colors.light.tint },
-                      loading && styles.modalLoginButtonDisabled,
-                    ]}
+                  <AuthActionButton
+                    label="Login"
+                    iconName="log-in-outline"
+                    colorScheme={colorScheme}
                     onPress={handleLogin}
+                    loading={loading}
                     disabled={loading}
-                  >
-                    {loading ? (
-                      <ActivityIndicator
-                        color={isDark ? Colors.dark.background : Colors.light.background}
-                      />
-                    ) : (
-                      <Text
-                        style={[
-                          styles.modalLoginButtonText,
-                          { color: isDark ? Colors.dark.background : Colors.light.background },
-                        ]}
-                      >
-                        Login
-                      </Text>
-                    )}
-                  </TouchableOpacity>
+                  />
 
                   {/* Cancel Button */}
-                  <TouchableOpacity
-                    style={[styles.modalCancelButton, { borderColor: isDark ? '#3A3A3C' : '#ddd' }]}
+                  <AuthActionButton
+                    label="Cancel"
+                    iconName="close-outline"
+                    colorScheme={colorScheme}
+                    variant="secondary"
                     onPress={hideModal}
-                  >
-                    <Text style={[styles.modalCancelButtonText, { color: themeTextColor }]}>
-                      Cancel
-                    </Text>
-                  </TouchableOpacity>
+                  />
                 </View>
               </View>
             </Animated.View>
@@ -2327,72 +2281,18 @@ export const PushDrawer: React.FC<PushDrawerProps> = ({ isVisible, onClose, onOp
         </TouchableOpacity>
       </Modal>
 
-      {/* Date of Birth Modal - Simple text input for now */}
-      <Modal
+      <CalendarDatePickerModal
         visible={showDobPicker}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowDobPicker(false)}
-      >
-        <TouchableOpacity
-          style={styles.pickerModalBackdrop}
-          onPress={() => setShowDobPicker(false)}
-          activeOpacity={1}
-        >
-          <View style={styles.pickerModalContainer}>
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={e => e.stopPropagation()}
-              style={[styles.pickerModalCard, { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF' }]}
-            >
-              <Text style={[styles.pickerModalTitle, { color: themeTextColor }]}>
-                Enter Date of Birth
-              </Text>
-              <View style={{ padding: 20 }}>
-                <Text style={[styles.modalLabel, { color: themeTextColor, marginBottom: 8 }]}>
-                  Format: DD/MM/YYYY
-                </Text>
-                <TextInput
-                  style={[
-                    styles.modalInput,
-                    {
-                      color: themeTextColor,
-                      backgroundColor: isDark ? '#2C2C2E' : '#f8f9fa',
-                      borderColor: isDark ? '#4A4A4A' : '#D4D4DA',
-                      borderWidth: 1,
-                    },
-                  ]}
-                  value={signUpDateOfBirth}
-                  onChangeText={setSignUpDateOfBirth}
-                  placeholder="DD/MM/YYYY"
-                  placeholderTextColor={isDark ? '#8E8E93' : '#999'}
-                  keyboardType="numbers-and-punctuation"
-                  maxLength={10}
-                />
-                <TouchableOpacity
-                  style={[
-                    styles.modalLoginButton,
-                    {
-                      backgroundColor: isDark ? Colors.dark.tint : Colors.light.tint,
-                      marginTop: 20,
-                    },
-                  ]}
-                  onPress={() => setShowDobPicker(false)}
-                >
-                  <Text
-                    style={[
-                      styles.modalLoginButtonText,
-                      { color: isDark ? Colors.dark.background : Colors.light.background },
-                    ]}
-                  >
-                    Done
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+        title="Date of Birth"
+        selectedDate={parseDisplayDate(signUpDateOfBirth)}
+        colorScheme={colorScheme}
+        maximumDate={new Date()}
+        onClose={() => setShowDobPicker(false)}
+        onSelectDate={date => {
+          setSignUpDateOfBirth(formatDateForDisplay(date));
+          setShowDobPicker(false);
+        }}
+      />
     </View>
   );
 };
@@ -2566,6 +2466,12 @@ const styles = StyleSheet.create({
     marginTop: 12,
     marginBottom: 16,
     gap: responsiveSize(9, 8, 11),
+  },
+  drawerAuthButton: {
+    flex: 1,
+    height: responsiveSize(44, 42, 48),
+    borderRadius: 100,
+    paddingHorizontal: responsiveSize(10, 8, 13),
   },
   drawerLoginButton: {
     flex: 1,

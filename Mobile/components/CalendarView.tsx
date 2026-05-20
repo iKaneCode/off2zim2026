@@ -592,11 +592,19 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                     </View>
                   ) : (
                     <View style={styles.inlineNoEventsContainer}>
-                      <FontAwesome6
-                        name="calendar-days"
-                        size={24}
-                        color={colorScheme === 'dark' ? '#555' : '#ccc'}
-                      />
+                      <View
+                        style={[
+                          styles.inlineNoEventsIconBubble,
+                          {
+                            backgroundColor:
+                              colorScheme === 'dark'
+                                ? 'rgba(175,82,222,0.22)'
+                                : 'rgba(175,82,222,0.14)',
+                          },
+                        ]}
+                      >
+                        <FontAwesome6 name="calendar-days" size={22} color="#AF52DE" />
+                      </View>
                       <ThemedText style={styles.inlineNoEventsText}>No events scheduled</ThemedText>
                     </View>
                   )}
@@ -825,6 +833,13 @@ const styles = {
     alignItems: 'center',
     paddingVertical: 24,
     paddingHorizontal: 16,
+  },
+  inlineNoEventsIconBubble: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   inlineNoEventsText: {
     fontSize: responsiveFontSize(14),

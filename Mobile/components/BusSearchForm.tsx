@@ -95,16 +95,14 @@ export function BusSearchForm({
             onPress={onOperatorPress}
             activeOpacity={0.8}
           >
-            {selectedOperator ? (
-              <View style={styles.selectionRow}>
-                <View style={[styles.iconBubble, { backgroundColor: bubbleBackground }]}>
-                  <FontAwesome6 name={operatorIconName} size={14} color="#8E8E93" />
-                </View>
-                <ThemedText style={styles.valueText}>{selectedOperator}</ThemedText>
+            <View style={styles.selectionRow}>
+              <View style={[styles.iconBubble, { backgroundColor: bubbleBackground }]}>
+                <FontAwesome6 name={operatorIconName} size={14} color="#8E8E93" />
               </View>
-            ) : (
-              <ThemedText style={styles.valueText}>Select operator</ThemedText>
-            )}
+              <ThemedText style={[styles.valueText, !selectedOperator && styles.placeholderText]}>
+                {selectedOperator || 'Select operator'}
+              </ThemedText>
+            </View>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -204,16 +202,14 @@ export function BusSearchForm({
           onPress={onPressFrom}
           activeOpacity={0.8}
         >
-          {selectedFromLocation ? (
-            <View style={styles.selectionRow}>
-              <View style={[styles.iconBubble, { backgroundColor: bubbleBackground }]}>
-                <Ionicons name="location" size={14} color={locationIconColor} />
-              </View>
-              <ThemedText style={styles.valueText}>{selectedFromLocation}</ThemedText>
+          <View style={styles.selectionRow}>
+            <View style={[styles.iconBubble, { backgroundColor: bubbleBackground }]}>
+              <Ionicons name="location" size={14} color={locationIconColor} />
             </View>
-          ) : (
-            <ThemedText style={styles.valueText}>{fromPlaceholder}</ThemedText>
-          )}
+            <ThemedText style={[styles.valueText, !selectedFromLocation && styles.placeholderText]}>
+              {selectedFromLocation || fromPlaceholder}
+            </ThemedText>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -233,16 +229,14 @@ export function BusSearchForm({
           onPress={onPressTo}
           activeOpacity={0.8}
         >
-          {selectedToLocation ? (
-            <View style={styles.selectionRow}>
-              <View style={[styles.iconBubble, { backgroundColor: bubbleBackground }]}>
-                <Ionicons name="location" size={14} color={locationIconColor} />
-              </View>
-              <ThemedText style={styles.valueText}>{selectedToLocation}</ThemedText>
+          <View style={styles.selectionRow}>
+            <View style={[styles.iconBubble, { backgroundColor: bubbleBackground }]}>
+              <Ionicons name="location" size={14} color={locationIconColor} />
             </View>
-          ) : (
-            <ThemedText style={styles.valueText}>{toPlaceholder}</ThemedText>
-          )}
+            <ThemedText style={[styles.valueText, !selectedToLocation && styles.placeholderText]}>
+              {selectedToLocation || toPlaceholder}
+            </ThemedText>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -262,16 +256,14 @@ export function BusSearchForm({
           onPress={onPressDepartureDate}
           activeOpacity={0.8}
         >
-          {selectedDate ? (
-            <View style={styles.selectionRow}>
-              <View style={[styles.iconBubble, { backgroundColor: bubbleBackground }]}>
-                <Ionicons name="calendar" size={14} color={calendarIconColor} />
-              </View>
-              <ThemedText style={styles.valueText}>{departureLabel}</ThemedText>
+          <View style={styles.selectionRow}>
+            <View style={[styles.iconBubble, { backgroundColor: bubbleBackground }]}>
+              <Ionicons name="calendar" size={14} color={calendarIconColor} />
             </View>
-          ) : (
-            <ThemedText style={styles.valueText}>{departureLabel}</ThemedText>
-          )}
+            <ThemedText style={[styles.valueText, !selectedDate && styles.placeholderText]}>
+              {departureLabel}
+            </ThemedText>
+          </View>
         </TouchableOpacity>
       </View>
 
@@ -292,16 +284,14 @@ export function BusSearchForm({
             onPress={onPressReturnDate}
             activeOpacity={0.8}
           >
-            {selectedReturnDate ? (
-              <View style={styles.selectionRow}>
-                <View style={[styles.iconBubble, { backgroundColor: bubbleBackground }]}>
-                  <Ionicons name="calendar" size={14} color={calendarIconColor} />
-                </View>
-                <ThemedText style={styles.valueText}>{returnLabel}</ThemedText>
+            <View style={styles.selectionRow}>
+              <View style={[styles.iconBubble, { backgroundColor: bubbleBackground }]}>
+                <Ionicons name="calendar" size={14} color={calendarIconColor} />
               </View>
-            ) : (
-              <ThemedText style={styles.valueText}>{returnLabel}</ThemedText>
-            )}
+              <ThemedText style={[styles.valueText, !selectedReturnDate && styles.placeholderText]}>
+                {returnLabel}
+              </ThemedText>
+            </View>
           </TouchableOpacity>
         </View>
       ) : null}
@@ -442,6 +432,10 @@ const styles = StyleSheet.create({
   valueText: {
     fontSize: responsiveFontSize(16),
     fontFamily: Fonts.medium,
+    flexShrink: 1,
+  },
+  placeholderText: {
+    opacity: 0.58,
   },
   sectionHeaderLabel: {
     marginBottom: 6,

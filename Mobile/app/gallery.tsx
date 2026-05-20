@@ -34,7 +34,10 @@ import Reanimated, {
 } from 'react-native-reanimated';
 import { Asset } from 'expo-asset';
 import { LocationPill } from '@/components/LocationPill';
-import { isFavorited as isFavoritedUtil } from '@/utils/favoritesUtils';
+import {
+  isFavorited as isFavoritedUtil,
+  toggleFavorite as toggleFavoriteUtil,
+} from '@/utils/favoritesUtils';
 import {
   IconActionButton,
   PushScreenOptions,
@@ -407,6 +410,9 @@ export default function GalleryScreen() {
     // Toggle favorite status
     setFavorites(prev => {
       const currentImageId = selectedImage || '';
+      if (currentImageId) {
+        toggleFavoriteUtil(currentImageId, 'gallery');
+      }
       return {
         ...prev,
         [currentImageId]: !prev[currentImageId],
@@ -442,6 +448,7 @@ export default function GalleryScreen() {
 
       // Toggle favorite status
       setFavorites(prev => ({ ...prev, [imageUrl]: !prev[imageUrl] }));
+      toggleFavoriteUtil(imageUrl, 'gallery');
     },
     [getHeartScale]
   );

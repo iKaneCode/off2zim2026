@@ -6,7 +6,6 @@ import {
   ScrollView,
   TextInput,
   TouchableOpacity,
-  ActivityIndicator,
   Modal,
 } from 'react-native';
 import { router } from 'expo-router';
@@ -24,6 +23,20 @@ import { CustomHeader } from '@/components/CustomHeader';
 import { ThemedView } from '@/components/ThemedView';
 import { ThemedText } from '@/components/ThemedText';
 import { WallpaperPattern } from '@/components/WallpaperPattern';
+import { AuthActionButton, CalendarDatePickerModal } from '@/components';
+
+const formatDateForDisplay = (isoDate: string) => {
+  const [year, month, day] = isoDate.split('-');
+  return `${day}/${month}/${year}`;
+};
+
+const parseDisplayDate = (value?: string) => {
+  if (!value) return null;
+  const match = value.trim().match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  if (!match) return null;
+  const [, day, month, year] = match;
+  return `${year}-${month}-${day}`;
+};
 
 export default function SignUpScreen() {
   const colorScheme = useColorScheme();
@@ -699,30 +712,15 @@ export default function SignUpScreen() {
           </View>
 
           {/* Create Account Button */}
-          <TouchableOpacity
-            style={[
-              styles.createButton,
-              { backgroundColor: isDark ? Colors.dark.tint : Colors.light.tint },
-              loading && styles.createButtonDisabled,
-            ]}
+          <AuthActionButton
+            label="Create Account"
+            iconName="person-add-outline"
+            colorScheme={colorScheme}
             onPress={handleSignUp}
+            loading={loading}
             disabled={loading}
-          >
-            {loading ? (
-              <ActivityIndicator
-                color={isDark ? Colors.dark.background : Colors.light.background}
-              />
-            ) : (
-              <Text
-                style={[
-                  styles.createButtonText,
-                  { color: isDark ? Colors.dark.background : Colors.light.background },
-                ]}
-              >
-                CREATE ACCOUNT
-              </Text>
-            )}
-          </TouchableOpacity>
+            uppercase
+          />
         </View>
       </ScrollView>
 
@@ -948,72 +946,18 @@ export default function SignUpScreen() {
         </TouchableOpacity>
       </Modal>
 
-      {/* Date of Birth Modal - Simple text input */}
-      <Modal
+      <CalendarDatePickerModal
         visible={showDobPicker}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowDobPicker(false)}
-      >
-        <TouchableOpacity
-          style={styles.pickerModalBackdrop}
-          onPress={() => setShowDobPicker(false)}
-          activeOpacity={1}
-        >
-          <View style={styles.pickerModalContainer}>
-            <TouchableOpacity
-              activeOpacity={1}
-              onPress={e => e.stopPropagation()}
-              style={[styles.pickerModalCard, { backgroundColor: isDark ? '#1C1C1E' : '#FFFFFF' }]}
-            >
-              <Text style={[styles.pickerModalTitle, { color: themeTextColor }]}>
-                Enter Date of Birth
-              </Text>
-              <View style={{ padding: 20 }}>
-                <Text style={[styles.label, { color: themeTextColor, marginBottom: 8 }]}>
-                  Format: DD/MM/YYYY
-                </Text>
-                <TextInput
-                  style={[
-                    styles.input,
-                    {
-                      color: themeTextColor,
-                      backgroundColor: inputBackground,
-                      borderColor: borderColor,
-                      borderWidth: 1,
-                    },
-                  ]}
-                  value={dateOfBirth}
-                  onChangeText={setDateOfBirth}
-                  placeholder="DD/MM/YYYY"
-                  placeholderTextColor={placeholderColor}
-                  keyboardType="numbers-and-punctuation"
-                  maxLength={10}
-                />
-                <TouchableOpacity
-                  style={[
-                    styles.createButton,
-                    {
-                      backgroundColor: isDark ? Colors.dark.tint : Colors.light.tint,
-                      marginTop: 20,
-                    },
-                  ]}
-                  onPress={() => setShowDobPicker(false)}
-                >
-                  <Text
-                    style={[
-                      styles.createButtonText,
-                      { color: isDark ? Colors.dark.background : Colors.light.background },
-                    ]}
-                  >
-                    Done
-                  </Text>
-                </TouchableOpacity>
-              </View>
-            </TouchableOpacity>
-          </View>
-        </TouchableOpacity>
-      </Modal>
+        title="Date of Birth"
+        selectedDate={parseDisplayDate(dateOfBirth)}
+        colorScheme={colorScheme}
+        maximumDate={new Date()}
+        onClose={() => setShowDobPicker(false)}
+        onSelectDate={date => {
+          setDateOfBirth(formatDateForDisplay(date));
+          setShowDobPicker(false);
+        }}
+      />
     </ThemedView>
   );
 }
@@ -1139,20 +1083,6 @@ const styles = StyleSheet.create({
   },
   pickerFlag: {
     fontSize: responsiveFontSize(24),
-  },
-  createButton: {
-    height: 50,
-    borderRadius: 8,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 10,
-  },
-  createButtonDisabled: {
-    opacity: 0.7,
-  },
-  createButtonText: {
-    fontSize: responsiveFontSize(18),
-    fontFamily: Fonts.bold,
   },
   pickerModalBackdrop: {
     flex: 1,

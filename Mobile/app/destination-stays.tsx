@@ -286,10 +286,6 @@ export default function DestinationStaysScreen() {
               </ThemedText>
               <LocationPill
                 label={resolvedLocation}
-                backgroundColor={isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)'}
-                iconBackgroundColor={isDark ? '#1C1C1E' : '#FFFFFF'}
-                lightTextColor={isDark ? '#FFFFFF' : '#000000'}
-                darkTextColor={isDark ? '#FFFFFF' : '#000000'}
                 variant="compact"
               />
             </View>

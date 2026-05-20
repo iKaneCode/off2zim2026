@@ -20,6 +20,7 @@ import * as Haptics from 'expo-haptics';
 import { responsiveFontSize, Fonts } from '@/constants/Fonts';
 import { WallpaperPattern } from '@/components/WallpaperPattern';
 import { getCardSurfaceColors } from '@/constants/CardStyles';
+import { LocationPill } from '@/components/LocationPill';
 import { PanGestureHandler, State } from 'react-native-gesture-handler';
 
 interface FlightResult {
@@ -740,37 +741,21 @@ export default function FlightSearchScreen() {
                     >
                       {/* Location Pills */}
                       <View style={styles.locationPillsContainer}>
-                        <View
-                          style={[
-                            styles.locationPill,
-                            {
-                              backgroundColor: isDark
-                                ? 'rgba(255,255,255,0.1)'
-                                : 'rgba(0,0,0,0.05)',
-                            },
-                          ]}
-                        >
-                          <Ionicons name="location-outline" size={12} color="#FF3B30" />
-                          <ThemedText style={styles.locationPillText}>
-                            {selectedFromLocation}
-                          </ThemedText>
-                        </View>
+                        <LocationPill
+                          label={selectedFromLocation}
+                          backgroundColor={isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}
+                          iconName="location-outline"
+                          variant="compact"
+                          style={{ flex: 1, justifyContent: 'center', borderRadius: 10 }}
+                        />
                         <View style={{ width: 60 }} />
-                        <View
-                          style={[
-                            styles.locationPill,
-                            {
-                              backgroundColor: isDark
-                                ? 'rgba(255,255,255,0.1)'
-                                : 'rgba(0,0,0,0.05)',
-                            },
-                          ]}
-                        >
-                          <Ionicons name="location-outline" size={12} color="#FF3B30" />
-                          <ThemedText style={styles.locationPillText}>
-                            {selectedToLocation}
-                          </ThemedText>
-                        </View>
+                        <LocationPill
+                          label={selectedToLocation}
+                          backgroundColor={isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}
+                          iconName="location-outline"
+                          variant="compact"
+                          style={{ flex: 1, justifyContent: 'center', borderRadius: 10 }}
+                        />
                       </View>
 
                       {/* Time Info */}
@@ -891,37 +876,21 @@ export default function FlightSearchScreen() {
                       >
                         {/* Location Pills */}
                         <View style={styles.locationPillsContainer}>
-                          <View
-                            style={[
-                              styles.locationPill,
-                              {
-                                backgroundColor: isDark
-                                  ? 'rgba(255,255,255,0.1)'
-                                  : 'rgba(0,0,0,0.05)',
-                              },
-                            ]}
-                          >
-                            <Ionicons name="location-outline" size={12} color="#FF3B30" />
-                            <ThemedText style={styles.locationPillText}>
-                              {selectedToLocation}
-                            </ThemedText>
-                          </View>
+                          <LocationPill
+                            label={selectedToLocation}
+                            backgroundColor={isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}
+                            iconName="location-outline"
+                            variant="compact"
+                            style={{ flex: 1, justifyContent: 'center', borderRadius: 10 }}
+                          />
                           <View style={{ width: 60 }} />
-                          <View
-                            style={[
-                              styles.locationPill,
-                              {
-                                backgroundColor: isDark
-                                  ? 'rgba(255,255,255,0.1)'
-                                  : 'rgba(0,0,0,0.05)',
-                              },
-                            ]}
-                          >
-                            <Ionicons name="location-outline" size={12} color="#FF3B30" />
-                            <ThemedText style={styles.locationPillText}>
-                              {selectedFromLocation}
-                            </ThemedText>
-                          </View>
+                          <LocationPill
+                            label={selectedFromLocation}
+                            backgroundColor={isDark ? 'rgba(255,255,255,0.1)' : 'rgba(0,0,0,0.05)'}
+                            iconName="location-outline"
+                            variant="compact"
+                            style={{ flex: 1, justifyContent: 'center', borderRadius: 10 }}
+                          />
                         </View>
 
                         {/* Time Info */}
@@ -2035,21 +2004,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     marginBottom: 6,
-  },
-  locationPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-    flex: 1,
-    justifyContent: 'center',
-  },
-  locationPillText: {
-    fontSize: responsiveFontSize(13),
-    fontFamily: Fonts.medium,
-    letterSpacing: 0.1,
   },
   busHeader: {
     flexDirection: 'row',

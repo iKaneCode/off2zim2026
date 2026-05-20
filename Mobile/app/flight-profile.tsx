@@ -1682,22 +1682,6 @@ const styles = StyleSheet.create({
     fontFamily: Fonts.bold,
     lineHeight: 28,
   },
-  locationPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    maxWidth: width * 0.6,
-    gap: 6,
-    flexShrink: 1,
-  },
-  locationPillText: {
-    fontSize: responsiveFontSize(15),
-    fontFamily: Fonts.medium,
-    flexShrink: 1,
-    letterSpacing: 0.2,
-  },
   titleRatingRow: {
     flexDirection: 'row',
     alignItems: 'center',

@@ -2470,26 +2470,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 6,
   },
-  locationPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-    flex: 1,
-    justifyContent: 'center',
-  },
   routeDivider: {
     width: 40,
     alignItems: 'center',
     justifyContent: 'center',
     marginHorizontal: 12,
-  },
-  locationPillText: {
-    fontSize: responsiveFontSize(13),
-    fontFamily: Fonts.bold,
-    letterSpacing: 0.1,
   },
   operatorMetaRow: {
     flexDirection: 'row',

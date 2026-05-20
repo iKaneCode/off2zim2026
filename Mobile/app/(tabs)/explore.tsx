@@ -6526,10 +6526,6 @@ export default function ExploreScreen() {
                             <View style={styles.activityMetaRow}>
                               <LocationPill
                                 label={item.location}
-                                backgroundColor={pillBg}
-                                iconBackgroundColor={pillIconBg}
-                                lightTextColor={pillText}
-                                darkTextColor={pillText}
                                 variant="compact"
                               />
                               <RatingPill
@@ -7210,6 +7206,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     paddingHorizontal: 16,
     paddingTop: 16,
+
   },
   staysHeaderIcon: {
     width: 36,

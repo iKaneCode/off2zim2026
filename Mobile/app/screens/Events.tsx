@@ -260,10 +260,6 @@ export default function EventsScreen() {
             <View style={styles.metaRow}>
               <LocationPill
                 label={item.location}
-                backgroundColor={pillBg}
-                iconBackgroundColor={pillIconBackground}
-                lightTextColor={pillTextColor}
-                darkTextColor={pillTextColor}
                 variant="compact"
               />
 
@@ -331,12 +327,8 @@ export default function EventsScreen() {
   );
 
   const resolvedLocation = locationParam || (
-    scopedLocations.length > 0 ? 'Selected locations' : 'All locations'
+    scopedLocations.length > 0 ? 'Selected locations' : 'Zimbabwe'
   );
-  const pillBgHeader = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.04)';
-  const pillTextColorHeader = isDark ? '#FFFFFF' : '#000000';
-  const pillIconBgHeader = isDark ? '#1C1C1E' : '#FFFFFF';
-
   const handleGoBack = () => {
     if (typeof router.canGoBack === 'function' && router.canGoBack()) {
       router.back();
@@ -376,10 +368,6 @@ export default function EventsScreen() {
               </ThemedText>
               <LocationPill
                 label={resolvedLocation}
-                backgroundColor={pillBgHeader}
-                iconBackgroundColor={pillIconBgHeader}
-                lightTextColor={pillTextColorHeader}
-                darkTextColor={pillTextColorHeader}
                 variant="compact"
               />
             </View>

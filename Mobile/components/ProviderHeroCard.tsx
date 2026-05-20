@@ -16,7 +16,7 @@ import { ThemedText } from './ThemedText';
 import { useColorScheme } from '@/hooks/useColorScheme';
 import { responsiveFontSize, responsiveLineHeight, responsiveSize, Fonts } from '@/constants/Fonts';
 import { StatusPill, type StatusPillProps } from './StatusPill';
-import { ProfileLocationPill } from './ProfileLocationPill';
+import { LocationPill } from './LocationPill';
 
 const AVATAR_SIZE = responsiveSize(96, 86, 108);
 
@@ -188,13 +188,11 @@ function ProviderHeroCardComponent({
         {location || statusPillProps ? (
           <View style={styles.locationStatusRow}>
             {location ? (
-              <ProfileLocationPill
+              <LocationPill
                 label={location}
-                backgroundColor={subtleBackground}
-                iconBackgroundColor={accentSurface}
                 iconName={locationIconName}
                 iconColor={locationIconColor}
-                textColor={textColor}
+                variant="compact"
               />
             ) : null}
 

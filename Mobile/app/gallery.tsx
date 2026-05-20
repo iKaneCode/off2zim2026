@@ -28,18 +28,19 @@ import { faHeart as solidHeart } from '@fortawesome/free-solid-svg-icons';
 import { faHeart as regularHeart, faShareFromSquare } from '@fortawesome/free-regular-svg-icons';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import Reanimated, {
+  Easing as ReanimatedEasing,
   runOnJS,
   useAnimatedStyle,
   useSharedValue,
+  withSpring,
   withTiming,
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Asset } from 'expo-asset';
-import { ProfileLocationPill } from '@/components/ProfileLocationPill';
+import { LocationPill } from '@/components/LocationPill';
 import { isFavorited as isFavoritedUtil } from '@/utils/favoritesUtils';
 import {
   PushScreenOptions,
-  TitleWithLocation,
   WallpaperPattern,
   WebSlideTransition,
 } from '@/components';
@@ -70,6 +71,13 @@ const POLAROID_SLOT_HEIGHT = 540 * POLAROID_ASSET_SCALE;
 const POLAROID_SLOT_LEFT = 235 * POLAROID_ASSET_SCALE;  // opening center (535) minus half slot width (300)
 const POLAROID_SLOT_TOP = 176 * POLAROID_ASSET_SCALE;   // opening center (446) minus half slot height (270)
 
+// Hero transition — approximate polaroid frame center on screen
+// Action buttons row (42px) + marginBottom (16px) sit above the polaroid in fullImageFrame
+const HERO_BUTTON_GROUP_H = 42 + 16;
+const HERO_GROUP_H = HERO_BUTTON_GROUP_H + POLAROID_ASSET_SIZE;
+const HERO_DEST_X = width / 2;
+const HERO_DEST_Y = height / 2 - HERO_GROUP_H / 2 + HERO_BUTTON_GROUP_H + POLAROID_ASSET_SIZE / 2;
+
 const clampOffset = (value: number, max: number) => {
   'worklet';
   return Math.min(Math.max(value, -max), max);
@@ -86,7 +94,7 @@ export default function GalleryScreen() {
   const colorScheme = useColorScheme();
   const isDark = colorScheme === 'dark';
   const resolvedLocation =
-    typeof location === 'string' && location.trim().length > 0 ? location : 'All locations';
+    typeof location === 'string' && location.trim().length > 0 ? location : 'Zimbabwe';
   const routeTitle = getParamString(params.title)?.trim();
   const routeContextImage = (
     getParamString(params.contextImage) ||
@@ -127,6 +135,15 @@ export default function GalleryScreen() {
   const zoomTranslateY = useSharedValue(0);
   const savedTranslateX = useSharedValue(0);
   const savedTranslateY = useSharedValue(0);
+
+  // Hero transition shared values (open/close animation from grid)
+  const heroProgress = useSharedValue(0);
+  const heroX = useSharedValue(0);
+  const heroY = useSharedValue(0);
+  const heroScale = useSharedValue(0.1);
+
+  // Refs for measuring grid thumbnails
+  const thumbnailRefs = useRef<Map<number, View | null>>(new Map()).current;
 
   // Get heart scale for specific image
   const getHeartScale = useCallback(
@@ -219,40 +236,62 @@ export default function GalleryScreen() {
     savedTranslateY.value = 0;
   }, [savedTranslateX, savedTranslateY, savedZoomScale, zoomScale, zoomTranslateX, zoomTranslateY]);
 
-  const openImage = (imageUrl: string) => {
+  const openImage = (imageUrl: string, thumbIndex: number) => {
     const index = Math.max(0, images.indexOf(imageUrl));
-    setCurrentImageIndex(index);
-    setSelectedImage(imageUrl);
-    resetZoom();
-    modalAnim.setValue(0);
-    imageAnim.setValue(0);
-    setModalVisible(true);
-    focusFilmstripItem(index, false);
-    Animated.parallel([
+    const ref = thumbnailRefs.get(thumbIndex);
+
+    const doOpen = (cx: number, cy: number, startScale: number) => {
+      // Set hero start values (thumbnail centre offset from polaroid centre)
+      heroX.value = cx - HERO_DEST_X;
+      heroY.value = cy - HERO_DEST_Y;
+      heroScale.value = startScale;
+      heroProgress.value = 0;
+
+      setCurrentImageIndex(index);
+      setSelectedImage(imageUrl);
+      resetZoom();
+      modalAnim.setValue(0);
+      imageAnim.setValue(1); // photo inside polaroid is immediately ready
+      setModalVisible(true);
+      focusFilmstripItem(index, false);
+
+      // Background fades in
       Animated.timing(modalAnim, {
         toValue: 1,
-        duration: 220,
+        duration: 300,
         useNativeDriver: true,
-      }),
-      Animated.spring(imageAnim, {
-        toValue: 1,
-        useNativeDriver: true,
-        tension: 72,
-        friction: 9,
-      }),
-    ]).start();
+      }).start();
+
+      // Polaroid springs from thumbnail to centre
+      heroProgress.value = withSpring(1, { damping: 18, stiffness: 160, mass: 0.9 });
+    };
+
+    if (ref) {
+      ref.measureInWindow((x, y, w, h) => {
+        doOpen(x + w / 2, y + h / 2, Math.min(w, h) / POLAROID_ASSET_SIZE);
+      });
+    } else {
+      doOpen(HERO_DEST_X, HERO_DEST_Y, 0.15);
+    }
   };
 
+
   const closeImage = useCallback(() => {
+    // Reverse the hero: polaroid springs back towards the thumbnail origin
+    heroProgress.value = withTiming(0, {
+      duration: 240,
+      easing: ReanimatedEasing.out(ReanimatedEasing.cubic),
+    });
     Animated.timing(modalAnim, {
       toValue: 0,
-      duration: 180,
+      duration: 240,
       useNativeDriver: true,
     }).start(() => {
       setSelectedImage(null);
       setModalVisible(false);
     });
-  }, [modalAnim]);
+  }, [heroProgress, modalAnim]);
+
 
   const showImageAt = useCallback(
     (index: number) => {
@@ -260,7 +299,16 @@ export default function GalleryScreen() {
         return;
       }
 
-      Haptics.selectionAsync().catch(() => {});
+      // Update hero source to the new thumbnail so close animates back to it
+      const ref = thumbnailRefs.get(index);
+      if (ref) {
+        ref.measureInWindow((x, y, w, h) => {
+          heroX.value = x + w / 2 - HERO_DEST_X;
+          heroY.value = y + h / 2 - HERO_DEST_Y;
+          heroScale.value = Math.min(w, h) / POLAROID_ASSET_SIZE;
+        });
+      }
+
       imageAnim.setValue(0);
       resetZoom();
       setCurrentImageIndex(index);
@@ -273,7 +321,7 @@ export default function GalleryScreen() {
         friction: 10,
       }).start();
     },
-    [currentImageIndex, focusFilmstripItem, imageAnim, images, resetZoom]
+    [currentImageIndex, focusFilmstripItem, heroScale, heroX, heroY, imageAnim, images, resetZoom, thumbnailRefs]
   );
 
   const handleSwipeDismiss = useCallback(() => {
@@ -343,8 +391,6 @@ export default function GalleryScreen() {
 
   // Handle toggling favorite status for current image
   const handleToggleFavorite = useCallback(() => {
-    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-
     // Animate the heart
     Animated.sequence([
       Animated.timing(heartScale, { toValue: 1.15, duration: 100, useNativeDriver: true }),
@@ -364,8 +410,6 @@ export default function GalleryScreen() {
   // Handle sharing the current image
   const handleShare = useCallback(async () => {
     try {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
-
       await Share.share({
         message: `Check out this amazing photo from ${viewerContextTitle}!`,
         title: `Photo from ${viewerContextTitle}`,
@@ -381,9 +425,6 @@ export default function GalleryScreen() {
     (imageUrl: string, event?: GestureResponderEvent) => {
       // Prevent the parent onPress from triggering if we're tapping the heart
       event?.stopPropagation();
-
-      // Haptic feedback
-      Haptics.selectionAsync().catch(() => {});
 
       // Animate heart
       const scale = getHeartScale(imageUrl);
@@ -425,15 +466,18 @@ export default function GalleryScreen() {
   }, [params.images]);
 
   // Render each gallery item
-  const renderGalleryItem = ({ item }: { item: string }) => {
+  const renderGalleryItem = ({ item, index }: { item: string; index: number }) => {
     const isFavorited = !!favorites[item] || isFavoritedUtil(item);
     const scale = getHeartScale(item);
 
     return (
-      <View style={styles.imageContainer}>
+      <View
+        ref={(r) => { thumbnailRefs.set(index, r); }}
+        style={styles.imageContainer}
+      >
         <TouchableOpacity
           style={styles.thumbnailContainer}
-          onPress={() => openImage(item)}
+          onPress={() => openImage(item, index)}
           activeOpacity={0.8}
         >
           <Image source={{ uri: item }} style={styles.thumbnail} resizeMode="cover" />
@@ -484,6 +528,20 @@ export default function GalleryScreen() {
   const imageTranslateY = imageAnim.interpolate({
     inputRange: [0, 1],
     outputRange: [10, 0],
+  });
+
+  // Hero animated style — drives the polaroid frame from thumbnail → centre screen on open,
+  // and back on close.
+  const polaroidHeroStyle = useAnimatedStyle(() => {
+    const p = heroProgress.value;
+    const startScale = heroScale.value;
+    const currentScale = startScale + (1 - startScale) * p;
+    const tx = heroX.value * (1 - p);
+    const ty = heroY.value * (1 - p);
+    return {
+      opacity: p,
+      transform: [{ translateX: tx }, { translateY: ty }, { scale: currentScale }],
+    };
   });
   const pinchGesture = Gesture.Pinch()
     .onUpdate(event => {
@@ -611,31 +669,21 @@ export default function GalleryScreen() {
 
             {/* Title section with gallery title left-aligned and location pill right-aligned */}
             <View style={styles.titleSection}>
-              <TitleWithLocation
-                title="Gallery"
-                location={resolvedLocation}
-                iconName="bed"
-                iconSize={16}
-                iconColor="#8E8E93"
-                style={styles.titleRowContainer}
-                titleStyle={[
+              <ThemedText
+                style={[
                   styles.galleryTitle,
-                  {
-                    color: isDark ? '#FFFFFF' : '#1C1C1E',
-                    textShadowColor: isDark ? 'rgba(0,0,0,0.55)' : 'rgba(255,255,255,0.45)',
-                  },
+                  { color: isDark ? '#FFFFFF' : '#1C1C1E' },
                 ]}
-                titleProps={{
-                  adjustsFontSizeToFit: true,
-                  minimumFontScale: 0.9,
-                }}
-                pillStyle={styles.pillTagOverlay}
-                pillTextStyle={styles.pillTextOverlay}
-                pillBackgroundLight="rgba(255,255,255,0.8)"
-                pillBackgroundDark="#1C1C1E"
-                pillTextLight="#000000"
-                pillTextDark="#FFFFFF"
-                pillTextProps={{ numberOfLines: 1 }}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+                adjustsFontSizeToFit
+                minimumFontScale={0.9}
+              >
+                Gallery
+              </ThemedText>
+              <LocationPill
+                label={resolvedLocation}
+                variant="compact"
               />
             </View>
 
@@ -696,36 +744,9 @@ export default function GalleryScreen() {
                     },
                   ]}
                 >
-                  {/* Title row */}
-                  <View style={[styles.viewerTopBar, { backgroundColor: viewerSurface }]}>
-                    {viewerContextImage && (
-                      <Image
-                        source={{ uri: viewerContextImage }}
-                        style={styles.viewerContextImage}
-                        resizeMode="cover"
-                      />
-                    )}
-
-                    <View style={styles.viewerTitleStack}>
-                      <ThemedText
-                        style={[styles.viewerTitle, { color: viewerTextColor }]}
-                        numberOfLines={1}
-                      >
-                        {viewerContextTitle}
-                      </ThemedText>
-                      {resolvedLocation !== viewerContextTitle && (
-                        <ProfileLocationPill
-                          label={resolvedLocation}
-                          backgroundColor={viewerButtonBackground}
-                          textColor={viewerTextColor}
-                          style={{ marginTop: 4 }}
-                        />
-                      )}
-                    </View>
-                  </View>
-
-                  {/* Action row: close (left), like + share (right) */}
-                  <View style={styles.viewerActionRow}>
+                  {/* Row 1: close | location */}
+                  <View style={styles.viewerTopRow}>
+                    {/* 1. Close button */}
                     <TouchableOpacity
                       style={[styles.viewerIconButton, { backgroundColor: viewerSurface }]}
                       onPress={closeImage}
@@ -734,7 +755,43 @@ export default function GalleryScreen() {
                       <Ionicons name="close" size={22} color={viewerTextColor} />
                     </TouchableOpacity>
 
-                    <View style={styles.viewerActionRowRight}>
+                    {/* 2. Location section — centred across full row width */}
+                    <View style={styles.viewerLocationBar} pointerEvents="none">
+                      {viewerContextImage && (
+                        <Image
+                          source={{ uri: viewerContextImage }}
+                          style={styles.viewerContextImage}
+                          resizeMode="cover"
+                        />
+                      )}
+                      <View style={styles.viewerTitleStack}>
+                        <ThemedText
+                          style={[styles.viewerTitle, { color: viewerTextColor }]}
+                          numberOfLines={1}
+                        >
+                          {viewerContextTitle}
+                        </ThemedText>
+                        {resolvedLocation !== viewerContextTitle && (
+                          <LocationPill
+                            label={resolvedLocation}
+                            variant="compact"
+                            style={{ marginTop: 4 }}
+                          />
+                        )}
+                      </View>
+                    </View>
+                  </View>
+
+                </Animated.View>
+
+                <View
+                  style={styles.imageViewerContainer}
+                  onTouchStart={handleViewerTouchStart}
+                  onTouchEnd={handleViewerTouchEnd}
+                >
+                  <View style={styles.fullImageFrame}>
+                    {/* like | share — just above polaroid */}
+                    <View style={[styles.viewerActionButtons, { marginBottom: 16, width: '100%', paddingHorizontal: 16 }]}>
                       <TouchableOpacity
                         style={[styles.viewerIconButton, { backgroundColor: viewerSurface }]}
                         onPress={handleToggleFavorite}
@@ -748,7 +805,6 @@ export default function GalleryScreen() {
                           />
                         </Animated.View>
                       </TouchableOpacity>
-
                       <TouchableOpacity
                         style={[styles.viewerIconButton, { backgroundColor: viewerSurface }]}
                         onPress={handleShare}
@@ -757,17 +813,8 @@ export default function GalleryScreen() {
                         <FontAwesomeIcon icon={faShareFromSquare} size={19} color={viewerTextColor} />
                       </TouchableOpacity>
                     </View>
-                  </View>
-                </Animated.View>
-
-                <View
-                  style={styles.imageViewerContainer}
-                  onTouchStart={handleViewerTouchStart}
-                  onTouchEnd={handleViewerTouchEnd}
-                >
-                  <View style={styles.fullImageFrame}>
                     {selectedImage && (
-                      <View style={[styles.polaroidAssetFrame, { backgroundColor: viewerBackground }]}>
+                      <Reanimated.View style={[styles.polaroidAssetFrame, { backgroundColor: viewerBackground }, polaroidHeroStyle]}>
                         <View style={styles.polaroidAssetPhotoSlot}>
                           <GestureDetector gesture={imageGesture}>
                             <Animated.View
@@ -795,7 +842,7 @@ export default function GalleryScreen() {
                             resizeMode="contain"
                           />
                         </View>
-                      </View>
+                      </Reanimated.View>
                     )}
                   </View>
 
@@ -1000,34 +1047,11 @@ const styles = StyleSheet.create({
   },
   titleSection: {
     paddingHorizontal: 16,
-    justifyContent: 'center',
-    alignItems: 'stretch',
-    position: 'relative',
-    paddingTop: 4,
-    marginBottom: 2, // Reduced from 16 to bring photo count closer
-  },
-  titleRowContainer: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
-    width: '100%',
-    flexWrap: 'nowrap', // Ensure elements stay on one line
-  },
-  pillTagOverlay: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    maxWidth: 220, // Maximum width to prevent overflow but allow dynamic sizing
-    minWidth: 100, // Minimum width for very short location names
-  },
-  pillTextOverlay: {
-    fontSize: responsiveFontSize(20),
-    fontWeight: '700',
-    fontFamily: Fonts.bold,
-    marginLeft: 6,
-    flexShrink: 1, // Allow text to shrink if needed
+    paddingTop: 4,
+    marginBottom: 2,
   },
   pillIcon: {
     marginRight: 4, // Match details view
@@ -1044,12 +1068,10 @@ const styles = StyleSheet.create({
   galleryTitle: {
     fontSize: responsiveFontSize(24),
     fontFamily: Fonts.bold,
-    flex: 1, // Take available space on the left side
+    flex: 1,
     textAlign: 'left',
-    marginRight: 16, // Add space between title and pill
+    marginRight: 16,
     lineHeight: 28,
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
   },
   galleryCountWrapper: {
     paddingHorizontal: 16,
@@ -1115,29 +1137,34 @@ const styles = StyleSheet.create({
   },
   viewerHeaderWrapper: {
     position: 'absolute',
-    top: Platform.OS === 'ios' ? 54 : 28,
+    top: Platform.OS === 'ios' ? 80 : 48,
     left: 16,
     right: 16,
     zIndex: 20,
+    flexDirection: 'column',
+    gap: 8,
   },
-  viewerTopBar: {
-    minHeight: 64,
-    borderRadius: 20,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+  viewerTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+    paddingTop: 16,
+  },
+  viewerLocationBar: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    top: 0,
+    bottom: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
     gap: 10,
   },
-  viewerActionRow: {
+  viewerActionButtons: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    marginTop: 8,
-    paddingHorizontal: 4,
-  },
-  viewerActionRowRight: {
-    flexDirection: 'row',
+    justifyContent: 'flex-end',
     gap: 8,
   },
   viewerIconButton: {
@@ -1148,12 +1175,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   viewerContextImage: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
   },
   viewerTitleStack: {
-    flex: 1,
     minWidth: 0,
   },
   viewerTitle: {

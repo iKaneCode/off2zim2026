@@ -35,6 +35,7 @@ import Reanimated, {
 } from 'react-native-reanimated';
 import * as Haptics from 'expo-haptics';
 import { Asset } from 'expo-asset';
+import { ProfileLocationPill } from '@/components/ProfileLocationPill';
 import { isFavorited as isFavoritedUtil } from '@/utils/favoritesUtils';
 import {
   PushScreenOptions,
@@ -688,64 +689,74 @@ export default function GalleryScreen() {
               >
                 <Animated.View
                   style={[
-                    styles.viewerTopBar,
+                    styles.viewerHeaderWrapper,
                     {
-                      backgroundColor: viewerSurface,
                       opacity: modalAnim,
                       transform: [{ translateY: controlsTranslateY }],
                     },
                   ]}
                 >
-                  <TouchableOpacity
-                    style={[styles.viewerIconButton, { backgroundColor: viewerButtonBackground }]}
-                    onPress={closeImage}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Ionicons name="close" size={22} color={viewerTextColor} />
-                  </TouchableOpacity>
-
-                  {viewerContextImage && (
-                    <Image
-                      source={{ uri: viewerContextImage }}
-                      style={styles.viewerContextImage}
-                      resizeMode="cover"
-                    />
-                  )}
-
-                  <View style={styles.viewerTitleStack}>
-                    {isLocationGallery ? (
-                      <View
-                        style={[
-                          styles.viewerLocationPill,
-                          { backgroundColor: viewerButtonBackground },
-                        ]}
-                      >
-                        <Ionicons name="location" size={13} color={viewerTextColor} />
-                        <ThemedText
-                          style={[styles.viewerLocationPillText, { color: viewerTextColor }]}
-                          numberOfLines={1}
-                        >
-                          {resolvedLocation}
-                        </ThemedText>
-                      </View>
-                    ) : (
-                      <>
-                        <ThemedText
-                          style={[styles.viewerTitle, { color: viewerTextColor }]}
-                          numberOfLines={1}
-                        >
-                          {viewerContextTitle}
-                        </ThemedText>
-                        {resolvedLocation !== viewerContextTitle && (
-                          <ThemedText
-                            style={[styles.viewerLocation, { color: viewerMutedColor }]}
-                            numberOfLines={1}
-                          >
-                            {resolvedLocation}
-                          </ThemedText>
-                        )}
-                      </>
+                  {/* Title row */}
+                  <View style={[styles.viewerTopBar, { backgroundColor: viewerSurface }]}>
+                    {viewerContextImage && (
+                      <Image
+                        source={{ uri: viewerContextImage }}
+                        style={styles.viewerContextImage}
+                        resizeMode="cover"
+                      />
                     )}
+
+                    <View style={styles.viewerTitleStack}>
+                      <ThemedText
+                        style={[styles.viewerTitle, { color: viewerTextColor }]}
+                        numberOfLines={1}
+                      >
+                        {viewerContextTitle}
+                      </ThemedText>
+                      {resolvedLocation !== viewerContextTitle && (
+                        <ProfileLocationPill
+                          label={resolvedLocation}
+                          backgroundColor={viewerButtonBackground}
+                          textColor={viewerTextColor}
+                          style={{ marginTop: 4 }}
+                        />
+                      )}
+                    </View>
+                  </View>
+
+                  {/* Action row: close (left), like + share (right) */}
+                  <View style={styles.viewerActionRow}>
+                    <TouchableOpacity
+                      style={[styles.viewerIconButton, { backgroundColor: viewerSurface }]}
+                      onPress={closeImage}
+                      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    >
+                      <Ionicons name="close" size={22} color={viewerTextColor} />
+                    </TouchableOpacity>
+
+                    <View style={styles.viewerActionRowRight}>
+                      <TouchableOpacity
+                        style={[styles.viewerIconButton, { backgroundColor: viewerSurface }]}
+                        onPress={handleToggleFavorite}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Animated.View style={{ transform: [{ scale: heartScale }] }}>
+                          <FontAwesomeIcon
+                            icon={selectedImageIsFavorited ? solidHeart : regularHeart}
+                            size={20}
+                            color={selectedImageIsFavorited ? '#FF4757' : viewerTextColor}
+                          />
+                        </Animated.View>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
+                        style={[styles.viewerIconButton, { backgroundColor: viewerSurface }]}
+                        onPress={handleShare}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <FontAwesomeIcon icon={faShareFromSquare} size={19} color={viewerTextColor} />
+                      </TouchableOpacity>
+                    </View>
                   </View>
                 </Animated.View>
 
@@ -844,37 +855,7 @@ export default function GalleryScreen() {
                   </ThemedText>
                 </Animated.View>
 
-                <Animated.View
-                  style={[
-                    styles.viewerFloatingActions,
-                    {
-                      opacity: modalAnim,
-                      transform: [{ translateY: footerTranslateY }],
-                    },
-                  ]}
-                >
-                  <TouchableOpacity
-                    style={[styles.viewerIconButton, { backgroundColor: viewerSurface }]}
-                    onPress={handleToggleFavorite}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Animated.View style={{ transform: [{ scale: heartScale }] }}>
-                      <FontAwesomeIcon
-                        icon={selectedImageIsFavorited ? solidHeart : regularHeart}
-                        size={20}
-                        color={selectedImageIsFavorited ? '#FF4757' : viewerTextColor}
-                      />
-                    </Animated.View>
-                  </TouchableOpacity>
 
-                  <TouchableOpacity
-                    style={[styles.viewerIconButton, { backgroundColor: viewerSurface }]}
-                    onPress={handleShare}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <FontAwesomeIcon icon={faShareFromSquare} size={19} color={viewerTextColor} />
-                  </TouchableOpacity>
-                </Animated.View>
 
                 <Animated.View
                   style={[
@@ -1132,12 +1113,14 @@ const styles = StyleSheet.create({
   modalContainer: {
     flex: 1,
   },
-  viewerTopBar: {
+  viewerHeaderWrapper: {
     position: 'absolute',
     top: Platform.OS === 'ios' ? 54 : 28,
     left: 16,
     right: 16,
     zIndex: 20,
+  },
+  viewerTopBar: {
     minHeight: 64,
     borderRadius: 20,
     paddingHorizontal: 10,
@@ -1145,6 +1128,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+  },
+  viewerActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 8,
+    paddingHorizontal: 4,
+  },
+  viewerActionRowRight: {
+    flexDirection: 'row',
+    gap: 8,
   },
   viewerIconButton: {
     width: 42,
@@ -1172,22 +1166,6 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize(12),
     lineHeight: 14,
     fontFamily: Fonts.medium,
-  },
-  viewerLocationPill: {
-    alignSelf: 'flex-start',
-    flexDirection: 'row',
-    alignItems: 'center',
-    maxWidth: '100%',
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    gap: 5,
-  },
-  viewerLocationPillText: {
-    flexShrink: 1,
-    fontSize: responsiveFontSize(14),
-    lineHeight: 16,
-    fontFamily: Fonts.bold,
   },
   imageViewerContainer: {
     flex: 1,

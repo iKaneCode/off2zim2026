@@ -2541,22 +2541,6 @@ const styles = StyleSheet.create({
     lineHeight: 20,
     letterSpacing: 0.2,
   },
-  locationPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 16,
-    maxWidth: width * 0.6,
-    gap: 6,
-    flexShrink: 1,
-  },
-  locationPillText: {
-    fontSize: responsiveFontSize(15),
-    fontFamily: Fonts.medium,
-    flexShrink: 1,
-    letterSpacing: 0.2,
-  },
   directionsPill: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -3667,21 +3651,5 @@ const styles = StyleSheet.create({
   itineraryPastDayText: {
     opacity: 0.3,
     fontSize: responsiveFontSize(20),
-  },
-  providerLocationPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-    maxWidth: width * 0.6,
-    flexShrink: 1,
-  },
-  providerLocationPillText: {
-    fontSize: responsiveFontSize(15),
-    lineHeight: 20,
-    fontFamily: Fonts.bold,
-    letterSpacing: 0.2,
-    flexShrink: 1,
   },
 });

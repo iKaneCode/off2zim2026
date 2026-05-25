@@ -6,6 +6,22 @@ export type ProviderOnboardingStatus =
 
 export type ProviderVerificationTier = "basic" | "verified_premium";
 
+export type ProviderTier = "basic" | "premium";
+
+export type ProviderTierStatus =
+  | "active"
+  | "trialing"
+  | "paused"
+  | "past_due"
+  | "cancelled";
+
+export type ServiceProviderCategoryId =
+  | "stays"
+  | "events"
+  | "things_to_do"
+  | "bus"
+  | "flight";
+
 export type ProviderListingStatus =
   | "draft"
   | "pending_review"
@@ -52,6 +68,14 @@ export interface ProviderCompanyRecord {
   businessEmail: string;
   physicalAddress: string;
   headquartersCity?: string | null;
+  profileImageUrl?: string | null;
+  coverImageUrl?: string | null;
+  legalCompanyName?: string | null;
+  incorporationDate?: string | null;
+  contactPersonPhone?: string | null;
+  zimraBpNumber?: string | null;
+  tinNumber?: string | null;
+  taxClearanceExpiresAt?: string | null;
   businessCategory?: string | null;
   businessDescription?: string | null;
   establishedYear?: number | null;
@@ -63,6 +87,10 @@ export interface ProviderCompanyRecord {
   serviceAreas: string[];
   onboardingStatus: ProviderOnboardingStatus;
   verificationTier: ProviderVerificationTier;
+  providerTier: ProviderTier;
+  tierStatus: ProviderTierStatus | string;
+  tierFeatures: string[];
+  serviceCategories: ServiceProviderCategoryId[];
   reviewSubmittedAt?: string | null;
   basicApprovedAt?: string | null;
   verifiedBadgeExpiresAt?: string | null;
@@ -77,6 +105,10 @@ export interface ProviderCompanyRecord {
     total: number;
     pending: number;
     disputed: number;
+  };
+  ratingStats?: {
+    average: number;
+    reviewCount: number;
   };
   createdAt: string;
   updatedAt: string;
@@ -251,6 +283,8 @@ export interface AdminListingRecord {
   slug: string;
   category: string;
   listingType: string;
+  shortDescription?: string | null;
+  description: string;
   location: string;
   pricingModel: string;
   basePrice?: number | null;
@@ -260,6 +294,12 @@ export interface AdminListingRecord {
   status: ProviderListingStatus;
   visibility: ProviderListingVisibility;
   capacity?: number | null;
+  pickupLeadTimeHours?: number | null;
+  images: string[];
+  tags: string[];
+  amenities: string[];
+  policies: Record<string, unknown>;
+  metadata: Record<string, unknown>;
   destinationId?: string | null;
   destinationName?: string | null;
   destinationLocation?: string | null;

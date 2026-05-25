@@ -8,12 +8,17 @@ export const dynamic = "force-dynamic";
 
 // Subscription pricing (USD)
 export const SUBSCRIPTION_PLANS = {
+  premium_provider: { monthly: 79, annual: 799 },
   verified_badge: { monthly: 29, annual: 299 },
   featured_placement: { monthly: 49, annual: 499 },
 } as const;
 
 const subscribeSchema = z.object({
-  planType: z.enum(["verified_badge", "featured_placement"]),
+  planType: z.enum([
+    "premium_provider",
+    "verified_badge",
+    "featured_placement",
+  ]),
   billingCycle: z.enum(["monthly", "annual"]),
   // In production, this would be a Stripe payment method ID or Paynow reference
   paymentReference: z.string().optional(),
@@ -22,7 +27,14 @@ const subscribeSchema = z.object({
 async function findCompany(userId: string) {
   return prisma.providerCompany.findUnique({
     where: { ownerUserId: userId },
-    select: { id: true, isVerified: true, isFeaturedEligible: true, onboardingStatus: true },
+    select: {
+      id: true,
+      isVerified: true,
+      isFeaturedEligible: true,
+      onboardingStatus: true,
+      providerTier: true,
+      tierStatus: true,
+    },
   });
 }
 
@@ -54,6 +66,8 @@ export async function GET() {
       company: {
         isVerified: company.isVerified,
         isFeaturedEligible: company.isFeaturedEligible,
+        providerTier: company.providerTier,
+        tierStatus: company.tierStatus,
       },
     });
   } catch (error) {
@@ -73,8 +87,14 @@ export async function POST(request: NextRequest) {
     if (!company) return apiError("Provider company not found.", 404);
 
     // Provider must have basic approval to subscribe
-    if (company.onboardingStatus !== "basic_approved" && company.onboardingStatus !== "verified") {
-      return apiError("Your company profile must be approved before subscribing.", 403);
+    if (
+      company.onboardingStatus !== "basic_approved" &&
+      company.onboardingStatus !== "verified"
+    ) {
+      return apiError(
+        "Your company profile must be approved before subscribing.",
+        403,
+      );
     }
 
     const payload = subscribeSchema.parse(await request.json());
@@ -90,7 +110,10 @@ export async function POST(request: NextRequest) {
         },
       });
       if (!hasVerified) {
-        return apiError("A Verified Badge subscription is required before subscribing to Featured Placement.", 403);
+        return apiError(
+          "A Verified Badge subscription is required before subscribing to Featured Placement.",
+          403,
+        );
       }
     }
 
@@ -105,7 +128,10 @@ export async function POST(request: NextRequest) {
     });
 
     if (existing) {
-      return apiError(`You already have an active ${payload.planType.replace("_", " ")} subscription.`, 409);
+      return apiError(
+        `You already have an active ${payload.planType.replace("_", " ")} subscription.`,
+        409,
+      );
     }
 
     const now = new Date();
@@ -130,7 +156,33 @@ export async function POST(request: NextRequest) {
       });
 
       // Update company flags based on plan type
-      if (payload.planType === "verified_badge") {
+      if (payload.planType === "premium_provider") {
+        await tx.providerCompany.update({
+          where: { id: company.id },
+          data: {
+            providerTier: "premium",
+            tierStatus: "active",
+          },
+        });
+
+        await tx.providerPlan.create({
+          data: {
+            companyId: company.id,
+            tier: "premium",
+            status: "active",
+            billingCycle: payload.billingCycle,
+            externalRef: payload.paymentReference ?? null,
+            startsAt: now,
+            endsAt: periodEnd,
+            features: JSON.stringify({
+              galleryManagement: true,
+              pushCampaigns: true,
+              advancedAnalytics: true,
+              premiumAndroidApp: true,
+            }),
+          },
+        });
+      } else if (payload.planType === "verified_badge") {
         await tx.providerCompany.update({
           where: { id: company.id },
           data: {
@@ -149,19 +201,25 @@ export async function POST(request: NextRequest) {
       return sub;
     });
 
-    return NextResponse.json({
-      subscription: {
-        id: subscription.id,
-        planType: subscription.planType,
-        billingCycle: subscription.billingCycle,
-        status: subscription.status,
-        currentPeriodStart: subscription.currentPeriodStart.toISOString(),
-        currentPeriodEnd: subscription.currentPeriodEnd.toISOString(),
+    return NextResponse.json(
+      {
+        subscription: {
+          id: subscription.id,
+          planType: subscription.planType,
+          billingCycle: subscription.billingCycle,
+          status: subscription.status,
+          currentPeriodStart: subscription.currentPeriodStart.toISOString(),
+          currentPeriodEnd: subscription.currentPeriodEnd.toISOString(),
+        },
       },
-    }, { status: 201 });
+      { status: 201 },
+    );
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return apiError(error.issues[0]?.message ?? "Invalid subscription data.", 422);
+      return apiError(
+        error.issues[0]?.message ?? "Invalid subscription data.",
+        422,
+      );
     }
     if (error instanceof Error && error.message === "Unauthorized") {
       return apiError("Unauthorized", 401);

@@ -97,7 +97,8 @@ function clearAuth() {
 }
 
 function mapProfileToProviderPayload(profile: UserProfile) {
-  const businessDocuments = profile.businessDocuments || EMPTY_PROVIDER_DOCUMENTS;
+  const businessDocuments =
+    profile.businessDocuments || EMPTY_PROVIDER_DOCUMENTS;
 
   return {
     companyName: profile.companyName || "",
@@ -110,7 +111,9 @@ function mapProfileToProviderPayload(profile: UserProfile) {
     headquartersCity: profile.location || "",
     businessCategory: profile.businessCategory || "",
     businessDescription: profile.businessDescription || "",
-    establishedYear: profile.establishedYear ? Number(profile.establishedYear) : null,
+    establishedYear: profile.establishedYear
+      ? Number(profile.establishedYear)
+      : null,
     numberOfEmployees: profile.numberOfEmployees || "",
     operatingHours: profile.operatingHours || "",
     websiteUrl: profile.websiteUrl || "",
@@ -179,7 +182,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const handleSessionExpired = (event: Event) => {
       const detail =
-        event instanceof CustomEvent ? event.detail as { path?: string } : {};
+        event instanceof CustomEvent ? (event.detail as { path?: string }) : {};
 
       clearAuth();
       if (detail?.path && typeof window !== "undefined") {
@@ -193,7 +196,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     window.addEventListener("off2zim:session-expired", handleSessionExpired);
 
     return () => {
-      window.removeEventListener("off2zim:session-expired", handleSessionExpired);
+      window.removeEventListener(
+        "off2zim:session-expired",
+        handleSessionExpired,
+      );
     };
   }, []);
 
@@ -210,7 +216,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       dispatch({ type: "LOGIN_SUCCESS", payload: payload.user });
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Login failed. Please try again.";
+        error instanceof Error
+          ? error.message
+          : "Login failed. Please try again.";
       dispatch({ type: "LOGIN_ERROR", payload: message });
       throw error;
     }
@@ -223,10 +231,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const registerPayload = {
         email: data.email,
         password: data.password,
-        firstName: data.firstName || (data.role === "provider" ? "Business" : "Off2Zim"),
-        lastName: data.lastName || (data.role === "provider" ? "User" : "Explorer"),
+        firstName:
+          data.firstName || (data.role === "provider" ? "Business" : "Off2Zim"),
+        lastName:
+          data.lastName || (data.role === "provider" ? "User" : "Explorer"),
         role: data.role,
-        explorerType: data.role === "explorer" ? data.explorerType || "foreign" : undefined,
+        explorerType:
+          data.role === "explorer" ? data.explorerType || "foreign" : undefined,
         companyName:
           data.role === "provider"
             ? data.companyName || data.tradingName || "Off2Zim Business"
@@ -248,11 +259,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             ? data.businessPhone || data.phone || "+263000000000"
             : undefined,
         businessEmail:
-          data.role === "provider" ? data.businessEmail || data.email : undefined,
+          data.role === "provider"
+            ? data.businessEmail || data.email
+            : undefined,
         physicalAddress:
           data.role === "provider"
             ? data.physicalAddress || "Pending address"
             : undefined,
+        providerTier:
+          data.role === "provider" ? data.providerTier || "basic" : undefined,
       };
 
       const payload = await apiFetch<AuthPayload>("/api/auth/register", {

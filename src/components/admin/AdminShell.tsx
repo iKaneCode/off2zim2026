@@ -13,7 +13,7 @@ export default function AdminShell({
 }: {
   activePath: string;
   title: string;
-  description: string;
+  description?: ReactNode;
   actions?: ReactNode;
   children: ReactNode;
 }) {
@@ -22,7 +22,11 @@ export default function AdminShell({
       <div className="grid min-h-screen lg:grid-cols-[250px_minmax(0,1fr)]">
         <AdminSidebar activePath={activePath} />
         <main className="min-w-0">
-          <AdminPageHeader title={title} description={description} actions={actions} />
+          <AdminPageHeader
+            title={title}
+            description={description}
+            actions={actions}
+          />
           <div className="space-y-6 px-4 py-6 sm:px-6">{children}</div>
         </main>
       </div>

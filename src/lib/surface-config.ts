@@ -44,7 +44,8 @@ export const portalMeta: Record<
   admin: {
     label: "Admin",
     title: "Admin workspace",
-    description: "Operations, onboarding, account reviews, and platform oversight.",
+    description:
+      "Operations, onboarding, account reviews, and platform oversight.",
     href: "/admin/overview",
     icon: ShieldCheck,
   },
@@ -84,7 +85,7 @@ export const portalLinks: Record<NonPublicSurface, PortalLink[]> = {
     },
     {
       label: "Provider onboarding",
-      href: "/admin/providers",
+      href: "/admin/service-providers",
       icon: BadgeCheck,
       section: "Providers",
     },
@@ -108,7 +109,7 @@ export const portalLinks: Record<NonPublicSurface, PortalLink[]> = {
     },
     {
       label: "Compliance reviews",
-      href: "/admin/providers",
+      href: "/admin/service-providers",
       icon: FileSearch,
       section: "Risk",
     },
@@ -164,7 +165,8 @@ export const authSurfaceCopy: Record<
       cardA: "Continue planning",
       cardB: "One account across the platform",
       cardABody: "Return to your plans without starting from scratch.",
-      cardBBody: "Travel tools, bookings, and provider connections stay under one login.",
+      cardBBody:
+        "Travel tools, bookings, and provider connections stay under one login.",
     },
     register: {
       eyebrow: "Create account",
@@ -172,8 +174,10 @@ export const authSurfaceCopy: Record<
       body: "Traveler and provider accounts start from one clear entry point.",
       cardA: "For explorers",
       cardB: "For providers",
-      cardABody: "Save places, plan days, and manage every booking in one view.",
-      cardBBody: "List your business, manage orders, and complete verification.",
+      cardABody:
+        "Save places, plan days, and manage every booking in one view.",
+      cardBBody:
+        "List your business, manage orders, and complete verification.",
     },
   },
   explorer: {
@@ -183,7 +187,8 @@ export const authSurfaceCopy: Record<
       body: "Trips, saved places, bookings, and route planning stay in one place.",
       cardA: "Continue your trip plans",
       cardB: "Keep everything together",
-      cardABody: "Resume your itinerary and bookings without losing your progress.",
+      cardABody:
+        "Resume your itinerary and bookings without losing your progress.",
       cardBBody: "Planning, saved places, and booking actions stay connected.",
     },
     register: {
@@ -192,7 +197,8 @@ export const authSurfaceCopy: Record<
       body: "Start saving places, building itineraries, and organizing bookings.",
       cardA: "Plan your trip in one place",
       cardB: "Use one account across Off2Zim",
-      cardABody: "Destinations, stays, activities, and planning tools stay connected.",
+      cardABody:
+        "Destinations, stays, activities, and planning tools stay connected.",
       cardBBody: "Discover, plan, and book with one traveler account.",
     },
   },
@@ -203,8 +209,10 @@ export const authSurfaceCopy: Record<
       body: "Listings, order flow, verification, and company tools stay in one place.",
       cardA: "Manage live listings",
       cardB: "Track orders and company status",
-      cardABody: "Get back to operational work without digging through the public site.",
-      cardBBody: "One provider account gives you access to listings, verification, and orders.",
+      cardABody:
+        "Get back to operational work without digging through the public site.",
+      cardBBody:
+        "One provider account gives you access to listings, verification, and orders.",
     },
     register: {
       eyebrow: "Create provider account",
@@ -212,8 +220,10 @@ export const authSurfaceCopy: Record<
       body: "Set up your business account first, then complete onboarding inside the provider tools.",
       cardA: "Create your business account",
       cardB: "Finish verification in your dashboard",
-      cardABody: "Get your business onto the platform without a long first form.",
-      cardBBody: "Complete verification, listings, and order setup after account creation.",
+      cardABody:
+        "Get your business onto the platform without a long first form.",
+      cardBBody:
+        "Complete verification, listings, and order setup after account creation.",
     },
   },
   admin: {
@@ -224,7 +234,8 @@ export const authSurfaceCopy: Record<
       cardA: "Review providers and issues",
       cardB: "Oversee platform activity",
       cardABody: "Go straight to reviews, approvals, and issue handling.",
-      cardBBody: "Monitor provider activity, bookings, and disputes from one place.",
+      cardBBody:
+        "Monitor provider activity, bookings, and disputes from one place.",
     },
     register: {
       eyebrow: "Admin access",
@@ -232,7 +243,8 @@ export const authSurfaceCopy: Record<
       body: "Use your assigned operations credentials to enter the admin workspace.",
       cardA: "Operations-only access",
       cardB: "Shared backend, stricter access",
-      cardABody: "Admin accounts should be issued through secure internal workflows.",
+      cardABody:
+        "Admin accounts should be issued through secure internal workflows.",
       cardBBody: "Admin access stays safer when it is managed separately.",
     },
   },

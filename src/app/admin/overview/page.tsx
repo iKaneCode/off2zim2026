@@ -1,7 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Building2, Flag, ListChecks, Receipt, ShoppingBag, Users } from "lucide-react";
+import {
+  Building2,
+  Flag,
+  ListChecks,
+  Receipt,
+  ShoppingBag,
+  Users,
+} from "lucide-react";
 import Link from "next/link";
 import ProtectedRoute from "@/components/auth/ProtectedRoute";
 import { actionButtonVariants } from "@/components/admin/ActionButton";
@@ -68,7 +75,9 @@ function AdminOverviewContent() {
     const load = async () => {
       try {
         const [providers, bookings, listings, disputes] = await Promise.all([
-          apiFetch<{ providers: ProviderCompanyRecord[] }>("/api/admin/providers"),
+          apiFetch<{ providers: ProviderCompanyRecord[] }>(
+            "/api/admin/providers",
+          ),
           apiFetch<{ bookings: AdminBookingRecord[] }>("/api/admin/bookings"),
           apiFetch<{ listings: AdminListingRecord[] }>("/api/admin/listings"),
           apiFetch<{ disputes: DisputeRecord[] }>("/api/admin/disputes"),
@@ -82,7 +91,9 @@ function AdminOverviewContent() {
         });
         setError("");
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Unable to load admin overview.");
+        setError(
+          err instanceof Error ? err.message : "Unable to load admin overview.",
+        );
       } finally {
         setLoading(false);
       }
@@ -93,23 +104,23 @@ function AdminOverviewContent() {
 
   const totalRevenue = useMemo(
     () => state.bookings.reduce((sum, booking) => sum + booking.totalAmount, 0),
-    [state.bookings]
+    [state.bookings],
   );
 
   const onboardingPending = useMemo(
     () =>
       state.providers.filter((provider) =>
-        ["submitted", "changes_requested"].includes(provider.onboardingStatus)
+        ["submitted", "changes_requested"].includes(provider.onboardingStatus),
       ),
-    [state.providers]
+    [state.providers],
   );
 
   const activeDisputes = useMemo(
     () =>
       state.disputes.filter((dispute) =>
-        ["open", "under_review"].includes(dispute.status)
+        ["open", "under_review"].includes(dispute.status),
       ),
-    [state.disputes]
+    [state.disputes],
   );
 
   const recentBookings = useMemo(
@@ -117,7 +128,7 @@ function AdminOverviewContent() {
       [...state.bookings]
         .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
         .slice(0, 8),
-    [state.bookings]
+    [state.bookings],
   );
 
   const recentDisputes = useMemo(
@@ -125,17 +136,23 @@ function AdminOverviewContent() {
       [...state.disputes]
         .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))
         .slice(0, 6),
-    [state.disputes]
+    [state.disputes],
   );
 
   const listingsPending = useMemo(
-    () => state.listings.filter((listing) => listing.status === "pending_review").length,
-    [state.listings]
+    () =>
+      state.listings.filter((listing) => listing.status === "pending_review")
+        .length,
+    [state.listings],
   );
 
   const totalUsers = useMemo(() => {
-    const travelerIds = new Set(state.bookings.map((booking) => booking.customer.id));
-    const providerIds = new Set(state.providers.map((provider) => provider.ownerUserId));
+    const travelerIds = new Set(
+      state.bookings.map((booking) => booking.customer.id),
+    );
+    const providerIds = new Set(
+      state.providers.map((provider) => provider.ownerUserId),
+    );
     return travelerIds.size + providerIds.size;
   }, [state.bookings, state.providers]);
 
@@ -143,13 +160,15 @@ function AdminOverviewContent() {
     <AdminShell
       activePath="/admin/overview"
       title="Overview"
-      description="Monitor provider onboarding, listings, bookings, disputes, and revenue from one operational dashboard."
+      description="Monitor service-provider onboarding, listings, bookings, disputes, and revenue from one operational dashboard."
       actions={
         <Link
-          href={getSurfaceHref("admin", "/admin/providers")}
-          className={cn(actionButtonVariants({ variant: "primary", size: "lg" }))}
+          href={getSurfaceHref("admin", "/admin/service-providers")}
+          className={cn(
+            actionButtonVariants({ variant: "primary", size: "lg" }),
+          )}
         >
-          Review providers
+          Review service providers
         </Link>
       }
     >
@@ -168,7 +187,7 @@ function AdminOverviewContent() {
           tone="info"
         />
         <AdminCard
-          label="Total providers"
+          label="Service providers"
           value={loading ? "—" : state.providers.length}
           detail={`${onboardingPending.length} awaiting review`}
           icon={Building2}
@@ -207,9 +226,9 @@ function AdminOverviewContent() {
         <div className="grid gap-4 px-6 py-5 md:grid-cols-3">
           {[
             {
-              label: "Provider approvals",
+              label: "Service-provider approvals",
               value: onboardingPending.length,
-              href: "/admin/providers",
+              href: "/admin/service-providers",
               icon: Building2,
             },
             {
@@ -260,7 +279,9 @@ function AdminOverviewContent() {
               action={
                 <Link
                   href={getSurfaceHref("admin", "/admin/bookings")}
-                  className={cn(actionButtonVariants({ variant: "secondary", size: "sm" }))}
+                  className={cn(
+                    actionButtonVariants({ variant: "secondary", size: "sm" }),
+                  )}
                 >
                   View all bookings
                 </Link>
@@ -340,14 +361,16 @@ function AdminOverviewContent() {
         <div className="space-y-6">
           <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-[#101010]">
             <AdminSectionHeader
-              title="Pending provider approvals"
-              description="Provider accounts waiting for review."
+              title="Pending service-provider approvals"
+              description="Service-provider accounts waiting for review."
               action={
                 <Link
-                  href={getSurfaceHref("admin", "/admin/providers")}
-                  className={cn(actionButtonVariants({ variant: "secondary", size: "sm" }))}
+                  href={getSurfaceHref("admin", "/admin/service-providers")}
+                  className={cn(
+                    actionButtonVariants({ variant: "secondary", size: "sm" }),
+                  )}
                 >
-                  Open providers
+                  Open service providers
                 </Link>
               }
             />
@@ -356,14 +379,17 @@ function AdminOverviewContent() {
                 <AdminEmptyState title="Loading approvals" />
               ) : onboardingPending.length === 0 ? (
                 <AdminEmptyState
-                  title="No pending providers"
-                  body="Provider approvals will appear here when submissions are ready for review."
+                  title="No pending service providers"
+                  body="Service-provider approvals will appear here when submissions are ready for review."
                 />
               ) : (
                 onboardingPending.slice(0, 6).map((provider) => (
                   <Link
                     key={provider.id}
-                    href={getSurfaceHref("admin", "/admin/providers")}
+                    href={getSurfaceHref(
+                      "admin",
+                      `/admin/service-providers/${provider.id}`,
+                    )}
                     className="block rounded-xl border border-slate-200 px-4 py-4 transition hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/[0.03]"
                   >
                     <div className="flex items-start justify-between gap-3">
@@ -375,7 +401,9 @@ function AdminOverviewContent() {
                           {provider.businessCategory || "Category pending"}
                         </div>
                       </div>
-                      <StatusBadge tone={getProviderTone(provider.onboardingStatus)}>
+                      <StatusBadge
+                        tone={getProviderTone(provider.onboardingStatus)}
+                      >
                         {formatLabel(provider.onboardingStatus)}
                       </StatusBadge>
                     </div>
@@ -395,7 +423,9 @@ function AdminOverviewContent() {
               action={
                 <Link
                   href={getSurfaceHref("admin", "/admin/disputes")}
-                  className={cn(actionButtonVariants({ variant: "secondary", size: "sm" }))}
+                  className={cn(
+                    actionButtonVariants({ variant: "secondary", size: "sm" }),
+                  )}
                 >
                   View disputes
                 </Link>

@@ -51,7 +51,9 @@ function AdminUsersContent() {
 
   const loadUsers = async () => {
     try {
-      const payload = await apiFetch<{ users: AdminUserRecord[] }>("/api/admin/users");
+      const payload = await apiFetch<{ users: AdminUserRecord[] }>(
+        "/api/admin/users",
+      );
       setUsers(payload.users);
       setSelectedId((current) => current || payload.users[0]?.id || "");
       setError("");
@@ -68,7 +70,7 @@ function AdminUsersContent() {
 
   const selectedUser = useMemo(
     () => users.find((user) => user.id === selectedId) || null,
-    [users, selectedId]
+    [users, selectedId],
   );
 
   useEffect(() => {
@@ -91,7 +93,7 @@ function AdminUsersContent() {
       ]
         .join(" ")
         .toLowerCase()
-        .includes(normalized)
+        .includes(normalized),
     );
   }, [query, users]);
 
@@ -100,27 +102,33 @@ function AdminUsersContent() {
       total: users.length,
       providers: users.filter((user) => user.role === "provider").length,
       admins: users.filter((user) => user.role === "admin").length,
-      verified: users.filter((user) => user.verificationStatus === "verified").length,
+      verified: users.filter((user) => user.verificationStatus === "verified")
+        .length,
     }),
-    [users]
+    [users],
   );
 
   const saveUser = async () => {
     if (!selectedUser) return;
     setSaving(true);
     try {
-      const payload = await apiFetch<{ user: AdminUserRecord }>("/api/admin/users", {
-        method: "PATCH",
-        body: JSON.stringify({
-          id: selectedUser.id,
-          role,
-          verificationStatus,
-          hasVerifiedBadge,
-        }),
-      });
+      const payload = await apiFetch<{ user: AdminUserRecord }>(
+        "/api/admin/users",
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            id: selectedUser.id,
+            role,
+            verificationStatus,
+            hasVerifiedBadge,
+          }),
+        },
+      );
 
       setUsers((current) =>
-        current.map((user) => (user.id === payload.user.id ? payload.user : user))
+        current.map((user) =>
+          user.id === payload.user.id ? payload.user : user,
+        ),
       );
       setError("");
     } catch (err) {
@@ -134,7 +142,7 @@ function AdminUsersContent() {
     <AdminShell
       activePath="/admin/users"
       title="Users"
-      description="Review traveler, provider, guide, and admin accounts from one operational view."
+      description="Review traveler, service-provider, guide, and admin accounts from one operational view."
     >
       {error ? (
         <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300">
@@ -143,9 +151,13 @@ function AdminUsersContent() {
       ) : null}
 
       <AdminStatGrid>
-        <AdminCard label="Total users" value={loading ? "-" : stats.total} icon={Users} />
         <AdminCard
-          label="Providers"
+          label="Total users"
+          value={loading ? "-" : stats.total}
+          icon={Users}
+        />
+        <AdminCard
+          label="Service providers"
           value={loading ? "-" : stats.providers}
           icon={UserCheck}
           tone="info"
@@ -205,14 +217,18 @@ function AdminUsersContent() {
                   key: "role",
                   header: "Role",
                   cell: (user: AdminUserRecord) => (
-                    <StatusBadge tone={roleTone(user.role)}>{user.role}</StatusBadge>
+                    <StatusBadge tone={roleTone(user.role)}>
+                      {user.role}
+                    </StatusBadge>
                   ),
                 },
                 {
                   key: "status",
                   header: "Verification",
                   cell: (user: AdminUserRecord) => (
-                    <StatusBadge tone={verificationTone(user.verificationStatus)}>
+                    <StatusBadge
+                      tone={verificationTone(user.verificationStatus)}
+                    >
                       {user.verificationStatus}
                     </StatusBadge>
                   ),
@@ -230,7 +246,12 @@ function AdminUsersContent() {
                     <button
                       type="button"
                       onClick={() => setSelectedId(user.id)}
-                      className={cn(actionButtonVariants({ variant: "secondary", size: "sm" }))}
+                      className={cn(
+                        actionButtonVariants({
+                          variant: "secondary",
+                          size: "sm",
+                        }),
+                      )}
                     >
                       View
                     </button>
@@ -267,10 +288,24 @@ function AdminUsersContent() {
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <Info label="Joined" value={new Date(selectedUser.createdAt).toLocaleDateString()} />
-                  <Info label="Email verified" value={selectedUser.emailVerified ? "Yes" : "No"} />
-                  <Info label="Provider profiles" value={String(selectedUser.providerCompanyCount)} />
-                  <Info label="Nationality" value={selectedUser.nationality || "Not provided"} />
+                  <Info
+                    label="Joined"
+                    value={new Date(
+                      selectedUser.createdAt,
+                    ).toLocaleDateString()}
+                  />
+                  <Info
+                    label="Email verified"
+                    value={selectedUser.emailVerified ? "Yes" : "No"}
+                  />
+                  <Info
+                    label="Provider profiles"
+                    value={String(selectedUser.providerCompanyCount)}
+                  />
+                  <Info
+                    label="Nationality"
+                    value={selectedUser.nationality || "Not provided"}
+                  />
                 </div>
 
                 <div className="space-y-4 rounded-xl border border-slate-200 p-4 dark:border-white/10">
@@ -296,7 +331,9 @@ function AdminUsersContent() {
                     </span>
                     <select
                       value={verificationStatus}
-                      onChange={(event) => setVerificationStatus(event.target.value)}
+                      onChange={(event) =>
+                        setVerificationStatus(event.target.value)
+                      }
                       className="mt-2 h-10 w-full rounded-lg border border-slate-200 bg-white px-3 text-sm text-slate-900 dark:border-white/10 dark:bg-[#0b0b0b] dark:text-white"
                     >
                       <option value="pending">Pending</option>
@@ -310,13 +347,19 @@ function AdminUsersContent() {
                     <input
                       type="checkbox"
                       checked={hasVerifiedBadge}
-                      onChange={(event) => setHasVerifiedBadge(event.target.checked)}
+                      onChange={(event) =>
+                        setHasVerifiedBadge(event.target.checked)
+                      }
                       className="h-4 w-4 rounded border-slate-300 text-[#ff5630]"
                     />
                     Show verified badge
                   </label>
 
-                  <ActionButton variant="primary" onClick={saveUser} disabled={saving}>
+                  <ActionButton
+                    variant="primary"
+                    onClick={saveUser}
+                    disabled={saving}
+                  >
                     {saving ? "Saving..." : "Save account changes"}
                   </ActionButton>
                 </div>

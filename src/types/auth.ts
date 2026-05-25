@@ -190,6 +190,7 @@ export interface RegisterData {
   businessPhone?: string;
   businessEmail?: string;
   physicalAddress?: string;
+  providerTier?: "basic" | "premium";
 }
 
 export interface AuthContextType extends AuthState {

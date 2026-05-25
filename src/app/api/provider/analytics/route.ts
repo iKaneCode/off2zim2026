@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { apiError } from "@/lib/http";
 import { requireSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { getProviderTierFeatures } from "@/lib/provider-platform";
 
 export const dynamic = "force-dynamic";
 
@@ -28,7 +29,7 @@ export async function GET() {
 
     const company = await prisma.providerCompany.findUnique({
       where: { ownerUserId: user.id },
-      select: { id: true },
+      select: { id: true, providerTier: true, tierStatus: true },
     });
 
     if (!company) {
@@ -70,36 +71,38 @@ export async function GET() {
     ]);
 
     const revenueBookings = bookings.filter((booking) =>
-      REVENUE_STATUSES.has(booking.status)
+      REVENUE_STATUSES.has(booking.status),
     );
-    const periodBookings = bookings.filter((booking) => booking.createdAt >= periodStart);
+    const periodBookings = bookings.filter(
+      (booking) => booking.createdAt >= periodStart,
+    );
     const periodRevenueBookings = periodBookings.filter((booking) =>
-      REVENUE_STATUSES.has(booking.status)
+      REVENUE_STATUSES.has(booking.status),
     );
     const totalRevenue = revenueBookings.reduce(
       (total, booking) => total + booking.totalAmount,
-      0
+      0,
     );
     const periodRevenue = periodRevenueBookings.reduce(
       (total, booking) => total + booking.totalAmount,
-      0
+      0,
     );
     const activeDisputes = disputes.filter((dispute) =>
-      ACTIVE_DISPUTE_STATUSES.has(dispute.status)
+      ACTIVE_DISPUTE_STATUSES.has(dispute.status),
     ).length;
     const completedBookings = bookings.filter(
-      (booking) => booking.status === "COMPLETED"
+      (booking) => booking.status === "COMPLETED",
     ).length;
     const cancelledBookings = bookings.filter(
-      (booking) => booking.status === "CANCELLED"
+      (booking) => booking.status === "CANCELLED",
     ).length;
     const pendingBookings = bookings.filter((booking) =>
-      ["REQUESTED", "PENDING"].includes(booking.status)
+      ["REQUESTED", "PENDING"].includes(booking.status),
     ).length;
     const bookingRate =
       bookings.length > 0
         ? Math.round(
-            ((bookings.length - cancelledBookings) / bookings.length) * 100
+            ((bookings.length - cancelledBookings) / bookings.length) * 100,
           )
         : 0;
     const averageOrderValue =
@@ -113,14 +116,17 @@ export async function GET() {
     revenueBookings.forEach((booking) => {
       const key = monthKey(booking.createdAt);
       if (revenueByMonth.has(key)) {
-        revenueByMonth.set(key, (revenueByMonth.get(key) || 0) + booking.totalAmount);
+        revenueByMonth.set(
+          key,
+          (revenueByMonth.get(key) || 0) + booking.totalAmount,
+        );
       }
     });
 
     const topListings = listings
       .map((listing) => {
         const listingBookings = bookings.filter(
-          (booking) => booking.listingId === listing.id
+          (booking) => booking.listingId === listing.id,
         );
         const listingRevenue = listingBookings
           .filter((booking) => REVENUE_STATUSES.has(booking.status))
@@ -162,13 +168,20 @@ export async function GET() {
       amount: `${payout.currency} ${payout.amount.toFixed(2)}`,
     }));
 
-    const recentActivity = [...bookingActivity, ...disputeActivity, ...payoutActivity]
+    const recentActivity = [
+      ...bookingActivity,
+      ...disputeActivity,
+      ...payoutActivity,
+    ]
       .sort((a, b) => new Date(b.meta).getTime() - new Date(a.meta).getTime())
       .slice(0, 8);
 
     return NextResponse.json({
       analytics: {
         periodLabel: "Last 30 days",
+        providerTier: company.providerTier,
+        tierStatus: company.tierStatus,
+        tierFeatures: getProviderTierFeatures(company),
         currency: bookings[0]?.currency || "USD",
         metrics: {
           totalRevenue,
@@ -179,7 +192,9 @@ export async function GET() {
           completedBookings,
           cancelledBookings,
           activeDisputes,
-          activeListings: listings.filter((listing) => listing.status === "active").length,
+          activeListings: listings.filter(
+            (listing) => listing.status === "active",
+          ).length,
           totalListings: listings.length,
           bookingRate,
           averageOrderValue,

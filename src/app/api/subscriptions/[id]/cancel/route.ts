@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: { id: string } },
 ) {
   try {
     const { user } = await requireSessionUser();
@@ -60,10 +60,33 @@ export async function POST(
           where: { id: company.id },
           data: { isFeaturedEligible: false },
         });
+      } else if (sub.planType === "premium_provider") {
+        await tx.providerPlan.updateMany({
+          where: {
+            companyId: company.id,
+            tier: "premium",
+            status: "active",
+          },
+          data: {
+            status: "cancelled",
+            endsAt: new Date(),
+          },
+        });
+
+        await tx.providerCompany.update({
+          where: { id: company.id },
+          data: {
+            providerTier: "basic",
+            tierStatus: "active",
+          },
+        });
       }
     });
 
-    return NextResponse.json({ success: true, cancelledPlanType: sub.planType });
+    return NextResponse.json({
+      success: true,
+      cancelledPlanType: sub.planType,
+    });
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
       return apiError("Unauthorized", 401);

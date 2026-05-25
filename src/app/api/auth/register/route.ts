@@ -22,6 +22,7 @@ const registerSchema = z.object({
   businessPhone: z.string().optional(),
   businessEmail: z.string().email().optional(),
   physicalAddress: z.string().optional(),
+  providerTier: z.enum(["basic", "premium"]).optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
     if (payload.role === "guide" || payload.role === "admin") {
       return apiError(
         "This account type can only be granted by an Off2Zim administrator.",
-        403
+        403,
       );
     }
 
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
     ) {
       return apiError(
         "Provider registration requires the core company profile fields.",
-        422
+        422,
       );
     }
 
@@ -72,7 +73,8 @@ export async function POST(request: NextRequest) {
         name: `${payload.firstName} ${payload.lastName}`.trim(),
         role: payload.role,
         explorerType: payload.role === "explorer" ? payload.explorerType : null,
-        verificationStatus: payload.role === "provider" ? "pending" : "basic_approved",
+        verificationStatus:
+          payload.role === "provider" ? "pending" : "basic_approved",
         explorerScore:
           payload.role === "explorer"
             ? JSON.stringify({
@@ -89,13 +91,16 @@ export async function POST(request: NextRequest) {
                 create: {
                   companyName: payload.companyName!,
                   tradingName: payload.tradingName,
-                  businessRegistrationNumber: payload.businessRegistrationNumber!,
+                  businessRegistrationNumber:
+                    payload.businessRegistrationNumber!,
                   mainContactPerson: payload.mainContactPerson!,
                   businessPhone: payload.businessPhone!,
                   businessEmail: payload.businessEmail!,
                   physicalAddress: payload.physicalAddress!,
                   onboardingStatus: "draft",
                   verificationTier: "basic",
+                  providerTier: payload.providerTier || "basic",
+                  tierStatus: "active",
                 },
               }
             : undefined,
@@ -128,7 +133,7 @@ export async function POST(request: NextRequest) {
     const verificationToken = await createEmailVerificationToken(user.id);
     const delivery = await sendEmailVerificationEmail(
       user.email,
-      verificationToken.token
+      verificationToken.token,
     );
 
     return NextResponse.json({
@@ -139,7 +144,10 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return apiError(error.issues[0]?.message || "Invalid registration data", 422);
+      return apiError(
+        error.issues[0]?.message || "Invalid registration data",
+        422,
+      );
     }
 
     console.error("Register route error:", error);

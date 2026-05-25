@@ -1,6 +1,7 @@
 import crypto from "crypto";
 import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
+import { getProviderTierFeatures } from "@/lib/provider-platform";
 
 const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 30;
 
@@ -33,7 +34,7 @@ export function verifyPassword(password: string, storedHash: string) {
   const candidateHash = crypto.scryptSync(password, salt, 64).toString("hex");
   return crypto.timingSafeEqual(
     Buffer.from(originalHash, "hex"),
-    Buffer.from(candidateHash, "hex")
+    Buffer.from(candidateHash, "hex"),
   );
 }
 
@@ -157,7 +158,8 @@ export function serializeUser(user: NonNullable<UserWithCompany>) {
     companyId: company?.id,
     profile: {
       fullName:
-        (typeof mobileProfile.full_name === "string" && mobileProfile.full_name) ||
+        (typeof mobileProfile.full_name === "string" &&
+          mobileProfile.full_name) ||
         fullName,
       phone: user.phone || undefined,
       location: user.nationality || undefined,
@@ -195,9 +197,12 @@ export function serializeUser(user: NonNullable<UserWithCompany>) {
       businessEmail: company?.businessEmail,
       physicalAddress: company?.physicalAddress,
       websiteUrl: company?.websiteUrl,
+      providerTier: company?.providerTier,
+      tierStatus: company?.tierStatus,
+      tierFeatures: company ? getProviderTierFeatures(company) : [],
       socialMediaLinks: safeJsonParse<Record<string, string>>(
         company?.socialMediaLinks,
-        {}
+        {},
       ),
       servicesOffered: safeJsonParse<string[]>(company?.servicesOffered, []),
       serviceAreas: safeJsonParse<string[]>(company?.serviceAreas, []),

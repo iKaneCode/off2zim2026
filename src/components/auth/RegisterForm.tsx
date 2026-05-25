@@ -3,7 +3,15 @@
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Building2, Eye, EyeOff, Globe2, Mail, Phone, User2 } from "lucide-react";
+import {
+  Building2,
+  Eye,
+  EyeOff,
+  Globe2,
+  Mail,
+  Phone,
+  User2,
+} from "lucide-react";
 import { type AppSurface, getSurfaceHref } from "@/lib/app-surface";
 import { useAuth } from "@/contexts/AuthContext";
 import { ExplorerType, UserRole } from "@/types/auth";
@@ -39,21 +47,19 @@ const RegisterForm = ({
     phone: "",
     companyName: "",
     tradingName: "",
+    providerTier: "basic" as "basic" | "premium",
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const passwordsMatch =
     !formData.confirmPassword || formData.password === formData.confirmPassword;
-  const loginHref = useMemo(
-    () => {
-      const signInHref = getSurfaceHref(surface, "/login");
-      return redirectTo
-        ? `${signInHref}?redirect=${encodeURIComponent(redirectTo)}`
-        : signInHref;
-    },
-    [redirectTo, surface],
-  );
+  const loginHref = useMemo(() => {
+    const signInHref = getSurfaceHref(surface, "/login");
+    return redirectTo
+      ? `${signInHref}?redirect=${encodeURIComponent(redirectTo)}`
+      : signInHref;
+  }, [redirectTo, surface]);
 
   const splitFullName = (value: string) => {
     const parts = value.trim().split(/\s+/).filter(Boolean);
@@ -92,6 +98,8 @@ const RegisterForm = ({
         phone: formData.phone,
         companyName:
           formData.role === "provider" ? formData.companyName : undefined,
+        providerTier:
+          formData.role === "provider" ? formData.providerTier : undefined,
       });
       onClose?.();
       if (redirectTo) {
@@ -224,7 +232,9 @@ const RegisterForm = ({
                 </span>
                 <div>
                   <div className="theme-heading font-semibold">Explorer</div>
-                  <div className="theme-muted mt-1 text-xs">Plan trips, save places, and manage bookings</div>
+                  <div className="theme-muted mt-1 text-xs">
+                    Plan trips, save places, and manage bookings
+                  </div>
                 </div>
               </div>
             </button>
@@ -245,8 +255,12 @@ const RegisterForm = ({
                   <Building2 className="h-4 w-4" />
                 </span>
                 <div>
-                  <div className="theme-heading font-semibold">Service provider</div>
-                  <div className="theme-muted mt-1 text-xs">List and manage services on Off2Zim</div>
+                  <div className="theme-heading font-semibold">
+                    Service provider
+                  </div>
+                  <div className="theme-muted mt-1 text-xs">
+                    List and manage services on Off2Zim
+                  </div>
                 </div>
               </div>
             </button>
@@ -259,7 +273,8 @@ const RegisterForm = ({
               Personal details
             </div>
             <p className="theme-muted mt-2 text-sm leading-6">
-              This helps us personalise your account and match your bookings to the right traveler.
+              This helps us personalise your account and match your bookings to
+              the right traveler.
             </p>
 
             <div className="mt-5 grid gap-4">
@@ -441,7 +456,10 @@ const RegisterForm = ({
                     <button
                       type="button"
                       onClick={() =>
-                        setFormData((prev) => ({ ...prev, explorerType: "foreign" }))
+                        setFormData((prev) => ({
+                          ...prev,
+                          explorerType: "foreign",
+                        }))
                       }
                       className={`rounded-[18px] border px-4 py-3 text-left text-sm transition ${
                         formData.explorerType === "foreign"
@@ -449,13 +467,20 @@ const RegisterForm = ({
                           : "border-black/10 bg-black/[0.03] hover:bg-black/[0.05] dark:border-white/10 dark:bg-white/[0.03] dark:hover:bg-white/[0.05]"
                       }`}
                     >
-                      <div className="theme-heading font-semibold">Visiting</div>
-                      <div className="theme-muted mt-0.5 text-xs">Traveling to Zimbabwe</div>
+                      <div className="theme-heading font-semibold">
+                        Visiting
+                      </div>
+                      <div className="theme-muted mt-0.5 text-xs">
+                        Traveling to Zimbabwe
+                      </div>
                     </button>
                     <button
                       type="button"
                       onClick={() =>
-                        setFormData((prev) => ({ ...prev, explorerType: "local" }))
+                        setFormData((prev) => ({
+                          ...prev,
+                          explorerType: "local",
+                        }))
                       }
                       className={`rounded-[18px] border px-4 py-3 text-left text-sm transition ${
                         formData.explorerType === "local"
@@ -464,7 +489,9 @@ const RegisterForm = ({
                       }`}
                     >
                       <div className="theme-heading font-semibold">Local</div>
-                      <div className="theme-muted mt-0.5 text-xs">Zimbabwe resident</div>
+                      <div className="theme-muted mt-0.5 text-xs">
+                        Zimbabwe resident
+                      </div>
                     </button>
                   </div>
                 </div>
@@ -522,6 +549,54 @@ const RegisterForm = ({
               </div>
 
               <div>
+                <div className="theme-muted mb-2 block text-sm font-medium">
+                  Subscription
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {[
+                    {
+                      id: "basic",
+                      label: "Basic",
+                      detail:
+                        "Web portal profile, listings, calendar, and basic analytics.",
+                    },
+                    {
+                      id: "premium",
+                      label: "Premium",
+                      detail:
+                        "Adds gallery, campaigns, advanced analytics, and Android app access.",
+                    },
+                  ].map((plan) => {
+                    const selected = formData.providerTier === plan.id;
+                    return (
+                      <button
+                        key={plan.id}
+                        type="button"
+                        onClick={() =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            providerTier: plan.id as "basic" | "premium",
+                          }))
+                        }
+                        className={`rounded-[18px] border p-4 text-left transition ${
+                          selected
+                            ? "border-[#ff5630] bg-[#ff5630]/10 text-[#b73216] dark:text-[#ffb49f]"
+                            : "border-black/10 bg-white/60 hover:border-black/20 dark:border-white/10 dark:bg-white/[0.03] dark:hover:border-white/20"
+                        }`}
+                      >
+                        <span className="block text-sm font-semibold">
+                          {plan.label}
+                        </span>
+                        <span className="theme-muted mt-1 block text-xs leading-5">
+                          {plan.detail}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div>
                 <label
                   htmlFor="phone"
                   className="theme-muted mb-2 block text-sm font-medium"
@@ -533,13 +608,13 @@ const RegisterForm = ({
                   <input
                     type="tel"
                     id="phone"
-                  name="phone"
-                  value={formData.phone}
-                  onChange={handleChange}
-                  required={isProvider}
-                  className="theme-input h-12 w-full rounded-[18px] pl-11 pr-4"
-                  placeholder="+263..."
-                />
+                    name="phone"
+                    value={formData.phone}
+                    onChange={handleChange}
+                    required={isProvider}
+                    className="theme-input h-12 w-full rounded-[18px] pl-11 pr-4"
+                    placeholder="+263..."
+                  />
                 </div>
               </div>
             </div>
@@ -600,7 +675,9 @@ const RegisterForm = ({
                 onChange={handleChange}
                 required
                 className={`theme-input h-12 w-full rounded-[18px] px-4 pr-12 ${
-                  passwordsMatch ? "" : "border-rose-300 dark:border-rose-500/30"
+                  passwordsMatch
+                    ? ""
+                    : "border-rose-300 dark:border-rose-500/30"
                 }`}
                 placeholder="Confirm your password"
               />

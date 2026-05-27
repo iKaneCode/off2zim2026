@@ -27,6 +27,8 @@ function companyInclude() {
     bookings: {
       include: {
         disputes: true,
+        user: true,
+        listing: true,
       },
     },
   };
@@ -121,5 +123,55 @@ export async function POST(
   } catch (error) {
     console.error("Admin provider document upload error:", error);
     return apiError("Unable to upload the provider document right now.", 500);
+  }
+}
+
+export async function DELETE(
+  request: NextRequest,
+  {
+    params,
+  }: { params: Promise<{ companyId: string }> | { companyId: string } },
+) {
+  try {
+    const { companyId } = await Promise.resolve(params);
+    const { user } = await requireSessionUser();
+    if (user.role !== "admin") {
+      return apiError(
+        "Only administrators can delete provider documents.",
+        403,
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const documentType = searchParams.get("type") || "";
+
+    if (!documentType.trim()) {
+      return apiError("A document type is required.", 422);
+    }
+
+    const document = await prisma.providerDocument.findFirst({
+      where: { companyId, type: documentType },
+      orderBy: { uploadedAt: "desc" },
+    });
+
+    if (!document) {
+      return apiError("Document not found.", 404);
+    }
+
+    await prisma.providerDocument.delete({ where: { id: document.id } });
+
+    const updatedCompany = await prisma.providerCompany.findUnique({
+      where: { id: companyId },
+      include: companyInclude(),
+    });
+
+    if (!updatedCompany) {
+      return apiError("Service provider not found.", 404);
+    }
+
+    return NextResponse.json({ provider: serializeCompany(updatedCompany) });
+  } catch (error) {
+    console.error("Admin provider document delete error:", error);
+    return apiError("Unable to delete the provider document right now.", 500);
   }
 }

@@ -31,6 +31,8 @@ export async function GET() {
         bookings: {
           include: {
             disputes: true,
+            user: true,
+            listing: true,
           },
         },
       },

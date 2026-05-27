@@ -27,7 +27,10 @@ export type ProviderListingStatus =
   | "pending_review"
   | "active"
   | "paused"
-  | "archived";
+  | "approved"
+  | "pending"
+  | "archived"
+  | "rejected";
 
 export type ProviderListingVisibility = "private" | "public";
 
@@ -57,6 +60,25 @@ export interface ProviderVerificationReviewRecord {
   } | null;
 }
 
+export interface ProviderRatingReviewRecord {
+  id: string;
+  rating: number;
+  note?: string | null;
+  customerName: string;
+  customerEmail?: string | null;
+  bookingType: string;
+  confirmationNumber: string;
+  totalAmount: number;
+  currency: string;
+  guests?: number | null;
+  listingTitle?: string | null;
+  listingCategory?: string | null;
+  listingLocation?: string | null;
+  isVerified: boolean;
+  createdAt: string;
+  reviewedAt?: string | null;
+}
+
 export interface ProviderCompanyRecord {
   id: string;
   ownerUserId: string;
@@ -73,6 +95,8 @@ export interface ProviderCompanyRecord {
   legalCompanyName?: string | null;
   incorporationDate?: string | null;
   contactPersonPhone?: string | null;
+  contactPersonIdType?: string | null;
+  contactPersonIdNumber?: string | null;
   zimraBpNumber?: string | null;
   tinNumber?: string | null;
   taxClearanceExpiresAt?: string | null;
@@ -109,6 +133,11 @@ export interface ProviderCompanyRecord {
   ratingStats?: {
     average: number;
     reviewCount: number;
+    distribution?: Record<1 | 2 | 3 | 4 | 5, number>;
+    withComments?: number;
+    verifiedCount?: number;
+    latestReviewAt?: string | null;
+    reviews?: ProviderRatingReviewRecord[];
   };
   createdAt: string;
   updatedAt: string;

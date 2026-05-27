@@ -184,12 +184,12 @@ function AdminProvidersContent() {
       <section className="rounded-2xl border border-slate-200 bg-white dark:border-white/10 dark:bg-[#101010]">
         <div className="space-y-4 px-4 py-4 sm:px-6">
           <div className="relative">
-            <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-[#ff5630]" />
+            <Search className="pointer-events-none absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400 dark:text-white/40" />
             <input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Search service providers by name, service, location, email, or contact"
-              className="h-14 w-full rounded-[28px] border border-slate-200 bg-slate-50/80 pl-12 pr-4 text-sm font-medium text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-[#ff5630] focus:bg-white focus:ring-4 focus:ring-[#ff5630]/10 dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:placeholder:text-white/35 dark:focus:bg-white/[0.08]"
+              className="h-14 w-full rounded-[28px] border border-slate-200 bg-slate-50/80 pl-12 pr-4 text-sm font-medium text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-slate-400 focus:bg-white focus:ring-4 focus:ring-slate-900/10 dark:border-white/10 dark:bg-white/[0.06] dark:text-white dark:placeholder:text-white/35 dark:focus:bg-white/[0.08] dark:focus:ring-white/10"
             />
           </div>
 
@@ -247,19 +247,19 @@ function ServiceProviderListCard({
       href={href}
       className={cn(
         "group block w-full rounded-xl border border-slate-200 px-4 py-4 transition",
-        "hover:border-[#ff5630]/60 hover:bg-[#ff5630]/5",
-        "dark:border-white/10 dark:hover:border-[#ff5630]/40 dark:hover:bg-[#ff5630]/10",
+        "hover:border-slate-300 hover:bg-slate-900/[0.03]",
+        "dark:border-white/10 dark:hover:border-white/20 dark:hover:bg-white/[0.05]",
       )}
     >
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3 md:justify-start">
             <div className="min-w-0">
-              <div className="truncate text-base font-semibold text-slate-950 group-hover:text-[#c43b1d] dark:text-white dark:group-hover:text-[#ffb49f]">
+              <div className="truncate text-base font-semibold text-slate-950 group-hover:text-slate-600 dark:text-white dark:group-hover:text-white/70">
                 {provider.companyName}
               </div>
               <div className="mt-1 flex min-w-0 items-center gap-1.5 text-sm text-slate-500 dark:text-white/45">
-                <MapPin className="h-3.5 w-3.5 shrink-0 text-[#ff5630]" />
+                <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400 dark:text-white/40" />
                 <span className="truncate">
                   {getOperatingLocation(provider)}
                 </span>

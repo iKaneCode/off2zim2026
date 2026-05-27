@@ -19,6 +19,8 @@ const companyUpdateSchema = z.object({
   businessRegistrationNumber: z.string().min(1),
   mainContactPerson: z.string().min(1),
   contactPersonPhone: z.string().optional().nullable(),
+  contactPersonIdType: z.enum(["id", "passport"]).optional().nullable(),
+  contactPersonIdNumber: z.string().optional().nullable(),
   businessPhone: z.string().min(1),
   businessEmail: z.string().email(),
   physicalAddress: z.string().min(1),
@@ -76,6 +78,8 @@ function companyInclude() {
     bookings: {
       include: {
         disputes: true,
+        user: true,
+        listing: true,
       },
     },
   };
@@ -146,6 +150,8 @@ export async function PATCH(
         incorporationDate:
           payload.incorporationDate ?? existingProfileMeta.incorporationDate,
         contactPersonPhone: payload.contactPersonPhone,
+        contactPersonIdType: payload.contactPersonIdType,
+        contactPersonIdNumber: payload.contactPersonIdNumber,
         zimraBpNumber: payload.zimraBpNumber,
         tinNumber: payload.tinNumber,
         taxClearanceExpiresAt: payload.taxClearanceExpiresAt,

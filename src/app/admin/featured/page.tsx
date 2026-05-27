@@ -371,7 +371,7 @@ function AutoQualifyPanel({ onDone }: { onDone: () => void }) {
             type="checkbox"
             checked={replace}
             onChange={(event) => setReplace(event.target.checked)}
-            className="h-4 w-4 rounded border-slate-300 accent-[#ff5630]"
+            className="h-4 w-4 rounded border-slate-300 accent-slate-900"
           />
           Deactivate existing top rated entries before promoting new ones
         </label>
@@ -549,7 +549,7 @@ export default function AdminFeaturedPage() {
                     type="checkbox"
                     checked={showAll}
                     onChange={(event) => setShowAll(event.target.checked)}
-                    className="h-4 w-4 rounded border-slate-300 accent-[#ff5630]"
+                    className="h-4 w-4 rounded border-slate-300 accent-slate-900"
                   />
                   Show inactive and expired
                 </label>

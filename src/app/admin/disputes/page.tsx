@@ -188,7 +188,7 @@ function AdminDisputesContent() {
                       <button
                         type="button"
                         onClick={() => setSelectedId(dispute.id)}
-                        className="font-medium text-slate-950 hover:text-[#ff5630] dark:text-white"
+                        className="font-medium text-slate-950 hover:text-slate-600 dark:text-white dark:hover:text-white/70"
                       >
                         {dispute.bookingConfirmationNumber}
                       </button>

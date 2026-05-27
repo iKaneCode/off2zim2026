@@ -12,11 +12,20 @@ import {
 } from "@/lib/listing-destination-rules";
 
 const updateListingSchema = z.object({
+  title: z.string().min(1).optional(),
+  shortDescription: z.string().optional().nullable(),
+  location: z.string().min(1).optional(),
+  listingType: z.string().min(1).optional(),
+  pricingModel: z.string().min(1).optional(),
+  basePrice: z.number().nonnegative().optional().nullable(),
+  capacity: z.number().int().positive().optional().nullable(),
   status: z
     .enum(["draft", "pending_review", "active", "paused", "archived"])
     .optional(),
   visibility: z.enum(["private", "public"]).optional(),
   category: z.string().min(1).optional(),
+  amenities: z.array(z.string()).optional(),
+  policies: z.record(z.unknown()).optional(),
   metadata: z.record(z.unknown()).optional(),
 });
 
@@ -78,10 +87,24 @@ export async function PATCH(
     const updated = await prisma.providerListing.update({
       where: { id: listing.id },
       data: {
+        title: payload.title,
+        shortDescription: payload.shortDescription,
+        listingType: payload.listingType,
+        pricingModel: payload.pricingModel,
+        basePrice: payload.basePrice,
+        capacity: payload.capacity,
         status: payload.status,
         visibility: payload.visibility,
         category: payload.category,
-        location: destination?.name ?? undefined,
+        location: destination?.name ?? payload.location,
+        amenities:
+          payload.amenities !== undefined
+            ? JSON.stringify(payload.amenities)
+            : undefined,
+        policies:
+          payload.policies !== undefined
+            ? JSON.stringify(payload.policies)
+            : undefined,
         metadata:
           payload.metadata || destination
             ? JSON.stringify({

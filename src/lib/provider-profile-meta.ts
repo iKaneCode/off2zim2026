@@ -4,6 +4,8 @@ export interface ProviderProfileMeta {
   legalCompanyName?: string | null;
   incorporationDate?: string | null;
   contactPersonPhone?: string | null;
+  contactPersonIdType?: string | null;
+  contactPersonIdNumber?: string | null;
   zimraBpNumber?: string | null;
   tinNumber?: string | null;
   taxClearanceExpiresAt?: string | null;
@@ -15,6 +17,8 @@ const META_KEYS = {
   legalCompanyName: "__off2zim_legalCompanyName",
   incorporationDate: "__off2zim_incorporationDate",
   contactPersonPhone: "__off2zim_contactPersonPhone",
+  contactPersonIdType: "__off2zim_contactPersonIdType",
+  contactPersonIdNumber: "__off2zim_contactPersonIdNumber",
   zimraBpNumber: "__off2zim_zimraBpNumber",
   tinNumber: "__off2zim_tinNumber",
   taxClearanceExpiresAt: "__off2zim_taxClearanceExpiresAt",
@@ -38,6 +42,12 @@ export function readProviderProfileMeta(
     ),
     contactPersonPhone: cleanValue(
       socialMediaLinks[META_KEYS.contactPersonPhone],
+    ),
+    contactPersonIdType: cleanValue(
+      socialMediaLinks[META_KEYS.contactPersonIdType],
+    ),
+    contactPersonIdNumber: cleanValue(
+      socialMediaLinks[META_KEYS.contactPersonIdNumber],
     ),
     zimraBpNumber: cleanValue(socialMediaLinks[META_KEYS.zimraBpNumber]),
     tinNumber: cleanValue(socialMediaLinks[META_KEYS.tinNumber]),

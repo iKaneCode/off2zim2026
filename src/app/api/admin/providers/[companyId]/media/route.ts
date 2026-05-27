@@ -42,6 +42,8 @@ function companyInclude() {
     bookings: {
       include: {
         disputes: true,
+        user: true,
+        listing: true,
       },
     },
   };

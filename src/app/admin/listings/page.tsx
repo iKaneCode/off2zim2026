@@ -201,7 +201,7 @@ function AdminListingsContent() {
               type="checkbox"
               checked={showMissingDestinations}
               onChange={(event) => setShowMissingDestinations(event.target.checked)}
-              className="h-4 w-4 rounded border-slate-300 accent-[#ff5630]"
+              className="h-4 w-4 rounded border-slate-300 accent-slate-900"
             />
             Missing destination only
           </label>

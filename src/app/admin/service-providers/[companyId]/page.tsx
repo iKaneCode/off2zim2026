@@ -13,7 +13,7 @@ import { apiFetch } from "@/lib/client-api";
 import { getSurfaceHref } from "@/lib/app-surface";
 import { cn } from "@/lib/utils";
 import type { ProviderCompanyRecord } from "@/types/platform";
-import { ArrowLeft, XCircle } from "lucide-react";
+import { ChevronLeft, XCircle } from "lucide-react";
 
 export default function AdminProviderDetailPage() {
   return (
@@ -94,9 +94,22 @@ function AdminProviderDetailContent() {
   return (
     <AdminShell
       activePath="/admin/service-providers"
-      title={provider?.companyName || "Service Providers"}
+      title={
+        provider?.tradingName || provider?.companyName || "Service Providers"
+      }
       description={
-        provider ? <ProviderHeaderStatus provider={provider} /> : undefined
+        provider ? (
+          <div className="flex flex-col gap-3">
+            <ProviderHeaderStatus provider={provider} />
+            <Link
+              href={getSurfaceHref("admin", "/admin/service-providers")}
+              aria-label="Back to service providers"
+              className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition hover:bg-slate-200 focus:outline-none focus:ring-4 focus:ring-slate-900/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/15 dark:focus:ring-white/15"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </Link>
+          </div>
+        ) : undefined
       }
       actions={
         provider ? (
@@ -119,16 +132,6 @@ function AdminProviderDetailContent() {
         ) : null
       }
     >
-      <div>
-        <Link
-          href={getSurfaceHref("admin", "/admin/service-providers")}
-          className={cn(actionButtonVariants({ variant: "secondary" }))}
-        >
-          <ArrowLeft className="h-4 w-4" />
-          Back
-        </Link>
-      </div>
-
       {error ? (
         <PageAlertModal
           title="Attention required"

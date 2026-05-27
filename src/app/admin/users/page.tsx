@@ -203,7 +203,7 @@ function AdminUsersContent() {
                       <button
                         type="button"
                         onClick={() => setSelectedId(user.id)}
-                        className="font-medium text-slate-950 hover:text-[#ff5630] dark:text-white"
+                        className="font-medium text-slate-950 hover:text-slate-600 dark:text-white dark:hover:text-white/70"
                       >
                         {user.name}
                       </button>
@@ -350,7 +350,7 @@ function AdminUsersContent() {
                       onChange={(event) =>
                         setHasVerifiedBadge(event.target.checked)
                       }
-                      className="h-4 w-4 rounded border-slate-300 text-[#ff5630]"
+                      className="h-4 w-4 rounded border-slate-300 accent-slate-900"
                     />
                     Show verified badge
                   </label>

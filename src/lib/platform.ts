@@ -11,6 +11,7 @@ import type {
 import type {
   ProviderCompanyRecord,
   ProviderListingRecord,
+  ProviderRatingReviewRecord,
   ProviderOrderRecord,
   PublicListingRecord,
   ExplorerBookingRecord,
@@ -50,7 +51,11 @@ type CompanyWithRelations = ProviderCompany & {
     reviewedBy: User | null;
   })[];
   listings?: (ProviderListing & { bookings: Booking[] })[];
-  bookings?: (Booking & { disputes: Dispute[] })[];
+  bookings?: (Booking & {
+    disputes: Dispute[];
+    user?: User | null;
+    listing?: ProviderListing | null;
+  })[];
 };
 
 type ListingWithRelations = ProviderListing & {
@@ -119,6 +124,58 @@ export function serializeCompany(
       (booking) =>
         booking.isExplorerRated && typeof booking.explorerRating === "number",
     ) ?? [];
+  const ratingDistribution: Record<1 | 2 | 3 | 4 | 5, number> = {
+    1: 0,
+    2: 0,
+    3: 0,
+    4: 0,
+    5: 0,
+  };
+  const ratingReviews = providerRatings
+    .map<ProviderRatingReviewRecord>((booking) => {
+      const rating = Math.min(5, Math.max(1, booking.explorerRating ?? 0)) as
+        | 1
+        | 2
+        | 3
+        | 4
+        | 5;
+      ratingDistribution[rating] += 1;
+
+      const customerName = booking.user
+        ? [booking.user.firstName, booking.user.lastName]
+            .filter(Boolean)
+            .join(" ")
+            .trim() ||
+          booking.user.name ||
+          booking.user.email
+        : "Explorer";
+
+      return {
+        id: booking.id,
+        rating,
+        note: booking.explorerRatingNote,
+        customerName,
+        customerEmail: booking.user?.email ?? null,
+        bookingType: booking.bookingType,
+        confirmationNumber: booking.confirmationNumber,
+        totalAmount: booking.totalAmount,
+        currency: booking.currency,
+        guests: booking.guests,
+        listingTitle: booking.listing?.title ?? null,
+        listingCategory: booking.listing?.category ?? null,
+        listingLocation: booking.listing?.location ?? null,
+        isVerified: true,
+        createdAt: booking.createdAt.toISOString(),
+        reviewedAt:
+          booking.ratingsRevealedAt?.toISOString() ??
+          booking.updatedAt.toISOString(),
+      };
+    })
+    .sort(
+      (first, second) =>
+        new Date(second.reviewedAt || second.createdAt).getTime() -
+        new Date(first.reviewedAt || first.createdAt).getTime(),
+    );
   const ratingStats = company.bookings
     ? {
         average:
@@ -129,6 +186,13 @@ export function serializeCompany(
               ) / providerRatings.length
             : 0,
         reviewCount: providerRatings.length,
+        distribution: ratingDistribution,
+        withComments: ratingReviews.filter((review) => review.note?.trim())
+          .length,
+        verifiedCount: ratingReviews.filter((review) => review.isVerified)
+          .length,
+        latestReviewAt: ratingReviews[0]?.reviewedAt ?? null,
+        reviews: ratingReviews,
       }
     : undefined;
 
@@ -148,6 +212,8 @@ export function serializeCompany(
     legalCompanyName: profileMeta.legalCompanyName,
     incorporationDate: profileMeta.incorporationDate,
     contactPersonPhone: profileMeta.contactPersonPhone,
+    contactPersonIdType: profileMeta.contactPersonIdType,
+    contactPersonIdNumber: profileMeta.contactPersonIdNumber,
     zimraBpNumber: profileMeta.zimraBpNumber,
     tinNumber: profileMeta.tinNumber,
     taxClearanceExpiresAt: profileMeta.taxClearanceExpiresAt,

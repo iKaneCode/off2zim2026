@@ -14,7 +14,7 @@ const reviewSchema = z.object({
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { companyId: string } }
+  { params }: { params: { companyId: string } },
 ) {
   try {
     const { user } = await requireSessionUser();
@@ -56,7 +56,9 @@ export async function POST(
                 ? "verified_partner_review"
                 : "basic_review",
             status:
-              payload.status === "changes_requested" ? "changes_requested" : "approved",
+              payload.status === "changes_requested"
+                ? "changes_requested"
+                : "approved",
             notes: payload.notes,
             internalSummary: payload.internalSummary || null,
             reviewedAt: new Date(),
@@ -94,6 +96,8 @@ export async function POST(
         bookings: {
           include: {
             disputes: true,
+            user: true,
+            listing: true,
           },
         },
       },
@@ -117,7 +121,10 @@ export async function POST(
     return NextResponse.json({ company: serializeCompany(updatedCompany) });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return apiError(error.issues[0]?.message || "Invalid review payload", 422);
+      return apiError(
+        error.issues[0]?.message || "Invalid review payload",
+        422,
+      );
     }
 
     console.error("Admin provider review error:", error);

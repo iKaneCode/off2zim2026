@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { apiError } from "@/lib/http";
 import { requireSessionUser } from "@/lib/auth";
 import { serializeCompany } from "@/lib/platform";
+import { ensureServiceProviderIds } from "@/lib/provider-company-ids";
 
 export const dynamic = "force-dynamic";
 export async function GET() {
@@ -46,8 +47,10 @@ export async function GET() {
       ],
     });
 
+    const companiesWithIds = await ensureServiceProviderIds(companies);
+
     return NextResponse.json({
-      providers: companies.map(serializeCompany),
+      providers: companiesWithIds.map(serializeCompany),
     });
   } catch (error) {
     return apiError("Unauthorized", 401);

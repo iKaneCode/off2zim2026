@@ -15,6 +15,10 @@ import {
   SERVICE_PROVIDER_FILTERS,
   type ServiceProviderCategoryId,
 } from "@/lib/service-provider-categories";
+import {
+  getProviderListingDisplayId,
+  getServiceProviderDisplayId,
+} from "@/lib/service-provider-id";
 import { cn } from "@/lib/utils";
 import type {
   AdminListingRecord,
@@ -26,6 +30,8 @@ import {
   Building2,
   CalendarDays,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Contact,
   FilePlus,
   FileText,
@@ -105,10 +111,40 @@ interface ListingEditForm {
   status: string;
   visibility: string;
   location: string;
+  bookingMode: string;
+  instantBooking: boolean;
   basePrice: string;
   listingType: string;
   pricingModel: string;
   capacity: string;
+  totalUnits: string;
+  bedrooms: string;
+  beds: string;
+  bathrooms: string;
+  maxAdults: string;
+  maxChildren: string;
+  maxInfants: string;
+  bedSetup: string;
+  bathroomType: string;
+  roomView: string;
+  checkInFrom: string;
+  checkInUntil: string;
+  checkOutUntil: string;
+  minNights: string;
+  maxNights: string;
+  advanceNoticeHours: string;
+  bookingWindowMonths: string;
+  cleaningFee: string;
+  securityDeposit: string;
+  extraGuestFee: string;
+  weeklyDiscount: string;
+  monthlyDiscount: string;
+  cancellationPolicy: string;
+  paymentPolicy: string;
+  calendarSyncUrl: string;
+  blackoutNotes: string;
+  accessibilityFeatures: string[];
+  safetyFeatures: string[];
   included: string[];
   notAllowed: string[];
 }
@@ -192,10 +228,40 @@ const emptyListingEditForm: ListingEditForm = {
   status: "",
   visibility: "",
   location: "",
+  bookingMode: "",
+  instantBooking: false,
   basePrice: "",
   listingType: "",
   pricingModel: "",
   capacity: "",
+  totalUnits: "",
+  bedrooms: "",
+  beds: "",
+  bathrooms: "",
+  maxAdults: "",
+  maxChildren: "",
+  maxInfants: "",
+  bedSetup: "",
+  bathroomType: "",
+  roomView: "",
+  checkInFrom: "",
+  checkInUntil: "",
+  checkOutUntil: "",
+  minNights: "",
+  maxNights: "",
+  advanceNoticeHours: "",
+  bookingWindowMonths: "",
+  cleaningFee: "",
+  securityDeposit: "",
+  extraGuestFee: "",
+  weeklyDiscount: "",
+  monthlyDiscount: "",
+  cancellationPolicy: "",
+  paymentPolicy: "",
+  calendarSyncUrl: "",
+  blackoutNotes: "",
+  accessibilityFeatures: [],
+  safetyFeatures: [],
   included: [],
   notAllowed: [],
 };
@@ -240,6 +306,20 @@ const STAY_NOT_ALLOWED_OPTIONS = [
 const GUEST_CAPACITY_OPTIONS = Array.from({ length: 12 }, (_, index) =>
   String(index + 1),
 );
+
+const ROOM_COUNT_OPTIONS = Array.from({ length: 50 }, (_, index) =>
+  String(index + 1),
+);
+
+const CALENDAR_WEEKDAY_LABELS = [
+  "Sun",
+  "Mon",
+  "Tue",
+  "Wed",
+  "Thu",
+  "Fri",
+  "Sat",
+];
 
 type ListingStatusFilter =
   | "all"
@@ -1000,7 +1080,10 @@ export default function EditableServiceProviderProfile({
 
   const saveListingEdit = async () => {
     if (!editingListingId) return;
-    const listingErrors = getListingValidationErrors(listingEditForm);
+    const listingErrors = getListingValidationErrors(
+      listingEditForm,
+      selectedService,
+    );
     if (listingErrors.size > 0) {
       setListingValidationAttemptedIds((current) => {
         const next = new Set(current);
@@ -1024,6 +1107,8 @@ export default function EditableServiceProviderProfile({
             status: getPersistedListingStatus(listingEditForm.status),
             visibility: listingEditForm.visibility || undefined,
             location: listingEditForm.location || undefined,
+            bookingMode: listingEditForm.bookingMode || undefined,
+            instantBooking: listingEditForm.instantBooking,
             listingType: listingEditForm.listingType || undefined,
             pricingModel: listingEditForm.pricingModel || undefined,
             basePrice: listingEditForm.basePrice
@@ -1040,6 +1125,10 @@ export default function EditableServiceProviderProfile({
                 (item) => item !== "No restrictions listed",
               ),
             },
+            metadata:
+              selectedService === "stays"
+                ? { stayDetails: toStayDetailsPayload(listingEditForm) }
+                : undefined,
           }),
         },
       );
@@ -1241,13 +1330,19 @@ export default function EditableServiceProviderProfile({
 
       <FormPanel title="Profile">
         <div className="grid gap-4 md:grid-cols-2">
-          <Field
-            label="Trading / public company name"
-            value={form.companyName}
-            initialValue={provider.companyName}
-            onChange={(value) => updateField("companyName", value)}
-            hasError={validationErrors.has("companyName")}
-          />
+          <div>
+            <label className="block text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40 mb-1.5">
+              Service Provider ID
+            </label>
+            <input
+              type="text"
+              value={getServiceProviderDisplayId(provider)}
+              disabled
+              className="w-full min-h-11 px-3 rounded-md border border-slate-200 bg-slate-100 text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500 cursor-not-allowed font-mono"
+              readOnly
+              tabIndex={-1}
+            />
+          </div>
           <Field
             label="Display name"
             value={form.tradingName}
@@ -1935,11 +2030,13 @@ export default function EditableServiceProviderProfile({
       >
         <ListingsManagerPanel
           listings={serviceListings}
+          allProviderListings={listings}
           loading={loadingListings}
           editingListingId={editingListingId}
           listingEditForm={listingEditForm}
           deletingListingId={deletingListingId}
           service={selectedService}
+          serviceProviderId={getServiceProviderDisplayId(provider)}
           operatingLocations={form.serviceAreas}
           displayName={getProviderDisplayName(provider, form)}
           savingListingId={savingListingId}
@@ -2374,11 +2471,13 @@ function SelectedList({
 
 function ListingsManagerPanel({
   listings,
+  allProviderListings,
   loading,
   editingListingId,
   listingEditForm,
   deletingListingId,
   service,
+  serviceProviderId,
   operatingLocations,
   displayName,
   savingListingId,
@@ -2389,11 +2488,13 @@ function ListingsManagerPanel({
   onDeleteListing,
 }: {
   listings: AdminListingRecord[];
+  allProviderListings: AdminListingRecord[];
   loading: boolean;
   editingListingId: string;
   listingEditForm: ListingEditForm;
   deletingListingId: string;
   service: ServiceProviderCategoryId;
+  serviceProviderId: string;
   operatingLocations: string[];
   displayName: string;
   savingListingId: string;
@@ -2481,12 +2582,18 @@ function ListingsManagerPanel({
       ) : (
         <div className="space-y-3">
           {filteredListings.map((listing) => {
+            const listingDisplayId = getListingDisplayId(
+              serviceProviderId,
+              listing,
+              allProviderListings,
+            );
             const editing = listing.id === editingListingId;
             const values = editing
               ? listingEditForm
               : toListingEditForm(listing, displayName);
             const initialValues = toListingEditForm(listing, displayName);
             const statusValue = values.status || listing.status;
+            const isStayListing = service === "stays";
             const isActive =
               statusValue === "active" || statusValue === "approved";
             const canToggleArchive = canToggleListingArchive(statusValue);
@@ -2543,11 +2650,11 @@ function ListingsManagerPanel({
                   <Trash2 className="h-4 w-4" />
                 </button>
 
-                <div className="grid gap-3 pr-12 md:grid-cols-[220px_minmax(0,280px)] lg:grid-cols-[220px_minmax(0,280px)_minmax(0,1fr)] lg:items-end">
+                <div className="grid gap-3 pr-12 md:grid-cols-[220px_minmax(0,280px)_minmax(0,220px)] lg:grid-cols-[220px_minmax(0,280px)_minmax(0,220px)_minmax(0,1fr)] lg:items-end">
                   <label className="block">
                     <ListingFieldLabel>Listing ID</ListingFieldLabel>
                     <input
-                      value={listing.id}
+                      value={listingDisplayId}
                       disabled
                       readOnly
                       className={cn(
@@ -2586,11 +2693,13 @@ function ListingsManagerPanel({
                     </select>
                   </label>
 
-                  <div className="flex flex-wrap items-end gap-3 md:col-span-2 lg:col-span-1 lg:justify-end">
+                  <div className="flex flex-wrap items-end gap-3">
                     <div className="min-w-28">
                       <ListingFieldLabel>Status</ListingFieldLabel>
-                      <div className="min-h-11 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold capitalize text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/75">
-                        {getListingStatusDisplayValue(statusValue)}
+                      <div className="flex min-h-11 items-center">
+                        <StatusPill
+                          value={getListingStatusDisplayValue(statusValue)}
+                        />
                       </div>
                     </div>
                     <ListingActivationToggle
@@ -2606,7 +2715,12 @@ function ListingsManagerPanel({
                   </div>
                 </div>
 
-                <div className="mt-3 grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+                <div
+                  className={cn(
+                    "mt-3 grid gap-3 md:grid-cols-2",
+                    isStayListing ? "xl:grid-cols-5" : "xl:grid-cols-4",
+                  )}
+                >
                   <label className="block">
                     <ListingFieldLabel
                       required={showRequiredState && !values.listingType}
@@ -2634,6 +2748,17 @@ function ListingsManagerPanel({
                       ))}
                     </select>
                   </label>
+
+                  {isStayListing ? (
+                    <ListingSelectControl
+                      label="Total rooms"
+                      value={values.totalUnits}
+                      options={ROOM_COUNT_OPTIONS}
+                      required
+                      showRequiredState={showRequiredState}
+                      onChange={(value) => edit({ totalUnits: value })}
+                    />
+                  ) : null}
 
                   <label className="block">
                     <ListingFieldLabel
@@ -2696,7 +2821,7 @@ function ListingsManagerPanel({
                     <ListingFieldLabel
                       required={showRequiredState && !values.capacity}
                     >
-                      {service === "stays" ? "Guests" : "Capacity"}
+                      {service === "stays" ? "Max guests" : "Capacity"}
                     </ListingFieldLabel>
                     <select
                       value={values.capacity}
@@ -2720,7 +2845,12 @@ function ListingsManagerPanel({
                     </select>
                   </label>
 
-                  <label className="block md:col-span-2 xl:col-span-4">
+                  <label
+                    className={cn(
+                      "block md:col-span-2",
+                      isStayListing ? "xl:col-span-5" : "xl:col-span-4",
+                    )}
+                  >
                     <ListingFieldLabel
                       required={showRequiredState && !values.shortDescription}
                     >
@@ -2743,7 +2873,19 @@ function ListingsManagerPanel({
                     />
                   </label>
 
-                  <div className="md:col-span-2 xl:col-span-4">
+                  {isStayListing ? (
+                    <StaysListingCalendarPanel
+                      listing={listing}
+                      values={values}
+                    />
+                  ) : null}
+
+                  <div
+                    className={cn(
+                      "md:col-span-2",
+                      isStayListing ? "xl:col-span-5" : "xl:col-span-4",
+                    )}
+                  >
                     <ListingFieldLabel
                       required={
                         showRequiredState && values.included.length === 0
@@ -2778,7 +2920,12 @@ function ListingsManagerPanel({
                     />
                   </div>
 
-                  <div className="md:col-span-2 xl:col-span-4">
+                  <div
+                    className={cn(
+                      "md:col-span-2",
+                      isStayListing ? "xl:col-span-5" : "xl:col-span-4",
+                    )}
+                  >
                     <ListingFieldLabel
                       required={
                         showRequiredState && values.notAllowed.length === 0
@@ -2839,6 +2986,263 @@ function ListingsManagerPanel({
           })}
         </div>
       )}
+    </div>
+  );
+}
+
+function StaysListingCalendarPanel({
+  listing,
+  values,
+}: {
+  listing: AdminListingRecord;
+  values: ListingEditForm;
+}) {
+  return (
+    <div className="md:col-span-2 xl:col-span-5">
+      <div>
+        <ListingFieldLabel>Calendar & Availability</ListingFieldLabel>
+        <StayCalendarPanel listing={listing} values={values} />
+      </div>
+    </div>
+  );
+}
+
+type ListingSelectOption = string | { value: string; label: string };
+
+function ListingSelectControl({
+  label,
+  value,
+  options,
+  required = false,
+  showRequiredState,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: ListingSelectOption[];
+  required?: boolean;
+  showRequiredState: boolean;
+  onChange: (value: string) => void;
+}) {
+  const showValidationState = required && showRequiredState;
+
+  return (
+    <label className="block">
+      <ListingFieldLabel required={showValidationState && !value}>
+        {label}
+      </ListingFieldLabel>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className={cn(
+          inputClassName,
+          getListingRequiredFieldClass(value, showValidationState),
+        )}
+      >
+        <option value="">Select</option>
+        {options.map((option) => {
+          const value = typeof option === "string" ? option : option.value;
+          const label = typeof option === "string" ? option : option.label;
+
+          return (
+            <option key={value} value={value}>
+              {label}
+            </option>
+          );
+        })}
+      </select>
+    </label>
+  );
+}
+
+function StayCalendarPanel({
+  listing,
+  values,
+}: {
+  listing: AdminListingRecord;
+  values: ListingEditForm;
+}) {
+  const totalUnits = parsePositiveInt(values.totalUnits) || 0;
+  const today = useMemo(
+    () => parseCalendarDateKey(getCalendarDateKey(new Date())),
+    [],
+  );
+  const [visibleMonth, setVisibleMonth] = useState(() => getMonthStart(today));
+  const [selectedDate, setSelectedDate] = useState(() =>
+    getCalendarDateKey(today),
+  );
+  const days = getStayCalendarMonthCells(listing, totalUnits, visibleMonth);
+  const selectedDay = getStayDateOccupancy(listing, totalUnits, selectedDate);
+  const roomType = values.listingType || "Room type";
+  const visibleBookings = selectedDay.bookings.slice(0, 4);
+  const isCurrentMonth = isSameCalendarMonth(visibleMonth, today);
+  const monthLabel = formatCalendarMonthLabel(visibleMonth);
+
+  const moveMonth = (direction: -1 | 1) => {
+    if (direction === -1 && isCurrentMonth) return;
+    setVisibleMonth((current) => {
+      const nextMonth = getMonthStart(addCalendarMonths(current, direction));
+      setSelectedDate(
+        getCalendarDateKey(getDefaultSelectedDate(nextMonth, today)),
+      );
+      return nextMonth;
+    });
+  };
+
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-[#0b0b0b]">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <span className="grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-slate-600 dark:bg-white/[0.06] dark:text-white/60">
+            <CalendarDays className="h-4 w-4" />
+          </span>
+          <div>
+            <div className="text-sm font-semibold text-slate-950 dark:text-white">
+              {formatCalendarDateLabel(selectedDate)}
+            </div>
+          </div>
+        </div>
+        <div className="flex items-center justify-between gap-2 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 dark:border-white/10 dark:bg-white/[0.04] sm:min-w-56">
+          <button
+            type="button"
+            onClick={() => moveMonth(-1)}
+            disabled={isCurrentMonth}
+            aria-label="Previous month"
+            className="grid h-8 w-8 place-items-center rounded-full text-slate-500 transition hover:bg-white hover:text-slate-950 disabled:pointer-events-none disabled:opacity-35 dark:text-white/50 dark:hover:bg-white/10 dark:hover:text-white"
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+          <div className="min-w-28 text-center text-sm font-semibold text-slate-950 dark:text-white">
+            {monthLabel}
+          </div>
+          <button
+            type="button"
+            onClick={() => moveMonth(1)}
+            aria-label="Next month"
+            className="grid h-8 w-8 place-items-center rounded-full text-slate-500 transition hover:bg-white hover:text-slate-950 dark:text-white/50 dark:hover:bg-white/10 dark:hover:text-white"
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="mt-3 grid gap-2 sm:grid-cols-4">
+        <StayCalendarMetric label="Room type" value={roomType} />
+        <StayCalendarMetric
+          label="Total rooms"
+          value={String(totalUnits || 0)}
+        />
+        <StayCalendarMetric
+          label="Booked"
+          value={String(selectedDay.bookedRooms)}
+        />
+        <StayCalendarMetric
+          label="Available"
+          value={String(selectedDay.availableRooms)}
+        />
+      </div>
+      <div className="mt-3 grid grid-cols-7 gap-1.5">
+        {CALENDAR_WEEKDAY_LABELS.map((weekday) => (
+          <div
+            key={weekday}
+            className="px-1 py-1 text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 dark:text-white/35"
+          >
+            {weekday}
+          </div>
+        ))}
+        {days.map((day, index) =>
+          day ? (
+            <button
+              key={day.key}
+              type="button"
+              onClick={() => setSelectedDate(day.key)}
+              className={cn(
+                "min-h-16 rounded-lg border px-2 py-1.5 text-left transition hover:-translate-y-0.5 hover:shadow-sm",
+                selectedDate === day.key &&
+                  "ring-2 ring-slate-950/15 dark:ring-white/20",
+                day.status === "booked"
+                  ? "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-300"
+                  : day.status === "limited"
+                    ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-300"
+                    : day.status === "blocked"
+                      ? "border-slate-200 bg-slate-100 text-slate-500 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/45"
+                      : "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-300",
+              )}
+            >
+              <div className="text-sm font-bold">{day.day}</div>
+              <div className="mt-2 truncate text-[10px] font-semibold capitalize">
+                {day.label}
+              </div>
+            </button>
+          ) : (
+            <div key={`blank-${index}`} className="min-h-16 rounded-lg" />
+          ),
+        )}
+      </div>
+
+      <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-white/10 dark:bg-white/[0.03]">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <div className="text-sm font-semibold text-slate-950 dark:text-white">
+              Bookings on {formatCalendarDateLabel(selectedDate)}
+            </div>
+            <div className="text-xs font-medium text-slate-500 dark:text-white/45">
+              {selectedDay.bookedRooms} of {totalUnits || 0} {roomType} rooms
+              booked
+            </div>
+          </div>
+          <StatusPill value={selectedDay.status} />
+        </div>
+
+        {visibleBookings.length > 0 ? (
+          <div className="mt-3 space-y-2">
+            {visibleBookings.map((booking) => (
+              <div
+                key={booking.id}
+                className="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-white px-3 py-2 dark:bg-[#0b0b0b]"
+              >
+                <div>
+                  <div className="text-sm font-semibold text-slate-800 dark:text-white/80">
+                    {booking.confirmationNumber || "Booking"}
+                  </div>
+                  <div className="text-xs text-slate-500 dark:text-white/45">
+                    {formatBookingDateRange(booking.checkIn, booking.checkOut)}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-semibold text-slate-500 dark:text-white/45">
+                    {booking.guests ? `${booking.guests} guests` : "Guests TBC"}
+                  </span>
+                  <StatusPill value={booking.status} />
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="mt-3 rounded-lg bg-white px-3 py-2 text-sm font-medium text-slate-500 dark:bg-[#0b0b0b] dark:text-white/45">
+            No bookings for this room type on the selected date.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function StayCalendarMetric({
+  label,
+  value,
+}: {
+  label: string;
+  value: ReactNode;
+}) {
+  return (
+    <div className="rounded-lg bg-slate-50 px-3 py-2 dark:bg-white/[0.04]">
+      <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
+        {label}
+      </div>
+      <div className="mt-1 text-lg font-bold text-slate-950 dark:text-white">
+        {value}
+      </div>
     </div>
   );
 }
@@ -4070,19 +4474,39 @@ function Metric({ label, value }: { label: string; value: number }) {
 
 function StatusPill({ value }: { value: string }) {
   const normalized = value.replace(/_/g, " ");
-  const className =
-    value === "active" || value === "approved"
-      ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300"
-      : value === "rejected" || value === "archived"
-        ? "bg-rose-50 text-rose-700 dark:bg-rose-400/10 dark:text-rose-300"
-        : "bg-amber-50 text-amber-700 dark:bg-amber-400/10 dark:text-amber-300";
-
+  let className = "";
+  if (value === "pending") {
+    className =
+      "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300";
+  } else if (
+    value === "approved" ||
+    value === "active" ||
+    value === "online" ||
+    value === "available"
+  ) {
+    className =
+      "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300";
+  } else if (value === "limited") {
+    className =
+      "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300";
+  } else if (value === "archived" || value === "blocked") {
+    className =
+      "border-slate-200 bg-slate-50 text-slate-500 dark:border-white/10 dark:bg-white/10 dark:text-white/60";
+  } else if (value === "rejected" || value === "booked") {
+    className =
+      "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-400/30 dark:bg-rose-400/10 dark:text-rose-300";
+  } else {
+    className =
+      "border-slate-200 bg-slate-50 text-slate-700 dark:border-white/10 dark:bg-white/10 dark:text-white/75";
+  }
   return (
     <span
       className={cn(
-        "inline-flex shrink-0 rounded-full px-2.5 py-1 text-[11px] font-medium capitalize",
+        "inline-flex items-center justify-center rounded-full px-3 text-xs font-semibold capitalize transition-all",
+        "h-7 w-28",
         className,
       )}
+      style={{ minWidth: 72, maxWidth: 112 }}
     >
       {normalized}
     </span>
@@ -4955,16 +5379,54 @@ function toListingEditForm(
   listing: AdminListingRecord,
   displayName = listing.title,
 ): ListingEditForm {
+  const stayDetails = getStayDetailsRecord(listing.metadata);
+
   return {
     title: displayName,
     shortDescription: listing.shortDescription || "",
     status: listing.status,
     visibility: listing.visibility,
     location: listing.location,
+    bookingMode: listing.bookingMode || "request",
+    instantBooking: listing.instantBooking,
     basePrice: listing.basePrice?.toString() || "",
     listingType: listing.listingType || "",
     pricingModel: listing.pricingModel || "",
     capacity: listing.capacity?.toString() || "",
+    totalUnits: getMetadataString(stayDetails, "totalUnits"),
+    bedrooms: getMetadataString(stayDetails, "bedrooms"),
+    beds: getMetadataString(stayDetails, "beds"),
+    bathrooms: getMetadataString(stayDetails, "bathrooms"),
+    maxAdults:
+      getMetadataString(stayDetails, "maxAdults") ||
+      listing.capacity?.toString() ||
+      "",
+    maxChildren: getMetadataString(stayDetails, "maxChildren"),
+    maxInfants: getMetadataString(stayDetails, "maxInfants"),
+    bedSetup: getMetadataString(stayDetails, "bedSetup"),
+    bathroomType: getMetadataString(stayDetails, "bathroomType"),
+    roomView: getMetadataString(stayDetails, "roomView"),
+    checkInFrom: getMetadataString(stayDetails, "checkInFrom"),
+    checkInUntil: getMetadataString(stayDetails, "checkInUntil"),
+    checkOutUntil: getMetadataString(stayDetails, "checkOutUntil"),
+    minNights: getMetadataString(stayDetails, "minNights"),
+    maxNights: getMetadataString(stayDetails, "maxNights"),
+    advanceNoticeHours: getMetadataString(stayDetails, "advanceNoticeHours"),
+    bookingWindowMonths: getMetadataString(stayDetails, "bookingWindowMonths"),
+    cleaningFee: getMetadataString(stayDetails, "cleaningFee"),
+    securityDeposit: getMetadataString(stayDetails, "securityDeposit"),
+    extraGuestFee: getMetadataString(stayDetails, "extraGuestFee"),
+    weeklyDiscount: getMetadataString(stayDetails, "weeklyDiscount"),
+    monthlyDiscount: getMetadataString(stayDetails, "monthlyDiscount"),
+    cancellationPolicy: getMetadataString(stayDetails, "cancellationPolicy"),
+    paymentPolicy: getMetadataString(stayDetails, "paymentPolicy"),
+    calendarSyncUrl: getMetadataString(stayDetails, "calendarSyncUrl"),
+    blackoutNotes: getMetadataString(stayDetails, "blackoutNotes"),
+    accessibilityFeatures: getMetadataArray(
+      stayDetails,
+      "accessibilityFeatures",
+    ),
+    safetyFeatures: getMetadataArray(stayDetails, "safetyFeatures"),
     included: listing.amenities,
     notAllowed: getPolicyArrayValue(listing.policies, [
       "notAllowed",
@@ -5071,6 +5533,28 @@ function getListingStatusStats(listings: AdminListingRecord[]) {
   };
 }
 
+function getListingDisplayId(
+  serviceProviderId: string,
+  listing: AdminListingRecord,
+  listings: AdminListingRecord[],
+) {
+  const orderedListings = [...listings].sort((first, second) => {
+    const firstCreatedAt = new Date(first.createdAt).getTime();
+    const secondCreatedAt = new Date(second.createdAt).getTime();
+    if (firstCreatedAt !== secondCreatedAt) {
+      return firstCreatedAt - secondCreatedAt;
+    }
+    return first.id.localeCompare(second.id);
+  });
+  const listingIndex = orderedListings.findIndex(
+    (item) => item.id === listing.id,
+  );
+  const sequence =
+    listingIndex >= 0 ? listingIndex + 1 : orderedListings.length + 1;
+
+  return getProviderListingDisplayId(serviceProviderId, sequence);
+}
+
 function canToggleListingArchive(status: string) {
   const displayStatus = getListingStatusDisplayValue(status);
   return displayStatus === "approved" || displayStatus === "archived";
@@ -5083,7 +5567,10 @@ function listingEditFormChanged(
   return JSON.stringify(first) !== JSON.stringify(second);
 }
 
-function getListingValidationErrors(form: ListingEditForm) {
+function getListingValidationErrors(
+  form: ListingEditForm,
+  service: ServiceProviderCategoryId,
+) {
   const errors = new Set<keyof ListingEditForm>();
 
   if (!form.location.trim()) errors.add("location");
@@ -5095,7 +5582,217 @@ function getListingValidationErrors(form: ListingEditForm) {
   if (form.included.length === 0) errors.add("included");
   if (form.notAllowed.length === 0) errors.add("notAllowed");
 
+  if (service === "stays") {
+    if (!form.totalUnits.trim()) errors.add("totalUnits");
+  }
+
   return errors;
+}
+
+function toStayDetailsPayload(form: ListingEditForm) {
+  return {
+    totalUnits: parsePositiveInt(form.totalUnits),
+  };
+}
+
+function getStayDetailsRecord(metadata: Record<string, unknown>) {
+  const value = metadata.stayDetails;
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function getMetadataString(metadata: Record<string, unknown>, key: string) {
+  const value = metadata[key];
+  if (typeof value === "string") return value;
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  if (typeof value === "boolean") return value ? "true" : "false";
+  return "";
+}
+
+function getMetadataArray(metadata: Record<string, unknown>, key: string) {
+  const value = metadata[key];
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => (typeof item === "string" ? item.trim() : ""))
+    .filter(Boolean);
+}
+
+function parsePositiveInt(value: string) {
+  const parsed = parseInt(value, 10);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function getStayCalendarMonthCells(
+  listing: AdminListingRecord,
+  totalUnits: number,
+  monthDate: Date,
+) {
+  const monthStart = getMonthStart(monthDate);
+  const daysInMonth = new Date(
+    monthStart.getFullYear(),
+    monthStart.getMonth() + 1,
+    0,
+  ).getDate();
+  const leadingBlanks = monthStart.getDay();
+  const cells: Array<null | {
+    key: string;
+    status: string;
+    label: string;
+    bookedRooms: number;
+    availableRooms: number;
+    day: string;
+  }> = Array.from({ length: leadingBlanks }, () => null);
+
+  for (let index = 0; index < daysInMonth; index += 1) {
+    const date = new Date(monthStart);
+    date.setDate(index + 1);
+    const key = getCalendarDateKey(date);
+    const occupancy = getStayDateOccupancy(listing, totalUnits, key);
+
+    cells.push({
+      key,
+      status: occupancy.status,
+      label: occupancy.label,
+      bookedRooms: occupancy.bookedRooms,
+      availableRooms: occupancy.availableRooms,
+      day: String(date.getDate()),
+    });
+  }
+
+  return cells;
+}
+
+function getStayDateOccupancy(
+  listing: AdminListingRecord,
+  totalUnits: number,
+  dateKey: string,
+) {
+  const date = parseCalendarDateKey(dateKey);
+  const roomCount = Math.max(totalUnits, 0);
+  const bookings = listing.bookingCalendar.filter((item) =>
+    dateFallsWithinRange(date, item.checkIn, item.checkOut),
+  );
+  const availability = listing.availability.find((item) =>
+    dateFallsWithinRange(date, item.startDate, item.endDate),
+  );
+  const capacityForCount = roomCount || Math.max(bookings.length, 1);
+  const bookedRooms = Math.min(capacityForCount, bookings.length);
+  const availabilityUnits =
+    typeof availability?.unitsAvailable === "number"
+      ? Math.max(availability.unitsAvailable, 0)
+      : null;
+  let availableRooms = roomCount ? Math.max(roomCount - bookedRooms, 0) : 0;
+  if (availabilityUnits !== null) {
+    availableRooms = roomCount
+      ? Math.min(availableRooms, availabilityUnits)
+      : availabilityUnits;
+  }
+
+  const rawAvailabilityStatus = availability?.status?.toLowerCase() || "";
+  const status =
+    rawAvailabilityStatus && rawAvailabilityStatus !== "available"
+      ? "blocked"
+      : roomCount > 0 && availableRooms <= 0
+        ? "booked"
+        : bookedRooms > 0 || (roomCount > 0 && availableRooms < roomCount)
+          ? "limited"
+          : "available";
+  const label =
+    status === "booked"
+      ? "Full"
+      : status === "limited"
+        ? roomCount
+          ? `${bookedRooms}/${roomCount}`
+          : `${bookedRooms} booked`
+        : status === "blocked"
+          ? "Blocked"
+          : "Open";
+
+  return {
+    key: dateKey,
+    status,
+    label,
+    bookings,
+    bookedRooms,
+    availableRooms,
+    totalUnits: roomCount,
+  };
+}
+
+function getMonthStart(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), 1);
+}
+
+function addCalendarMonths(date: Date, months: number) {
+  return new Date(date.getFullYear(), date.getMonth() + months, 1);
+}
+
+function getDefaultSelectedDate(monthDate: Date, today: Date) {
+  return isSameCalendarMonth(monthDate, today) ? today : monthDate;
+}
+
+function isSameCalendarMonth(first: Date, second: Date) {
+  return (
+    first.getFullYear() === second.getFullYear() &&
+    first.getMonth() === second.getMonth()
+  );
+}
+
+function formatCalendarMonthLabel(date: Date) {
+  return new Intl.DateTimeFormat("en", {
+    month: "long",
+    year: "numeric",
+  }).format(date);
+}
+
+function getCalendarDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function parseCalendarDateKey(value: string) {
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) {
+    const fallback = new Date();
+    fallback.setHours(0, 0, 0, 0);
+    return fallback;
+  }
+  return new Date(year, month - 1, day);
+}
+
+function formatCalendarDateLabel(value: string) {
+  return new Intl.DateTimeFormat("en", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  }).format(parseCalendarDateKey(value));
+}
+
+function formatBookingDateRange(
+  checkIn?: string | null,
+  checkOut?: string | null,
+) {
+  if (!checkIn || !checkOut) return "Dates pending";
+  return `${formatCalendarDateLabel(checkIn.slice(0, 10))} - ${formatCalendarDateLabel(checkOut.slice(0, 10))}`;
+}
+
+function dateFallsWithinRange(
+  date: Date,
+  startValue?: string | null,
+  endValue?: string | null,
+) {
+  if (!startValue || !endValue) return false;
+  const start = parseCalendarDateKey(startValue.slice(0, 10));
+  const end = parseCalendarDateKey(endValue.slice(0, 10));
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
+    return false;
+  }
+  start.setHours(0, 0, 0, 0);
+  end.setHours(0, 0, 0, 0);
+  return date >= start && date < end;
 }
 
 function toggleListingOption(

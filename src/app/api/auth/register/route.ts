@@ -6,6 +6,7 @@ import { rateLimit, rateLimitResponse, AUTH_LIMIT } from "@/lib/rate-limit";
 import { createSession, hashPassword, serializeUser } from "@/lib/auth";
 import { createEmailVerificationToken } from "@/lib/auth-tokens";
 import { sendEmailVerificationEmail } from "@/lib/auth-email";
+import { generateNextServiceProviderId } from "@/lib/provider-company-ids";
 
 export const dynamic = "force-dynamic";
 const registerSchema = z.object({
@@ -63,6 +64,10 @@ export async function POST(request: NextRequest) {
     }
 
     const passwordHash = hashPassword(payload.password);
+    const serviceProviderId =
+      payload.role === "provider"
+        ? await generateNextServiceProviderId()
+        : undefined;
 
     const user = await prisma.user.create({
       data: {
@@ -89,6 +94,7 @@ export async function POST(request: NextRequest) {
           payload.role === "provider"
             ? {
                 create: {
+                  serviceProviderId,
                   companyName: payload.companyName!,
                   tradingName: payload.tradingName,
                   businessRegistrationNumber:

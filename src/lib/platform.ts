@@ -198,6 +198,9 @@ export function serializeCompany(
 
   return {
     id: company.id,
+    serviceProviderId:
+      (company as { serviceProviderId?: string | null }).serviceProviderId ??
+      null,
     ownerUserId: company.ownerUserId,
     companyName: company.companyName,
     tradingName: company.tradingName,
@@ -532,6 +535,24 @@ export function serializeAdminListing(
     requiresDestination,
     hasDestinationAssignment:
       !requiresDestination || !!destination.destinationId,
+    availability: listing.availability.map((slot) => ({
+      id: slot.id,
+      startDate: slot.startDate.toISOString(),
+      endDate: slot.endDate.toISOString(),
+      unitsAvailable: slot.unitsAvailable,
+      status: slot.status,
+      notes: slot.notes,
+    })),
+    bookingCalendar: listing.bookings.map((booking) => ({
+      id: booking.id,
+      confirmationNumber: booking.confirmationNumber,
+      status: booking.status,
+      checkIn: booking.checkIn?.toISOString() ?? null,
+      checkOut: booking.checkOut?.toISOString() ?? null,
+      guests: booking.guests,
+      totalAmount: booking.totalAmount,
+      currency: booking.currency,
+    })),
     availabilityCount: listing.availability.length,
     bookingsCount: listing.bookings.length,
     disputesCount: listing.bookings.reduce(

@@ -19,6 +19,8 @@ const updateListingSchema = z.object({
   pricingModel: z.string().min(1).optional(),
   basePrice: z.number().nonnegative().optional().nullable(),
   capacity: z.number().int().positive().optional().nullable(),
+  bookingMode: z.string().min(1).optional(),
+  instantBooking: z.boolean().optional(),
   status: z
     .enum(["draft", "pending_review", "active", "paused", "archived"])
     .optional(),
@@ -93,6 +95,8 @@ export async function PATCH(
         pricingModel: payload.pricingModel,
         basePrice: payload.basePrice,
         capacity: payload.capacity,
+        bookingMode: payload.bookingMode,
+        instantBooking: payload.instantBooking,
         status: payload.status,
         visibility: payload.visibility,
         category: payload.category,

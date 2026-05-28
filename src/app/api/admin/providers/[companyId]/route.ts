@@ -5,6 +5,10 @@ import { requireSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { serializeCompany } from "@/lib/platform";
 import {
+  ensureServiceProviderIds,
+  getProviderCompanyIdentifierWhere,
+} from "@/lib/provider-company-ids";
+import {
   mergeProviderProfileMeta,
   readProviderProfileMeta,
 } from "@/lib/provider-profile-meta";
@@ -98,8 +102,8 @@ export async function GET(
       return apiError("Only administrators can view service providers.", 403);
     }
 
-    const company = await prisma.providerCompany.findUnique({
-      where: { id: companyId },
+    const company = await prisma.providerCompany.findFirst({
+      where: getProviderCompanyIdentifierWhere(companyId),
       include: companyInclude(),
     });
 
@@ -107,7 +111,9 @@ export async function GET(
       return apiError("Service provider not found.", 404);
     }
 
-    return NextResponse.json({ provider: serializeCompany(company) });
+    const [companyWithId] = await ensureServiceProviderIds([company]);
+
+    return NextResponse.json({ provider: serializeCompany(companyWithId) });
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
       return apiError("Unauthorized", 401);
@@ -131,16 +137,19 @@ export async function PATCH(
     }
 
     const payload = companyUpdateSchema.parse(await request.json());
-    const existing = await prisma.providerCompany.findUnique({
-      where: { id: companyId },
-      select: { id: true, socialMediaLinks: true },
+    const existing = await prisma.providerCompany.findFirst({
+      where: getProviderCompanyIdentifierWhere(companyId),
+      include: companyInclude(),
     });
 
     if (!existing) {
       return apiError("Service provider not found.", 404);
     }
 
-    const existingSocialLinks = parseSocialLinks(existing.socialMediaLinks);
+    const [existingWithId] = await ensureServiceProviderIds([existing]);
+    const existingSocialLinks = parseSocialLinks(
+      existingWithId.socialMediaLinks,
+    );
     const existingProfileMeta = readProviderProfileMeta(existingSocialLinks);
     const socialMediaLinks = mergeProviderProfileMeta(
       payload.socialMediaLinks,

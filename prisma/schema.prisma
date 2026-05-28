@@ -365,6 +365,7 @@ model Review {
 }
 
 model ProviderCompany {
+  serviceProviderId           String?   @unique
   id                         String    @id @default(cuid())
   ownerUserId                String
   companyName                String

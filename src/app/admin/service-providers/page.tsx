@@ -15,6 +15,7 @@ import {
   type ServiceProviderCategoryId,
 } from "@/lib/service-provider-categories";
 import { getSurfaceHref } from "@/lib/app-surface";
+import { serviceProviderIdToRouteSegment } from "@/lib/service-provider-id";
 import { cn } from "@/lib/utils";
 import type { ProviderCompanyRecord } from "@/types/platform";
 import {
@@ -238,7 +239,9 @@ function ServiceProviderListCard({
 }) {
   const href = getSurfaceHref(
     "admin",
-    `/admin/service-providers/${provider.id}`,
+    `/admin/service-providers/${
+      serviceProviderIdToRouteSegment(provider.serviceProviderId) || provider.id
+    }`,
   );
   const reviewSummary = getReviewSummary(provider);
 

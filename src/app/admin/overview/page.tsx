@@ -21,6 +21,7 @@ import AdminTable from "@/components/admin/AdminTable";
 import StatusBadge from "@/components/admin/StatusBadge";
 import { apiFetch } from "@/lib/client-api";
 import { getSurfaceHref } from "@/lib/app-surface";
+import { serviceProviderIdToRouteSegment } from "@/lib/service-provider-id";
 import { cn } from "@/lib/utils";
 import type {
   AdminBookingRecord,
@@ -388,7 +389,11 @@ function AdminOverviewContent() {
                     key={provider.id}
                     href={getSurfaceHref(
                       "admin",
-                      `/admin/service-providers/${provider.id}`,
+                      `/admin/service-providers/${
+                        serviceProviderIdToRouteSegment(
+                          provider.serviceProviderId,
+                        ) || provider.id
+                      }`,
                     )}
                     className="block rounded-xl border border-slate-200 px-4 py-4 transition hover:bg-slate-50 dark:border-white/10 dark:hover:bg-white/[0.03]"
                   >

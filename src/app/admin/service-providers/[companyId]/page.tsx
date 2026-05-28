@@ -25,7 +25,7 @@ export default function AdminProviderDetailPage() {
 
 function AdminProviderDetailContent() {
   const params = useParams<{ companyId: string }>();
-  const companyId = params?.companyId;
+  const providerIdentifier = params?.companyId;
   const [provider, setProvider] = useState<ProviderCompanyRecord | null>(null);
   const [notes, setNotes] = useState("");
   const [internalSummary, setInternalSummary] = useState("");
@@ -38,13 +38,13 @@ function AdminProviderDetailContent() {
 
   useEffect(() => {
     const loadProvider = async () => {
-      if (!companyId) {
+      if (!providerIdentifier) {
         return;
       }
 
       try {
         const payload = await apiFetch<{ provider: ProviderCompanyRecord }>(
-          `/api/admin/providers/${companyId}`,
+          `/api/admin/providers/${encodeURIComponent(providerIdentifier)}`,
         );
         setProvider(payload.provider);
         setError("");
@@ -60,7 +60,7 @@ function AdminProviderDetailContent() {
     };
 
     loadProvider();
-  }, [companyId]);
+  }, [providerIdentifier]);
 
   const submitReview = async () => {
     if (!provider || !notes.trim()) {

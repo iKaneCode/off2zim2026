@@ -81,6 +81,7 @@ export interface ProviderRatingReviewRecord {
 
 export interface ProviderCompanyRecord {
   id: string;
+  serviceProviderId?: string | null;
   ownerUserId: string;
   companyName: string;
   tradingName?: string | null;
@@ -150,6 +151,17 @@ export interface ListingAvailabilityRecord {
   unitsAvailable?: number | null;
   status: string;
   notes?: string | null;
+}
+
+export interface AdminListingBookingRecord {
+  id: string;
+  confirmationNumber: string;
+  status: string;
+  checkIn?: string | null;
+  checkOut?: string | null;
+  guests?: number | null;
+  totalAmount: number;
+  currency: string;
 }
 
 export interface ProviderListingRecord {
@@ -334,6 +346,8 @@ export interface AdminListingRecord {
   destinationLocation?: string | null;
   requiresDestination: boolean;
   hasDestinationAssignment: boolean;
+  availability: ListingAvailabilityRecord[];
+  bookingCalendar: AdminListingBookingRecord[];
   availabilityCount: number;
   bookingsCount: number;
   disputesCount: number;

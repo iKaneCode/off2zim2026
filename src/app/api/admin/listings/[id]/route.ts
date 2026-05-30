@@ -9,6 +9,7 @@ import {
   getListingDestinationMetadata,
   listingRequiresDestination,
   resolveListingDestination,
+  resolveListingDestinationByName,
 } from "@/lib/listing-destination-rules";
 
 const updateListingSchema = z.object({
@@ -72,9 +73,18 @@ export async function PATCH(
     })();
     const nextMetadata = { ...existingMetadata, ...(payload.metadata ?? {}) };
     const submittedDestination = getListingDestinationMetadata(nextMetadata);
-    const destination = resolveListingDestination(
-      submittedDestination.destinationId,
-    );
+    const destination =
+      resolveListingDestination(submittedDestination.destinationId) ||
+      [
+        submittedDestination.destinationName,
+        submittedDestination.destinationLocation,
+        payload.location,
+        listing.location,
+      ].reduce(
+        (matchedDestination, candidate) =>
+          matchedDestination || resolveListingDestinationByName(candidate),
+        null as ReturnType<typeof resolveListingDestinationByName>,
+      );
     const nextCategory = payload.category ?? listing.category;
 
     if (listingRequiresDestination(nextCategory) && !destination) {
@@ -196,34 +206,15 @@ export async function DELETE(
       return apiError("Listing not found.", 404);
     }
 
-    if (listing.bookings.length > 0) {
-      await prisma.providerListing.update({
+    await prisma.$transaction([
+      prisma.booking.updateMany({
+        where: { listingId: listing.id },
+        data: { listingId: null },
+      }),
+      prisma.providerListing.delete({
         where: { id: listing.id },
-        data: {
-          status: "archived",
-          visibility: "private",
-        },
-      });
-
-      await prisma.adminAuditLog.create({
-        data: {
-          adminUserId: user.id,
-          companyId: listing.companyId,
-          action: "provider_listing_archived",
-          targetType: "provider_listing",
-          targetId: listing.id,
-          summary:
-            "Listing archived from admin console because it has bookings",
-          metadata: JSON.stringify({ bookingsCount: listing.bookings.length }),
-        },
-      });
-
-      return NextResponse.json({ archived: true, deleted: false });
-    }
-
-    await prisma.providerListing.delete({
-      where: { id: listing.id },
-    });
+      }),
+    ]);
 
     await prisma.adminAuditLog.create({
       data: {
@@ -233,7 +224,10 @@ export async function DELETE(
         targetType: "provider_listing",
         targetId: listing.id,
         summary: "Listing deleted from admin console",
-        metadata: JSON.stringify({ title: listing.title }),
+        metadata: JSON.stringify({
+          title: listing.title,
+          detachedBookingsCount: listing.bookings.length,
+        }),
       },
     });
 

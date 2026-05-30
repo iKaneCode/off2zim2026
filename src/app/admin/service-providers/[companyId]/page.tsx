@@ -97,20 +97,21 @@ function AdminProviderDetailContent() {
       title={
         provider?.tradingName || provider?.companyName || "Service Providers"
       }
-      description={
+      titleLeading={
         provider ? (
-          <div className="flex flex-col gap-3">
-            <ProviderHeaderStatus provider={provider} />
-            <Link
-              href={getSurfaceHref("admin", "/admin/service-providers")}
-              aria-label="Back to service providers"
-              className="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition hover:bg-slate-200 focus:outline-none focus:ring-4 focus:ring-slate-900/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/15 dark:focus:ring-white/15"
-            >
-              <ChevronLeft className="h-5 w-5" />
-            </Link>
-          </div>
-        ) : undefined
+          <Link
+            href={getSurfaceHref("admin", "/admin/service-providers")}
+            aria-label="Back to service providers"
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/90 text-slate-700 shadow-sm transition hover:bg-slate-200 focus:outline-none focus:ring-4 focus:ring-slate-900/10 dark:bg-white/10 dark:text-white dark:hover:bg-white/15 dark:focus:ring-white/15"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Link>
+        ) : null
       }
+      description={
+        provider ? <ProviderHeaderStatus provider={provider} /> : undefined
+      }
+      fixedHeader
       actions={
         provider ? (
           <div className="text-right text-sm text-slate-500 dark:text-white/45">
@@ -230,14 +231,22 @@ function ProviderHeaderStatus({
 
   return (
     <div className="inline-flex items-center gap-2 text-sm font-medium">
-      <span
-        className={cn(
-          "h-2.5 w-2.5 rounded-full",
-          needsAttention
-            ? "bg-rose-500 shadow-[0_0_0_4px_rgba(244,63,94,0.12)]"
-            : "bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.14)]",
-        )}
-      />
+      <span className="relative flex h-2.5 w-2.5">
+        <span
+          className={cn(
+            "absolute inline-flex h-full w-full animate-ping rounded-full opacity-40",
+            needsAttention ? "bg-rose-500" : "bg-emerald-500",
+          )}
+        />
+        <span
+          className={cn(
+            "relative inline-flex h-2.5 w-2.5 rounded-full",
+            needsAttention
+              ? "bg-rose-500 shadow-[0_0_0_4px_rgba(244,63,94,0.12)]"
+              : "bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.14)]",
+          )}
+        />
+      </span>
       <span
         className={
           needsAttention

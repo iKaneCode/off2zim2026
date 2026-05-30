@@ -18,7 +18,9 @@ export type ListingDestinationMetadata = {
   destinationLocation?: string;
 };
 
-export function listingRequiresDestination(category: string | null | undefined) {
+export function listingRequiresDestination(
+  category: string | null | undefined,
+) {
   const normalizedCategory = (category || "").trim().toLowerCase();
 
   if (destinationRequiredCategories.has(normalizedCategory)) {
@@ -26,26 +28,26 @@ export function listingRequiresDestination(category: string | null | undefined) 
   }
 
   const matchedGroup = serviceGroups.find((group) =>
-    [
-      group.id,
-      group.label,
-      group.providerCategory,
-    ]
+    [group.id, group.label, group.providerCategory]
       .map(normalizeTaxonomyValue)
-      .includes(normalizeTaxonomyValue(category))
+      .includes(normalizeTaxonomyValue(category)),
   );
 
   return matchedGroup?.destinationScoped ?? false;
 }
 
 export function getListingDestinationMetadata(
-  metadata: Record<string, unknown> | null | undefined
+  metadata: Record<string, unknown> | null | undefined,
 ): ListingDestinationMetadata {
   return {
     destinationId:
-      typeof metadata?.destinationId === "string" ? metadata.destinationId : undefined,
+      typeof metadata?.destinationId === "string"
+        ? metadata.destinationId
+        : undefined,
     destinationName:
-      typeof metadata?.destinationName === "string" ? metadata.destinationName : undefined,
+      typeof metadata?.destinationName === "string"
+        ? metadata.destinationName
+        : undefined,
     destinationLocation:
       typeof metadata?.destinationLocation === "string"
         ? metadata.destinationLocation
@@ -57,12 +59,35 @@ export function getDestinationOptions(): ExplorerDestinationSummary[] {
   return curatedZimbabweDestinations.map((destination) => ({ ...destination }));
 }
 
-export function resolveListingDestination(destinationId: string | null | undefined) {
+export function resolveListingDestination(
+  destinationId: string | null | undefined,
+) {
   return getDestinationById(getDestinationOptions(), destinationId);
 }
 
+export function resolveListingDestinationByName(
+  value: string | null | undefined,
+) {
+  const normalizedValue = normalizeTaxonomyValue(value);
+  if (!normalizedValue) return null;
+
+  return (
+    getDestinationOptions().find((destination) =>
+      [
+        destination.id,
+        destination.name,
+        destination.location,
+        `${destination.name}, ${destination.location}`,
+      ]
+        .filter(Boolean)
+        .map(normalizeTaxonomyValue)
+        .includes(normalizedValue),
+    ) ?? null
+  );
+}
+
 export function buildDestinationMetadata(
-  destination: ExplorerDestinationSummary | null
+  destination: ExplorerDestinationSummary | null,
 ): ListingDestinationMetadata {
   if (!destination) {
     return {};

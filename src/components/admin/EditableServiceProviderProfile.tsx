@@ -117,6 +117,13 @@ interface ListingEditForm {
   listingType: string;
   pricingModel: string;
   capacity: string;
+  ticketType: string;
+  totalTickets: string;
+  eventDate: string;
+  eventStartTime: string;
+  activityDate: string;
+  activityTimeSlot: string;
+  maxParticipants: string;
   totalUnits: string;
   bedrooms: string;
   beds: string;
@@ -234,6 +241,13 @@ const emptyListingEditForm: ListingEditForm = {
   listingType: "",
   pricingModel: "",
   capacity: "",
+  ticketType: "",
+  totalTickets: "",
+  eventDate: "",
+  eventStartTime: "",
+  activityDate: "",
+  activityTimeSlot: "",
+  maxParticipants: "",
   totalUnits: "",
   bedrooms: "",
   beds: "",
@@ -311,6 +325,55 @@ const ROOM_COUNT_OPTIONS = Array.from({ length: 50 }, (_, index) =>
   String(index + 1),
 );
 
+const EVENT_TICKET_TYPE_OPTIONS = [
+  "Early bird",
+  "Standard",
+  "VIP",
+  "VVIP",
+  "Group",
+  "Child",
+  "Student",
+];
+
+const ACTIVITY_TYPE_OPTIONS = [
+  "Skydiving",
+  "Zip line",
+  "Bungee jumping",
+  "Helicopter ride",
+  "Rafting",
+  "Game drive",
+  "Quad biking",
+  "Snorkeling",
+  "Cultural tour",
+  "Guided tour",
+  "Attraction",
+  "Package",
+];
+
+const ACTIVITY_PRICING_OPTIONS = [
+  { value: "per_person", label: "Per person" },
+  { value: "per_group", label: "Per group" },
+  { value: "private_group", label: "Private group" },
+  { value: "package", label: "Package" },
+];
+
+const ACTIVITY_TIME_SLOT_OPTIONS = [
+  "06:00 - 08:00",
+  "08:00 - 10:00",
+  "10:00 - 12:00",
+  "12:00 - 14:00",
+  "14:00 - 16:00",
+  "16:00 - 18:00",
+  "Sunset slot",
+];
+
+const ACTIVITY_CAPACITY_OPTIONS = Array.from({ length: 60 }, (_, index) =>
+  String(index + 1),
+);
+
+const ADMIN_DRAFT_LISTING_SHORT_DESCRIPTION =
+  "Draft listing created from the admin portal.";
+
 const CALENDAR_WEEKDAY_LABELS = [
   "Sun",
   "Mon",
@@ -359,8 +422,8 @@ const LISTING_SERVICE_CONFIG: Record<
     emptyTitle: "No accommodation listings yet",
     emptyBody: "Add a room, suite, lodge, campsite, or stay package.",
     addLabel: "Add stay",
-    defaultListingType: "Room",
-    defaultPricingModel: "per_night",
+    defaultListingType: "",
+    defaultPricingModel: "",
   },
   events: {
     label: "Events",
@@ -368,8 +431,8 @@ const LISTING_SERVICE_CONFIG: Record<
     emptyTitle: "No event listings yet",
     emptyBody: "Add an event, ticketed experience, festival, or show.",
     addLabel: "Add event",
-    defaultListingType: "Event",
-    defaultPricingModel: "per_ticket",
+    defaultListingType: "",
+    defaultPricingModel: "",
   },
   things_to_do: {
     label: "Activities",
@@ -377,8 +440,8 @@ const LISTING_SERVICE_CONFIG: Record<
     emptyTitle: "No activity listings yet",
     emptyBody: "Add a tour, attraction, activity, or guided experience.",
     addLabel: "Add activity",
-    defaultListingType: "Activity",
-    defaultPricingModel: "per_person",
+    defaultListingType: "",
+    defaultPricingModel: "",
   },
   bus: {
     label: "Bus",
@@ -387,7 +450,7 @@ const LISTING_SERVICE_CONFIG: Record<
     emptyBody: "Add a route, shuttle, transfer, or bus service.",
     addLabel: "Add route",
     defaultListingType: "Route",
-    defaultPricingModel: "per_seat",
+    defaultPricingModel: "",
   },
   flight: {
     label: "Flight",
@@ -396,8 +459,19 @@ const LISTING_SERVICE_CONFIG: Record<
     emptyBody: "Add a flight, charter, route, or air transfer.",
     addLabel: "Add flight",
     defaultListingType: "Flight",
-    defaultPricingModel: "per_seat",
+    defaultPricingModel: "",
   },
+};
+
+const LEGACY_DEFAULT_LISTING_PRICING_MODELS: Record<
+  ServiceProviderCategoryId,
+  string[]
+> = {
+  stays: ["per_night", "per_service"],
+  events: ["per_ticket", "per_service"],
+  things_to_do: ["per_person", "per_service"],
+  bus: ["per_seat", "per_service"],
+  flight: ["per_seat", "per_service"],
 };
 
 export default function EditableServiceProviderProfile({
@@ -422,6 +496,8 @@ export default function EditableServiceProviderProfile({
   const [uploading, setUploading] = useState("");
   const [addingListing, setAddingListing] = useState(false);
   const [deletingListingId, setDeletingListingId] = useState("");
+  const [deleteConfirmationListing, setDeleteConfirmationListing] =
+    useState<AdminListingRecord | null>(null);
   const [editingListingId, setEditingListingId] = useState("");
   const [listingEditForm, setListingEditForm] =
     useState<ListingEditForm>(emptyListingEditForm);
@@ -1000,11 +1076,7 @@ export default function EditableServiceProviderProfile({
             title: getProviderDisplayName(provider, form),
             category: serviceProviderCategoryLabels[primaryService],
             listingType: config.defaultListingType,
-            location:
-              form.serviceAreas[0] ||
-              form.headquartersCity ||
-              provider.headquartersCity ||
-              "Zimbabwe",
+            location: "",
             pricingModel: config.defaultPricingModel,
             serviceCategory: primaryService,
           }),
@@ -1021,21 +1093,23 @@ export default function EditableServiceProviderProfile({
     }
   };
 
-  const deleteListing = async (listing: AdminListingRecord) => {
-    const confirmed = window.confirm(
-      `Remove ${listing.title}? Listings with bookings will be archived for record keeping.`,
-    );
-    if (!confirmed) return;
+  const deleteListing = (listing: AdminListingRecord) => {
+    setDeleteConfirmationListing(listing);
+  };
 
-    setDeletingListingId(listing.id);
+  const confirmDeleteListing = async () => {
+    if (!deleteConfirmationListing) return;
+
+    setDeletingListingId(deleteConfirmationListing.id);
     setError("");
     setMessage("");
     try {
       const payload = await apiFetch<{ archived: boolean; deleted: boolean }>(
-        `/api/admin/listings/${listing.id}`,
+        `/api/admin/listings/${deleteConfirmationListing.id}`,
         { method: "DELETE" },
       );
       await loadListings();
+      setDeleteConfirmationListing(null);
       setMessage(payload.archived ? "Listing archived." : "Listing deleted.");
     } catch (err) {
       setError(
@@ -1049,7 +1123,11 @@ export default function EditableServiceProviderProfile({
   const startEditListing = (listing: AdminListingRecord) => {
     setEditingListingId(listing.id);
     setListingEditForm(
-      toListingEditForm(listing, getProviderDisplayName(provider, form)),
+      toListingEditForm(
+        listing,
+        getProviderDisplayName(provider, form),
+        form.serviceAreas,
+      ),
     );
   };
 
@@ -1062,7 +1140,11 @@ export default function EditableServiceProviderProfile({
     setListingEditForm((current) => ({
       ...(editingListingId === listing.id
         ? current
-        : toListingEditForm(listing, getProviderDisplayName(provider, form))),
+        : toListingEditForm(
+            listing,
+            getProviderDisplayName(provider, form),
+            form.serviceAreas,
+          )),
       ...patch,
     }));
   };
@@ -1083,6 +1165,7 @@ export default function EditableServiceProviderProfile({
     const listingErrors = getListingValidationErrors(
       listingEditForm,
       selectedService,
+      form.serviceAreas,
     );
     if (listingErrors.size > 0) {
       setListingValidationAttemptedIds((current) => {
@@ -1114,9 +1197,16 @@ export default function EditableServiceProviderProfile({
             basePrice: listingEditForm.basePrice
               ? parseFloat(listingEditForm.basePrice)
               : undefined,
-            capacity: listingEditForm.capacity
-              ? parseInt(listingEditForm.capacity, 10)
-              : null,
+            capacity:
+              selectedService === "events"
+                ? null
+                : selectedService === "things_to_do"
+                  ? listingEditForm.maxParticipants
+                    ? parseInt(listingEditForm.maxParticipants, 10)
+                    : null
+                  : listingEditForm.capacity
+                    ? parseInt(listingEditForm.capacity, 10)
+                    : null,
             amenities: listingEditForm.included.filter(
               (item) => item !== "No inclusions listed",
             ),
@@ -1128,7 +1218,14 @@ export default function EditableServiceProviderProfile({
             metadata:
               selectedService === "stays"
                 ? { stayDetails: toStayDetailsPayload(listingEditForm) }
-                : undefined,
+                : selectedService === "events"
+                  ? { eventDetails: toEventDetailsPayload(listingEditForm) }
+                  : selectedService === "things_to_do"
+                    ? {
+                        activityDetails:
+                          toActivityDetailsPayload(listingEditForm),
+                      }
+                    : undefined,
           }),
         },
       );
@@ -1170,6 +1267,27 @@ export default function EditableServiceProviderProfile({
           title="Notification"
           message={message}
           onClose={() => setMessage("")}
+        />
+      ) : null}
+
+      {deleteConfirmationListing ? (
+        <AlertModal
+          tone="warning"
+          title="Delete listing?"
+          message={`Delete ${deleteConfirmationListing.title}? Booking records stay in history, but this listing will be removed from the service provider.`}
+          confirmLabel={
+            deletingListingId === deleteConfirmationListing.id
+              ? "Deleting..."
+              : "Delete"
+          }
+          cancelLabel="Cancel"
+          confirming={deletingListingId === deleteConfirmationListing.id}
+          onConfirm={confirmDeleteListing}
+          onClose={() => {
+            if (!deletingListingId) {
+              setDeleteConfirmationListing(null);
+            }
+          }}
         />
       ) : null}
 
@@ -2030,7 +2148,6 @@ export default function EditableServiceProviderProfile({
       >
         <ListingsManagerPanel
           listings={serviceListings}
-          allProviderListings={listings}
           loading={loadingListings}
           editingListingId={editingListingId}
           listingEditForm={listingEditForm}
@@ -2471,7 +2588,6 @@ function SelectedList({
 
 function ListingsManagerPanel({
   listings,
-  allProviderListings,
   loading,
   editingListingId,
   listingEditForm,
@@ -2488,7 +2604,6 @@ function ListingsManagerPanel({
   onDeleteListing,
 }: {
   listings: AdminListingRecord[];
-  allProviderListings: AdminListingRecord[];
   loading: boolean;
   editingListingId: string;
   listingEditForm: ListingEditForm;
@@ -2585,15 +2700,23 @@ function ListingsManagerPanel({
             const listingDisplayId = getListingDisplayId(
               serviceProviderId,
               listing,
-              allProviderListings,
+              listings,
             );
             const editing = listing.id === editingListingId;
             const values = editing
               ? listingEditForm
-              : toListingEditForm(listing, displayName);
-            const initialValues = toListingEditForm(listing, displayName);
+              : toListingEditForm(listing, displayName, operatingLocations);
+            const initialValues = toListingEditForm(
+              listing,
+              displayName,
+              operatingLocations,
+            );
             const statusValue = values.status || listing.status;
             const isStayListing = service === "stays";
+            const isEventListing = service === "events";
+            const isActivityListing = service === "things_to_do";
+            const useFiveColumnListingGrid =
+              isStayListing || isEventListing || isActivityListing;
             const isActive =
               statusValue === "active" || statusValue === "approved";
             const canToggleArchive = canToggleListingArchive(statusValue);
@@ -2650,7 +2773,7 @@ function ListingsManagerPanel({
                   <Trash2 className="h-4 w-4" />
                 </button>
 
-                <div className="grid gap-3 pr-12 md:grid-cols-[220px_minmax(0,280px)_minmax(0,220px)] lg:grid-cols-[220px_minmax(0,280px)_minmax(0,220px)_minmax(0,1fr)] lg:items-end">
+                <div className="grid gap-3 pr-12 md:grid-cols-[220px_minmax(0,280px)] lg:grid-cols-[220px_minmax(0,280px)_minmax(0,300px)] lg:items-end">
                   <label className="block">
                     <ListingFieldLabel>Listing ID</ListingFieldLabel>
                     <input
@@ -2694,38 +2817,49 @@ function ListingsManagerPanel({
                   </label>
 
                   <div className="flex flex-wrap items-end gap-3">
-                    <div className="min-w-28">
-                      <ListingFieldLabel>Status</ListingFieldLabel>
-                      <div className="flex min-h-11 items-center">
-                        <StatusPill
-                          value={getListingStatusDisplayValue(statusValue)}
+                    <div className="w-full sm:w-auto">
+                      <ListingFieldLabel>Listing Status</ListingFieldLabel>
+                      <div className="flex items-center gap-3">
+                        <div className="w-full sm:w-[220px]">
+                          <StatusPill
+                            value={getListingStatusDisplayValue(statusValue)}
+                            size="field"
+                          />
+                        </div>
+                        <ListingActivationToggle
+                          checked={isActive}
+                          disabled={!canToggleArchive}
+                          onChange={(checked) =>
+                            edit({
+                              status: checked ? "active" : "archived",
+                              visibility: checked ? "public" : "private",
+                            })
+                          }
                         />
                       </div>
                     </div>
-                    <ListingActivationToggle
-                      checked={isActive}
-                      disabled={!canToggleArchive}
-                      onChange={(checked) =>
-                        edit({
-                          status: checked ? "active" : "archived",
-                          visibility: checked ? "public" : "private",
-                        })
-                      }
-                    />
                   </div>
                 </div>
 
                 <div
                   className={cn(
                     "mt-3 grid gap-3 md:grid-cols-2",
-                    isStayListing ? "xl:grid-cols-5" : "xl:grid-cols-4",
+                    useFiveColumnListingGrid
+                      ? "xl:grid-cols-5"
+                      : "xl:grid-cols-4",
                   )}
                 >
                   <label className="block">
                     <ListingFieldLabel
                       required={showRequiredState && !values.listingType}
                     >
-                      {service === "stays" ? "Room type" : "Listing type"}
+                      {service === "stays"
+                        ? "Room type"
+                        : service === "events"
+                          ? "Event type"
+                          : service === "things_to_do"
+                            ? "Activity"
+                            : "Listing type"}
                     </ListingFieldLabel>
                     <select
                       value={values.listingType}
@@ -2757,6 +2891,75 @@ function ListingsManagerPanel({
                       required
                       showRequiredState={showRequiredState}
                       onChange={(value) => edit({ totalUnits: value })}
+                    />
+                  ) : null}
+
+                  {isEventListing ? (
+                    <label className="block">
+                      <ListingFieldLabel
+                        required={showRequiredState && !values.ticketType}
+                      >
+                        Ticket type
+                      </ListingFieldLabel>
+                      <select
+                        value={values.ticketType}
+                        onChange={(event) =>
+                          edit({ ticketType: event.target.value })
+                        }
+                        className={cn(
+                          inputClassName,
+                          getListingRequiredFieldClass(
+                            values.ticketType,
+                            showRequiredState,
+                          ),
+                        )}
+                      >
+                        <option value="">Select</option>
+                        {EVENT_TICKET_TYPE_OPTIONS.map((option) => (
+                          <option key={option} value={option}>
+                            {option}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
+
+                  {isEventListing ? (
+                    <label className="block">
+                      <ListingFieldLabel
+                        required={showRequiredState && !values.totalTickets}
+                      >
+                        Total tickets
+                      </ListingFieldLabel>
+                      <input
+                        type="number"
+                        min="1"
+                        value={values.totalTickets}
+                        onChange={(event) =>
+                          edit({ totalTickets: event.target.value })
+                        }
+                        className={cn(
+                          inputClassName,
+                          getListingRequiredFieldClass(
+                            values.totalTickets,
+                            showRequiredState,
+                          ),
+                        )}
+                        placeholder="Add"
+                      />
+                    </label>
+                  ) : null}
+
+                  {isActivityListing ? (
+                    <ListingSelectControl
+                      label="Max participants"
+                      value={values.maxParticipants}
+                      options={ACTIVITY_CAPACITY_OPTIONS}
+                      required
+                      showRequiredState={showRequiredState}
+                      onChange={(value) =>
+                        edit({ maxParticipants: value, capacity: value })
+                      }
                     />
                   ) : null}
 
@@ -2792,7 +2995,17 @@ function ListingsManagerPanel({
                     <ListingFieldLabel
                       required={showRequiredState && !values.basePrice}
                     >
-                      {service === "stays" ? "Price / night" : "Price"}
+                      {service === "stays"
+                        ? "Price / night"
+                        : service === "events"
+                          ? "Price / ticket"
+                          : service === "things_to_do" &&
+                              (values.pricingModel === "per_group" ||
+                                values.pricingModel === "private_group")
+                            ? "Group price"
+                            : service === "things_to_do"
+                              ? "Price / person"
+                              : "Price"}
                     </ListingFieldLabel>
                     <div className="relative">
                       <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm font-semibold text-slate-500 dark:text-white/45">
@@ -2817,38 +3030,42 @@ function ListingsManagerPanel({
                     </div>
                   </label>
 
-                  <label className="block">
-                    <ListingFieldLabel
-                      required={showRequiredState && !values.capacity}
-                    >
-                      {service === "stays" ? "Max guests" : "Capacity"}
-                    </ListingFieldLabel>
-                    <select
-                      value={values.capacity}
-                      onChange={(event) =>
-                        edit({ capacity: event.target.value })
-                      }
-                      className={cn(
-                        inputClassName,
-                        getListingRequiredFieldClass(
-                          values.capacity,
-                          showRequiredState,
-                        ),
-                      )}
-                    >
-                      <option value="">Select</option>
-                      {GUEST_CAPACITY_OPTIONS.map((value) => (
-                        <option key={value} value={value}>
-                          {value}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                  {!isEventListing && !isActivityListing ? (
+                    <label className="block">
+                      <ListingFieldLabel
+                        required={showRequiredState && !values.capacity}
+                      >
+                        {service === "stays" ? "Max guests" : "Capacity"}
+                      </ListingFieldLabel>
+                      <select
+                        value={values.capacity}
+                        onChange={(event) =>
+                          edit({ capacity: event.target.value })
+                        }
+                        className={cn(
+                          inputClassName,
+                          getListingRequiredFieldClass(
+                            values.capacity,
+                            showRequiredState,
+                          ),
+                        )}
+                      >
+                        <option value="">Select</option>
+                        {GUEST_CAPACITY_OPTIONS.map((value) => (
+                          <option key={value} value={value}>
+                            {value}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                  ) : null}
 
                   <label
                     className={cn(
                       "block md:col-span-2",
-                      isStayListing ? "xl:col-span-5" : "xl:col-span-4",
+                      useFiveColumnListingGrid
+                        ? "xl:col-span-5"
+                        : "xl:col-span-4",
                     )}
                   >
                     <ListingFieldLabel
@@ -2873,17 +3090,12 @@ function ListingsManagerPanel({
                     />
                   </label>
 
-                  {isStayListing ? (
-                    <StaysListingCalendarPanel
-                      listing={listing}
-                      values={values}
-                    />
-                  ) : null}
-
                   <div
                     className={cn(
                       "md:col-span-2",
-                      isStayListing ? "xl:col-span-5" : "xl:col-span-4",
+                      useFiveColumnListingGrid
+                        ? "xl:col-span-5"
+                        : "xl:col-span-4",
                     )}
                   >
                     <ListingFieldLabel
@@ -2923,7 +3135,9 @@ function ListingsManagerPanel({
                   <div
                     className={cn(
                       "md:col-span-2",
-                      isStayListing ? "xl:col-span-5" : "xl:col-span-4",
+                      useFiveColumnListingGrid
+                        ? "xl:col-span-5"
+                        : "xl:col-span-4",
                     )}
                   >
                     <ListingFieldLabel
@@ -2961,6 +3175,29 @@ function ListingsManagerPanel({
                       }
                     />
                   </div>
+
+                  {isStayListing ? (
+                    <StaysListingCalendarPanel
+                      listing={listing}
+                      values={values}
+                    />
+                  ) : null}
+
+                  {isEventListing ? (
+                    <EventListingCalendarPanel
+                      values={values}
+                      showRequiredState={showRequiredState}
+                      onChange={(patch) => edit(patch)}
+                    />
+                  ) : null}
+
+                  {isActivityListing ? (
+                    <ActivityListingCalendarPanel
+                      values={values}
+                      showRequiredState={showRequiredState}
+                      onChange={(patch) => edit(patch)}
+                    />
+                  ) : null}
                 </div>
 
                 <div className="mt-3 flex flex-col-reverse items-stretch justify-center gap-2 sm:flex-row sm:items-center">
@@ -3002,6 +3239,326 @@ function StaysListingCalendarPanel({
       <div>
         <ListingFieldLabel>Calendar & Availability</ListingFieldLabel>
         <StayCalendarPanel listing={listing} values={values} />
+      </div>
+    </div>
+  );
+}
+
+function EventListingCalendarPanel({
+  values,
+  showRequiredState,
+  onChange,
+}: {
+  values: ListingEditForm;
+  showRequiredState: boolean;
+  onChange: (patch: Partial<ListingEditForm>) => void;
+}) {
+  const today = useMemo(
+    () => parseCalendarDateKey(getCalendarDateKey(new Date())),
+    [],
+  );
+  const eventDate = values.eventDate.trim();
+  const [visibleMonth, setVisibleMonth] = useState(() =>
+    getMonthStart(eventDate ? parseCalendarDateKey(eventDate) : today),
+  );
+  const days = getEventCalendarMonthCells(visibleMonth, eventDate, today);
+  const monthLabel = formatCalendarMonthLabel(visibleMonth);
+
+  useEffect(() => {
+    if (!eventDate) return;
+    setVisibleMonth(getMonthStart(parseCalendarDateKey(eventDate)));
+  }, [eventDate]);
+
+  const moveMonth = (direction: -1 | 1) => {
+    setVisibleMonth((current) =>
+      getMonthStart(addCalendarMonths(current, direction)),
+    );
+  };
+
+  return (
+    <div className="md:col-span-2 xl:col-span-5">
+      <ListingFieldLabel required={showRequiredState && !eventDate}>
+        Calendar & Event Date
+      </ListingFieldLabel>
+      <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-[#0b0b0b]">
+        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_160px]">
+          <label className="block">
+            <ListingFieldLabel required={showRequiredState && !eventDate}>
+              Event date
+            </ListingFieldLabel>
+            <input
+              type="date"
+              value={eventDate}
+              onChange={(event) => onChange({ eventDate: event.target.value })}
+              className={cn(
+                inputClassName,
+                getListingRequiredFieldClass(eventDate, showRequiredState),
+              )}
+            />
+          </label>
+          <label className="block">
+            <ListingFieldLabel>Start time</ListingFieldLabel>
+            <input
+              type="time"
+              value={values.eventStartTime}
+              onChange={(event) =>
+                onChange({ eventStartTime: event.target.value })
+              }
+              className={inputClassName}
+            />
+          </label>
+        </div>
+
+        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <span className="grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-slate-600 dark:bg-white/[0.06] dark:text-white/60">
+              <CalendarDays className="h-4 w-4" />
+            </span>
+            <div>
+              <div className="text-sm font-semibold text-slate-950 dark:text-white">
+                {eventDate
+                  ? formatCalendarDateLabel(eventDate)
+                  : "Select event date"}
+              </div>
+              <div className="text-xs font-medium text-slate-500 dark:text-white/45">
+                Click a date or use the field above.
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center justify-between gap-2 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 dark:border-white/10 dark:bg-white/[0.04] sm:min-w-56">
+            <button
+              type="button"
+              onClick={() => moveMonth(-1)}
+              aria-label="Previous month"
+              className="grid h-8 w-8 place-items-center rounded-full text-slate-500 transition hover:bg-white hover:text-slate-950 dark:text-white/50 dark:hover:bg-white/10 dark:hover:text-white"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <div className="min-w-28 text-center text-sm font-semibold text-slate-950 dark:text-white">
+              {monthLabel}
+            </div>
+            <button
+              type="button"
+              onClick={() => moveMonth(1)}
+              aria-label="Next month"
+              className="grid h-8 w-8 place-items-center rounded-full text-slate-500 transition hover:bg-white hover:text-slate-950 dark:text-white/50 dark:hover:bg-white/10 dark:hover:text-white"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-3 grid grid-cols-7 gap-1.5">
+          {CALENDAR_WEEKDAY_LABELS.map((weekday) => (
+            <div
+              key={weekday}
+              className="px-1 py-1 text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 dark:text-white/35"
+            >
+              {weekday}
+            </div>
+          ))}
+          {days.map((day, index) =>
+            day ? (
+              <button
+                key={day.key}
+                type="button"
+                onClick={() => onChange({ eventDate: day.key })}
+                className={cn(
+                  "min-h-14 rounded-lg border px-2 py-1.5 text-left transition hover:-translate-y-0.5 hover:shadow-sm",
+                  getEventCalendarDayClass(day.isSelected, day.isPast),
+                )}
+              >
+                <div className="text-sm font-bold">{day.day}</div>
+                <div className="mt-2 truncate text-[10px] font-semibold">
+                  {day.isSelected ? "Event" : day.isPast ? "Past" : ""}
+                </div>
+              </button>
+            ) : (
+              <div key={`blank-${index}`} className="min-h-14 rounded-lg" />
+            ),
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ActivityListingCalendarPanel({
+  values,
+  showRequiredState,
+  onChange,
+}: {
+  values: ListingEditForm;
+  showRequiredState: boolean;
+  onChange: (patch: Partial<ListingEditForm>) => void;
+}) {
+  const today = useMemo(
+    () => parseCalendarDateKey(getCalendarDateKey(new Date())),
+    [],
+  );
+  const activityDate = values.activityDate.trim();
+  const [visibleMonth, setVisibleMonth] = useState(() =>
+    getMonthStart(activityDate ? parseCalendarDateKey(activityDate) : today),
+  );
+  const days = getEventCalendarMonthCells(visibleMonth, activityDate, today);
+  const monthLabel = formatCalendarMonthLabel(visibleMonth);
+  const pricingLabel =
+    ACTIVITY_PRICING_OPTIONS.find(
+      (option) => option.value === values.pricingModel,
+    )?.label || "N/A";
+
+  useEffect(() => {
+    if (!activityDate) return;
+    setVisibleMonth(getMonthStart(parseCalendarDateKey(activityDate)));
+  }, [activityDate]);
+
+  const moveMonth = (direction: -1 | 1) => {
+    setVisibleMonth((current) =>
+      getMonthStart(addCalendarMonths(current, direction)),
+    );
+  };
+
+  return (
+    <div className="md:col-span-2 xl:col-span-5">
+      <ListingFieldLabel
+        required={
+          showRequiredState && (!activityDate || !values.activityTimeSlot)
+        }
+      >
+        Calendar & Availability
+      </ListingFieldLabel>
+      <div className="rounded-xl border border-slate-200 bg-white p-3 dark:border-white/10 dark:bg-[#0b0b0b]">
+        <div className="grid gap-3 md:grid-cols-[minmax(0,1fr)_200px]">
+          <label className="block">
+            <ListingFieldLabel required={showRequiredState && !activityDate}>
+              Activity date
+            </ListingFieldLabel>
+            <input
+              type="date"
+              value={activityDate}
+              onChange={(event) =>
+                onChange({ activityDate: event.target.value })
+              }
+              className={cn(
+                inputClassName,
+                getListingRequiredFieldClass(activityDate, showRequiredState),
+              )}
+            />
+          </label>
+          <label className="block">
+            <ListingFieldLabel
+              required={showRequiredState && !values.activityTimeSlot}
+            >
+              Time slot
+            </ListingFieldLabel>
+            <select
+              value={values.activityTimeSlot}
+              onChange={(event) =>
+                onChange({ activityTimeSlot: event.target.value })
+              }
+              className={cn(
+                inputClassName,
+                getListingRequiredFieldClass(
+                  values.activityTimeSlot,
+                  showRequiredState,
+                ),
+              )}
+            >
+              <option value="">Select</option>
+              {ACTIVITY_TIME_SLOT_OPTIONS.map((slot) => (
+                <option key={slot} value={slot}>
+                  {slot}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <div className="mt-3 grid gap-2 sm:grid-cols-4">
+          <StayCalendarMetric
+            label="Activity"
+            value={values.listingType || "N/A"}
+          />
+          <StayCalendarMetric
+            label="Time slot"
+            value={values.activityTimeSlot || "N/A"}
+          />
+          <StayCalendarMetric
+            label="Max participants"
+            value={values.maxParticipants || "N/A"}
+          />
+          <StayCalendarMetric label="Pricing" value={pricingLabel} />
+        </div>
+
+        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-3">
+            <span className="grid h-10 w-10 place-items-center rounded-full bg-slate-100 text-slate-600 dark:bg-white/[0.06] dark:text-white/60">
+              <CalendarDays className="h-4 w-4" />
+            </span>
+            <div>
+              <div className="text-sm font-semibold text-slate-950 dark:text-white">
+                {activityDate
+                  ? formatCalendarDateLabel(activityDate)
+                  : "Select activity date"}
+              </div>
+              <div className="text-xs font-medium text-slate-500 dark:text-white/45">
+                Select the date tourists will book for this activity.
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center justify-between gap-2 rounded-full border border-slate-200 bg-slate-50 px-2 py-1 dark:border-white/10 dark:bg-white/[0.04] sm:min-w-56">
+            <button
+              type="button"
+              onClick={() => moveMonth(-1)}
+              aria-label="Previous month"
+              className="grid h-8 w-8 place-items-center rounded-full text-slate-500 transition hover:bg-white hover:text-slate-950 dark:text-white/50 dark:hover:bg-white/10 dark:hover:text-white"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+            <div className="min-w-28 text-center text-sm font-semibold text-slate-950 dark:text-white">
+              {monthLabel}
+            </div>
+            <button
+              type="button"
+              onClick={() => moveMonth(1)}
+              aria-label="Next month"
+              className="grid h-8 w-8 place-items-center rounded-full text-slate-500 transition hover:bg-white hover:text-slate-950 dark:text-white/50 dark:hover:bg-white/10 dark:hover:text-white"
+            >
+              <ChevronRight className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+
+        <div className="mt-3 grid grid-cols-7 gap-1.5">
+          {CALENDAR_WEEKDAY_LABELS.map((weekday) => (
+            <div
+              key={weekday}
+              className="px-1 py-1 text-center text-[10px] font-semibold uppercase tracking-[0.12em] text-slate-400 dark:text-white/35"
+            >
+              {weekday}
+            </div>
+          ))}
+          {days.map((day, index) =>
+            day ? (
+              <button
+                key={day.key}
+                type="button"
+                onClick={() => onChange({ activityDate: day.key })}
+                className={cn(
+                  "min-h-14 rounded-lg border px-2 py-1.5 text-left transition hover:-translate-y-0.5 hover:shadow-sm",
+                  getEventCalendarDayClass(day.isSelected, day.isPast),
+                )}
+              >
+                <div className="text-sm font-bold">{day.day}</div>
+                <div className="mt-2 truncate text-[10px] font-semibold">
+                  {day.isSelected ? "Activity" : day.isPast ? "Past" : ""}
+                </div>
+              </button>
+            ) : (
+              <div key={`blank-${index}`} className="min-h-14 rounded-lg" />
+            ),
+          )}
+        </div>
       </div>
     </div>
   );
@@ -3071,15 +3628,26 @@ function StayCalendarPanel({
   const [selectedDate, setSelectedDate] = useState(() =>
     getCalendarDateKey(today),
   );
-  const days = getStayCalendarMonthCells(listing, totalUnits, visibleMonth);
-  const selectedDay = getStayDateOccupancy(listing, totalUnits, selectedDate);
-  const roomType = values.listingType || "Room type";
+  const configuredRoomType = values.listingType.trim();
+  const hasCalendarSetup = Boolean(configuredRoomType) && totalUnits > 0;
+  const days = getStayCalendarMonthCells(
+    listing,
+    totalUnits,
+    visibleMonth,
+    hasCalendarSetup,
+    today,
+  );
+  const selectedDay = getStayDateOccupancy(
+    listing,
+    totalUnits,
+    selectedDate,
+    hasCalendarSetup,
+  );
+  const roomType = configuredRoomType || "N/A";
   const visibleBookings = selectedDay.bookings.slice(0, 4);
-  const isCurrentMonth = isSameCalendarMonth(visibleMonth, today);
   const monthLabel = formatCalendarMonthLabel(visibleMonth);
 
   const moveMonth = (direction: -1 | 1) => {
-    if (direction === -1 && isCurrentMonth) return;
     setVisibleMonth((current) => {
       const nextMonth = getMonthStart(addCalendarMonths(current, direction));
       setSelectedDate(
@@ -3106,9 +3674,8 @@ function StayCalendarPanel({
           <button
             type="button"
             onClick={() => moveMonth(-1)}
-            disabled={isCurrentMonth}
             aria-label="Previous month"
-            className="grid h-8 w-8 place-items-center rounded-full text-slate-500 transition hover:bg-white hover:text-slate-950 disabled:pointer-events-none disabled:opacity-35 dark:text-white/50 dark:hover:bg-white/10 dark:hover:text-white"
+            className="grid h-8 w-8 place-items-center rounded-full text-slate-500 transition hover:bg-white hover:text-slate-950 dark:text-white/50 dark:hover:bg-white/10 dark:hover:text-white"
           >
             <ChevronLeft className="h-4 w-4" />
           </button>
@@ -3130,15 +3697,15 @@ function StayCalendarPanel({
         <StayCalendarMetric label="Room type" value={roomType} />
         <StayCalendarMetric
           label="Total rooms"
-          value={String(totalUnits || 0)}
+          value={hasCalendarSetup ? String(totalUnits) : "N/A"}
         />
         <StayCalendarMetric
           label="Booked"
-          value={String(selectedDay.bookedRooms)}
+          value={hasCalendarSetup ? String(selectedDay.bookedRooms) : "N/A"}
         />
         <StayCalendarMetric
           label="Available"
-          value={String(selectedDay.availableRooms)}
+          value={hasCalendarSetup ? String(selectedDay.availableRooms) : "N/A"}
         />
       </div>
       <div className="mt-3 grid grid-cols-7 gap-1.5">
@@ -3160,13 +3727,7 @@ function StayCalendarPanel({
                 "min-h-16 rounded-lg border px-2 py-1.5 text-left transition hover:-translate-y-0.5 hover:shadow-sm",
                 selectedDate === day.key &&
                   "ring-2 ring-slate-950/15 dark:ring-white/20",
-                day.status === "booked"
-                  ? "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-300"
-                  : day.status === "limited"
-                    ? "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/20 dark:bg-amber-400/10 dark:text-amber-300"
-                    : day.status === "blocked"
-                      ? "border-slate-200 bg-slate-100 text-slate-500 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/45"
-                      : "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/20 dark:bg-emerald-400/10 dark:text-emerald-300",
+                getStayCalendarDayClass(day.status, day.isPast),
               )}
             >
               <div className="text-sm font-bold">{day.day}</div>
@@ -3187,14 +3748,19 @@ function StayCalendarPanel({
               Bookings on {formatCalendarDateLabel(selectedDate)}
             </div>
             <div className="text-xs font-medium text-slate-500 dark:text-white/45">
-              {selectedDay.bookedRooms} of {totalUnits || 0} {roomType} rooms
-              booked
+              {hasCalendarSetup
+                ? `${selectedDay.bookedRooms} of ${totalUnits} ${roomType} rooms booked`
+                : "Select a room type and total rooms to calculate availability."}
             </div>
           </div>
           <StatusPill value={selectedDay.status} />
         </div>
 
-        {visibleBookings.length > 0 ? (
+        {!hasCalendarSetup ? (
+          <div className="mt-3 rounded-lg bg-white px-3 py-2 text-sm font-medium text-slate-500 dark:bg-[#0b0b0b] dark:text-white/45">
+            Select a room type and total rooms to view availability.
+          </div>
+        ) : visibleBookings.length > 0 ? (
           <div className="mt-3 space-y-2">
             {visibleBookings.map((booking) => (
               <div
@@ -4472,27 +5038,42 @@ function Metric({ label, value }: { label: string; value: number }) {
   );
 }
 
-function StatusPill({ value }: { value: string }) {
-  const normalized = value.replace(/_/g, " ");
+function StatusPill({
+  value,
+  size = "compact",
+}: {
+  value: string;
+  size?: "compact" | "field";
+}) {
+  const normalizedValue = value.trim().toLowerCase();
+  const normalized =
+    normalizedValue === "n/a" || normalizedValue === "not applicable"
+      ? "N/A"
+      : value.replace(/_/g, " ");
   let className = "";
-  if (value === "pending") {
+  if (normalizedValue === "pending") {
     className =
       "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300";
   } else if (
-    value === "approved" ||
-    value === "active" ||
-    value === "online" ||
-    value === "available"
+    normalizedValue === "approved" ||
+    normalizedValue === "active" ||
+    normalizedValue === "online" ||
+    normalizedValue === "available"
   ) {
     className =
       "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-400/30 dark:bg-emerald-400/10 dark:text-emerald-300";
-  } else if (value === "limited") {
+  } else if (normalizedValue === "limited") {
     className =
       "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-300";
-  } else if (value === "archived" || value === "blocked") {
+  } else if (
+    normalizedValue === "archived" ||
+    normalizedValue === "blocked" ||
+    normalizedValue === "n/a" ||
+    normalizedValue === "not applicable"
+  ) {
     className =
       "border-slate-200 bg-slate-50 text-slate-500 dark:border-white/10 dark:bg-white/10 dark:text-white/60";
-  } else if (value === "rejected" || value === "booked") {
+  } else if (normalizedValue === "rejected" || normalizedValue === "booked") {
     className =
       "border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-400/30 dark:bg-rose-400/10 dark:text-rose-300";
   } else {
@@ -4503,10 +5084,10 @@ function StatusPill({ value }: { value: string }) {
     <span
       className={cn(
         "inline-flex items-center justify-center rounded-full px-3 text-xs font-semibold capitalize transition-all",
-        "h-7 w-28",
+        size === "field" ? "h-11 w-full text-sm" : "h-7 w-28",
         className,
       )}
-      style={{ minWidth: 72, maxWidth: 112 }}
+      style={size === "compact" ? { minWidth: 72, maxWidth: 112 } : undefined}
     >
       {normalized}
     </span>
@@ -4905,13 +5486,22 @@ function AlertModal({
   title,
   message,
   onClose,
+  onConfirm,
+  confirmLabel = "OK",
+  cancelLabel = "Cancel",
+  confirming = false,
 }: {
-  tone: "error" | "success";
+  tone: "error" | "success" | "warning";
   title: string;
   message: string;
   onClose: () => void;
+  onConfirm?: () => void | Promise<void>;
+  confirmLabel?: string;
+  cancelLabel?: string;
+  confirming?: boolean;
 }) {
   const isError = tone === "error";
+  const isWarning = tone === "warning";
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/45 px-4 backdrop-blur-sm">
@@ -4921,11 +5511,15 @@ function AlertModal({
             "mx-auto flex h-14 w-14 items-center justify-center rounded-full",
             isError
               ? "bg-rose-50 text-rose-600 dark:bg-rose-500/10 dark:text-rose-300"
-              : "bg-emerald-50 text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-300",
+              : isWarning
+                ? "bg-amber-50 text-amber-600 dark:bg-amber-400/10 dark:text-amber-300"
+                : "bg-emerald-50 text-emerald-600 dark:bg-emerald-400/10 dark:text-emerald-300",
           )}
         >
           {isError ? (
             <XCircle className="h-7 w-7" />
+          ) : isWarning ? (
+            <Trash2 className="h-7 w-7" />
           ) : (
             <CheckCircle2 className="h-7 w-7" />
           )}
@@ -4936,16 +5530,46 @@ function AlertModal({
         <div className="mt-2 text-sm leading-6 text-slate-500 dark:text-white/55">
           {message}
         </div>
-        <button
-          type="button"
-          onClick={onClose}
-          className={cn(
-            actionButtonVariants({ variant: "primary", size: "lg" }),
-            "mt-5 w-full justify-center",
-          )}
-        >
-          OK
-        </button>
+        {onConfirm ? (
+          <div className="mt-5 grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={confirming}
+              className={cn(
+                actionButtonVariants({ variant: "secondary", size: "lg" }),
+                "justify-center",
+              )}
+            >
+              {cancelLabel}
+            </button>
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={confirming}
+              className={cn(
+                actionButtonVariants({
+                  variant: isWarning ? "danger" : "primary",
+                  size: "lg",
+                }),
+                "justify-center",
+              )}
+            >
+              {confirmLabel}
+            </button>
+          </div>
+        ) : (
+          <button
+            type="button"
+            onClick={onClose}
+            className={cn(
+              actionButtonVariants({ variant: "primary", size: "lg" }),
+              "mt-5 w-full justify-center",
+            )}
+          >
+            {confirmLabel}
+          </button>
+        )}
       </div>
     </div>
   );
@@ -5316,12 +5940,16 @@ function listingMatchesService(
   const normalizedService = normalizeListingText(serviceLabel);
   const normalizedCategory = normalizeListingText(listing.category);
   const normalizedType = normalizeListingText(listing.listingType);
+  const normalizedDefaultType = normalizeListingText(
+    LISTING_SERVICE_CONFIG[service].defaultListingType,
+  );
 
   return (
     normalizedCategory === normalizedService ||
     normalizedType === normalizedService ||
-    normalizedType ===
-      normalizeListingText(LISTING_SERVICE_CONFIG[service].defaultListingType)
+    (service === "things_to_do" && normalizedType === "activity") ||
+    (normalizedDefaultType.length > 0 &&
+      normalizedType === normalizedDefaultType)
   );
 }
 
@@ -5330,14 +5958,14 @@ function getListingServiceSummary(service: ServiceProviderCategoryId) {
     case "stays":
       return "Rooms, suites, lodges, campsites, prices per night, inclusions, and house rules.";
     case "events":
-      return "Event type, ticket price, capacity, included items, and attendance rules.";
+      return "Event type, ticket type, ticket totals, event date, included items, and attendance rules.";
     case "bus":
       return "Routes, fares, seat capacity, luggage allowance, and passenger rules.";
     case "flight":
       return "Flight routes, fares, seat capacity, baggage rules, and service notes.";
     case "things_to_do":
     default:
-      return "Activities, tour prices, group sizes, inclusions, and safety rules.";
+      return "Activities, dates, time slots, participant limits, group pricing, inclusions, and safety rules.";
   }
 }
 
@@ -5354,8 +5982,9 @@ function getListingServiceFieldLabels(service: ServiceProviderCategoryId) {
     case "events":
       return [
         "Event type",
+        "Ticket type",
+        "Total tickets",
         "Ticket price",
-        "Capacity",
         "Included",
         "Restrictions",
       ];
@@ -5366,34 +5995,120 @@ function getListingServiceFieldLabels(service: ServiceProviderCategoryId) {
     case "things_to_do":
     default:
       return [
-        "Activity type",
-        "Price",
-        "Group size",
+        "Activity",
+        "Date",
+        "Time slot",
+        "Max participants",
         "Included",
         "Not allowed",
       ];
   }
 }
 
+function isServiceProviderCategoryId(
+  value: string,
+): value is ServiceProviderCategoryId {
+  return value in LISTING_SERVICE_CONFIG;
+}
+
 function toListingEditForm(
   listing: AdminListingRecord,
   displayName = listing.title,
+  operatingLocations: string[] = [],
 ): ListingEditForm {
   const stayDetails = getStayDetailsRecord(listing.metadata);
+  const eventDetails = getEventDetailsRecord(listing.metadata);
+  const activityDetails = getActivityDetailsRecord(listing.metadata);
+  const serviceCategory =
+    typeof listing.metadata?.serviceCategory === "string"
+      ? listing.metadata.serviceCategory
+      : "";
+  const serviceId = isServiceProviderCategoryId(serviceCategory)
+    ? serviceCategory
+    : null;
+  const listingType =
+    (serviceCategory === "stays" && listing.listingType === "Room") ||
+    (serviceCategory === "events" && listing.listingType === "Event") ||
+    (serviceCategory === "things_to_do" && listing.listingType === "Activity")
+      ? ""
+      : listing.listingType || "";
+  const shortDescription =
+    listing.shortDescription === ADMIN_DRAFT_LISTING_SHORT_DESCRIPTION
+      ? ""
+      : listing.shortDescription || "";
+  const totalUnits = getMetadataString(stayDetails, "totalUnits");
+  const ticketType = getMetadataString(eventDetails, "ticketType");
+  const totalTickets =
+    getMetadataString(eventDetails, "totalTickets") ||
+    (serviceCategory === "events" && listing.capacity
+      ? listing.capacity.toString()
+      : "");
+  const eventDate = getMetadataString(eventDetails, "eventDate");
+  const eventStartTime = getMetadataString(eventDetails, "eventStartTime");
+  const activityDate = getMetadataString(activityDetails, "activityDate");
+  const activityTimeSlot =
+    getMetadataString(activityDetails, "activityTimeSlot") ||
+    getMetadataString(activityDetails, "timeSlot");
+  const maxParticipants =
+    getMetadataString(activityDetails, "maxParticipants") ||
+    (serviceCategory === "things_to_do" && listing.capacity
+      ? listing.capacity.toString()
+      : "");
+  const isAdminDraft =
+    listing.status === "draft" &&
+    listing.metadata?.source === "admin_service_provider_detail";
+  const hasEventDetails =
+    Boolean(ticketType) ||
+    Boolean(totalTickets) ||
+    Boolean(eventDate) ||
+    Boolean(eventStartTime);
+  const hasActivityDetails =
+    Boolean(activityDate) ||
+    Boolean(activityTimeSlot) ||
+    Boolean(maxParticipants);
+  const hasServiceDetails = hasEventDetails || hasActivityDetails;
+  const shouldRequireLocationSelection =
+    isAdminDraft &&
+    operatingLocations[0] === listing.location &&
+    !hasServiceDetails &&
+    !shortDescription &&
+    !listing.basePrice &&
+    !listing.capacity &&
+    !totalUnits;
+  const shouldRequirePricingModelSelection =
+    isAdminDraft &&
+    serviceId !== null &&
+    LEGACY_DEFAULT_LISTING_PRICING_MODELS[serviceId].includes(
+      listing.pricingModel,
+    ) &&
+    !shortDescription &&
+    !listing.basePrice &&
+    !listing.capacity &&
+    !totalUnits &&
+    !hasServiceDetails;
 
   return {
     title: displayName,
-    shortDescription: listing.shortDescription || "",
+    shortDescription,
     status: listing.status,
     visibility: listing.visibility,
-    location: listing.location,
+    location: shouldRequireLocationSelection ? "" : listing.location,
     bookingMode: listing.bookingMode || "request",
     instantBooking: listing.instantBooking,
     basePrice: listing.basePrice?.toString() || "",
-    listingType: listing.listingType || "",
-    pricingModel: listing.pricingModel || "",
+    listingType,
+    pricingModel: shouldRequirePricingModelSelection
+      ? ""
+      : listing.pricingModel || "",
     capacity: listing.capacity?.toString() || "",
-    totalUnits: getMetadataString(stayDetails, "totalUnits"),
+    ticketType,
+    totalTickets,
+    eventDate,
+    eventStartTime,
+    activityDate,
+    activityTimeSlot,
+    maxParticipants,
+    totalUnits,
     bedrooms: getMetadataString(stayDetails, "bedrooms"),
     beds: getMetadataString(stayDetails, "beds"),
     bathrooms: getMetadataString(stayDetails, "bathrooms"),
@@ -5454,12 +6169,19 @@ function getListingTypeOptions(service: ServiceProviderCategoryId) {
       ];
     case "things_to_do":
     default:
-      return ["Guided tour", "Activity", "Attraction", "Experience", "Package"];
+      return ACTIVITY_TYPE_OPTIONS;
   }
 }
 
 function getListingPricingOptions(service: ServiceProviderCategoryId) {
   if (service === "stays") return STAY_PRICING_OPTIONS;
+  if (service === "events") {
+    return [
+      { value: "per_ticket", label: "Per ticket" },
+      { value: "package", label: "Package" },
+    ];
+  }
+  if (service === "things_to_do") return ACTIVITY_PRICING_OPTIONS;
 
   return [
     { value: "per_person", label: "Per person" },
@@ -5471,6 +6193,17 @@ function getListingPricingOptions(service: ServiceProviderCategoryId) {
 
 function getListingIncludedOptions(service: ServiceProviderCategoryId) {
   if (service === "stays") return STAY_INCLUDED_OPTIONS;
+  if (service === "things_to_do") {
+    return [
+      "Guide",
+      "Safety briefing",
+      "Equipment",
+      "Transport",
+      "Entry fees",
+      "Refreshments",
+      "No inclusions listed",
+    ];
+  }
 
   return [
     "Guide",
@@ -5484,6 +6217,16 @@ function getListingIncludedOptions(service: ServiceProviderCategoryId) {
 
 function getListingNotAllowedOptions(service: ServiceProviderCategoryId) {
   if (service === "stays") return STAY_NOT_ALLOWED_OPTIONS;
+  if (service === "things_to_do") {
+    return [
+      "No smoking",
+      "No alcohol",
+      "No unattended children",
+      "Age restrictions apply",
+      "Health restrictions apply",
+      "No restrictions listed",
+    ];
+  }
 
   return [
     "No smoking",
@@ -5538,7 +6281,10 @@ function getListingDisplayId(
   listing: AdminListingRecord,
   listings: AdminListingRecord[],
 ) {
-  const orderedListings = [...listings].sort((first, second) => {
+  const providerListings = listings.filter(
+    (item) => item.companyId === listing.companyId,
+  );
+  const orderedListings = [...providerListings].sort((first, second) => {
     const firstCreatedAt = new Date(first.createdAt).getTime();
     const secondCreatedAt = new Date(second.createdAt).getTime();
     if (firstCreatedAt !== secondCreatedAt) {
@@ -5570,20 +6316,40 @@ function listingEditFormChanged(
 function getListingValidationErrors(
   form: ListingEditForm,
   service: ServiceProviderCategoryId,
+  operatingLocations: string[] = [],
 ) {
   const errors = new Set<keyof ListingEditForm>();
 
-  if (!form.location.trim()) errors.add("location");
+  const hasValidLocation =
+    form.location.trim().length > 0 &&
+    (operatingLocations.length === 0 ||
+      operatingLocations.includes(form.location));
+  if (!hasValidLocation) errors.add("location");
   if (!form.listingType.trim()) errors.add("listingType");
   if (!form.pricingModel.trim()) errors.add("pricingModel");
   if (!form.basePrice.trim()) errors.add("basePrice");
-  if (!form.capacity.trim()) errors.add("capacity");
+  if (service === "things_to_do") {
+    if (!form.maxParticipants.trim()) errors.add("maxParticipants");
+  } else if (service !== "events" && !form.capacity.trim()) {
+    errors.add("capacity");
+  }
   if (!form.shortDescription.trim()) errors.add("shortDescription");
   if (form.included.length === 0) errors.add("included");
   if (form.notAllowed.length === 0) errors.add("notAllowed");
 
   if (service === "stays") {
     if (!form.totalUnits.trim()) errors.add("totalUnits");
+  }
+
+  if (service === "events") {
+    if (!form.ticketType.trim()) errors.add("ticketType");
+    if (!form.totalTickets.trim()) errors.add("totalTickets");
+    if (!form.eventDate.trim()) errors.add("eventDate");
+  }
+
+  if (service === "things_to_do") {
+    if (!form.activityDate.trim()) errors.add("activityDate");
+    if (!form.activityTimeSlot.trim()) errors.add("activityTimeSlot");
   }
 
   return errors;
@@ -5595,8 +6361,41 @@ function toStayDetailsPayload(form: ListingEditForm) {
   };
 }
 
+function toEventDetailsPayload(form: ListingEditForm) {
+  return {
+    ticketType: form.ticketType.trim(),
+    totalTickets: parsePositiveInt(form.totalTickets),
+    eventDate: form.eventDate.trim(),
+    eventStartTime: form.eventStartTime.trim(),
+  };
+}
+
+function toActivityDetailsPayload(form: ListingEditForm) {
+  return {
+    activityType: form.listingType.trim(),
+    activityDate: form.activityDate.trim(),
+    activityTimeSlot: form.activityTimeSlot.trim(),
+    maxParticipants: parsePositiveInt(form.maxParticipants),
+    pricingModel: form.pricingModel.trim(),
+  };
+}
+
 function getStayDetailsRecord(metadata: Record<string, unknown>) {
   const value = metadata.stayDetails;
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function getEventDetailsRecord(metadata: Record<string, unknown>) {
+  const value = metadata.eventDetails;
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function getActivityDetailsRecord(metadata: Record<string, unknown>) {
+  const value = metadata.activityDetails;
   return value && typeof value === "object" && !Array.isArray(value)
     ? (value as Record<string, unknown>)
     : {};
@@ -5627,8 +6426,11 @@ function getStayCalendarMonthCells(
   listing: AdminListingRecord,
   totalUnits: number,
   monthDate: Date,
+  hasCalendarSetup = true,
+  today = new Date(),
 ) {
   const monthStart = getMonthStart(monthDate);
+  const todayStart = parseCalendarDateKey(getCalendarDateKey(today));
   const daysInMonth = new Date(
     monthStart.getFullYear(),
     monthStart.getMonth() + 1,
@@ -5641,6 +6443,7 @@ function getStayCalendarMonthCells(
     label: string;
     bookedRooms: number;
     availableRooms: number;
+    isPast: boolean;
     day: string;
   }> = Array.from({ length: leadingBlanks }, () => null);
 
@@ -5648,7 +6451,12 @@ function getStayCalendarMonthCells(
     const date = new Date(monthStart);
     date.setDate(index + 1);
     const key = getCalendarDateKey(date);
-    const occupancy = getStayDateOccupancy(listing, totalUnits, key);
+    const occupancy = getStayDateOccupancy(
+      listing,
+      totalUnits,
+      key,
+      hasCalendarSetup,
+    );
 
     cells.push({
       key,
@@ -5656,6 +6464,42 @@ function getStayCalendarMonthCells(
       label: occupancy.label,
       bookedRooms: occupancy.bookedRooms,
       availableRooms: occupancy.availableRooms,
+      isPast: date < todayStart,
+      day: String(date.getDate()),
+    });
+  }
+
+  return cells;
+}
+
+function getEventCalendarMonthCells(
+  monthDate: Date,
+  selectedDate: string,
+  today = new Date(),
+) {
+  const monthStart = getMonthStart(monthDate);
+  const todayStart = parseCalendarDateKey(getCalendarDateKey(today));
+  const daysInMonth = new Date(
+    monthStart.getFullYear(),
+    monthStart.getMonth() + 1,
+    0,
+  ).getDate();
+  const leadingBlanks = monthStart.getDay();
+  const cells: Array<null | {
+    key: string;
+    isSelected: boolean;
+    isPast: boolean;
+    day: string;
+  }> = Array.from({ length: leadingBlanks }, () => null);
+
+  for (let index = 0; index < daysInMonth; index += 1) {
+    const date = new Date(monthStart);
+    date.setDate(index + 1);
+    const key = getCalendarDateKey(date);
+    cells.push({
+      key,
+      isSelected: key === selectedDate,
+      isPast: date < todayStart,
       day: String(date.getDate()),
     });
   }
@@ -5667,9 +6511,23 @@ function getStayDateOccupancy(
   listing: AdminListingRecord,
   totalUnits: number,
   dateKey: string,
+  hasCalendarSetup = true,
 ) {
   const date = parseCalendarDateKey(dateKey);
   const roomCount = Math.max(totalUnits, 0);
+
+  if (!hasCalendarSetup) {
+    return {
+      key: dateKey,
+      status: "n/a",
+      label: "N/A",
+      bookings: [],
+      bookedRooms: 0,
+      availableRooms: 0,
+      totalUnits: 0,
+    };
+  }
+
   const bookings = listing.bookingCalendar.filter((item) =>
     dateFallsWithinRange(date, item.checkIn, item.checkOut),
   );
@@ -5690,20 +6548,22 @@ function getStayDateOccupancy(
   }
 
   const rawAvailabilityStatus = availability?.status?.toLowerCase() || "";
+  const availabilityRatio = roomCount > 0 ? availableRooms / roomCount : 0;
   const status =
     rawAvailabilityStatus && rawAvailabilityStatus !== "available"
       ? "blocked"
       : roomCount > 0 && availableRooms <= 0
         ? "booked"
-        : bookedRooms > 0 || (roomCount > 0 && availableRooms < roomCount)
-          ? "limited"
-          : "available";
+        : availabilityRatio >= 0.5
+          ? "available"
+          : "limited";
   const label =
     status === "booked"
       ? "Full"
-      : status === "limited"
+      : status === "limited" ||
+          (status === "available" && availableRooms < roomCount)
         ? roomCount
-          ? `${bookedRooms}/${roomCount}`
+          ? `${availableRooms}/${roomCount}`
           : `${bookedRooms} booked`
         : status === "blocked"
           ? "Blocked"
@@ -5718,6 +6578,38 @@ function getStayDateOccupancy(
     availableRooms,
     totalUnits: roomCount,
   };
+}
+
+function getEventCalendarDayClass(isSelected: boolean, isPast: boolean) {
+  if (isSelected) {
+    return "border-slate-950 bg-slate-950 text-white dark:border-white dark:bg-white dark:text-slate-950";
+  }
+
+  return isPast
+    ? "border-slate-100 bg-slate-50/55 text-slate-400 dark:border-white/5 dark:bg-white/[0.03] dark:text-white/30"
+    : "border-slate-200 bg-white text-slate-700 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/70";
+}
+
+function getStayCalendarDayClass(status: string, isPast: boolean) {
+  if (status === "booked") {
+    return isPast
+      ? "border-rose-100 bg-rose-50/45 text-rose-500 dark:border-rose-400/10 dark:bg-rose-400/[0.05] dark:text-rose-300/70"
+      : "border-rose-300 bg-rose-100 text-rose-800 dark:border-rose-400/35 dark:bg-rose-400/15 dark:text-rose-200";
+  }
+
+  if (status === "limited") {
+    return isPast
+      ? "border-amber-100 bg-amber-50/45 text-amber-500 dark:border-amber-400/10 dark:bg-amber-400/[0.05] dark:text-amber-300/70"
+      : "border-amber-300 bg-amber-100 text-amber-800 dark:border-amber-400/35 dark:bg-amber-400/15 dark:text-amber-200";
+  }
+
+  if (status === "blocked" || status === "n/a") {
+    return "border-slate-200 bg-slate-100 text-slate-500 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/45";
+  }
+
+  return isPast
+    ? "border-emerald-100 bg-emerald-50/45 text-emerald-500 dark:border-emerald-400/10 dark:bg-emerald-400/[0.05] dark:text-emerald-300/70"
+    : "border-emerald-300 bg-emerald-100 text-emerald-800 dark:border-emerald-400/35 dark:bg-emerald-400/15 dark:text-emerald-200";
 }
 
 function getMonthStart(date: Date) {
@@ -5875,12 +6767,26 @@ function getServiceListingDetails(
         },
       ];
     case "events":
+      const eventDetails = getEventDetailsRecord(listing.metadata);
       return [
         { label: "Event type", value: listing.listingType || "Not set" },
+        {
+          label: "Ticket type",
+          value: getMetadataString(eventDetails, "ticketType") || "Not set",
+        },
         { label: "Ticket price", value: formatBasePrice(listing, "Not set") },
         {
-          label: "Capacity",
-          value: formatCapacity(listing.capacity, "people"),
+          label: "Total tickets",
+          value:
+            getMetadataString(eventDetails, "totalTickets") ||
+            (listing.capacity ? listing.capacity.toLocaleString() : "Not set"),
+        },
+        {
+          label: "Event date",
+          value: formatEventDateValue(
+            getMetadataString(eventDetails, "eventDate"),
+            getMetadataString(eventDetails, "eventStartTime"),
+          ),
         },
         { label: "Included", value: formatListValue(listing.amenities) },
         {
@@ -5924,11 +6830,26 @@ function getServiceListingDetails(
       ];
     case "things_to_do":
     default:
+      const activityDetails = getActivityDetailsRecord(listing.metadata);
       return [
-        { label: "Activity type", value: listing.listingType || "Not set" },
+        { label: "Activity", value: listing.listingType || "Not set" },
+        {
+          label: "Activity date",
+          value: formatEventDateValue(
+            getMetadataString(activityDetails, "activityDate"),
+            "",
+          ),
+        },
+        {
+          label: "Time slot",
+          value:
+            getMetadataString(activityDetails, "activityTimeSlot") ||
+            getMetadataString(activityDetails, "timeSlot") ||
+            "Not set",
+        },
         { label: "Price", value: formatBasePrice(listing, "Not set") },
         {
-          label: "Group size",
+          label: "Max participants",
           value: formatCapacity(listing.capacity, "people"),
         },
         { label: "Included", value: formatListValue(listing.amenities) },
@@ -5958,6 +6879,12 @@ function formatBasePrice(listing: AdminListingRecord, fallback: string) {
 function formatCapacity(value?: number | null, unit = "people") {
   if (!value) return "Not set";
   return `${value.toLocaleString()} ${unit}`;
+}
+
+function formatEventDateValue(dateValue: string, timeValue: string) {
+  if (!dateValue) return "Not set";
+  const label = formatCalendarDateLabel(dateValue);
+  return timeValue ? `${label}, ${timeValue}` : label;
 }
 
 function formatListValue(values?: string[] | null) {

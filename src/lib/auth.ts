@@ -105,6 +105,20 @@ export function setSessionCookie(
   sessionToken: string,
   expires: Date,
 ) {
+  const domain = getSessionCookieDomain();
+
+  if (domain) {
+    response.cookies.set({
+      name: SESSION_COOKIE_NAME,
+      value: "",
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      expires: new Date(0),
+    });
+  }
+
   response.cookies.set({
     name: SESSION_COOKIE_NAME,
     value: sessionToken,
@@ -112,7 +126,7 @@ export function setSessionCookie(
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    domain: getSessionCookieDomain(),
+    domain,
     expires,
   });
   return response;
@@ -126,9 +140,23 @@ export function clearSessionCookie(response: NextResponse) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
-    domain: getSessionCookieDomain(),
     expires: new Date(0),
   });
+
+  const domain = getSessionCookieDomain();
+  if (domain) {
+    response.cookies.set({
+      name: SESSION_COOKIE_NAME,
+      value: "",
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      domain,
+      expires: new Date(0),
+    });
+  }
+
   return response;
 }
 

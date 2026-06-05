@@ -282,8 +282,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      await apiFetch<{ ok: boolean }>("/api/auth/logout", {
+      await fetch("/api/auth/logout", {
         method: "POST",
+        credentials: "include",
       });
     } catch {
       // If the session is already gone we can still clear client state safely.

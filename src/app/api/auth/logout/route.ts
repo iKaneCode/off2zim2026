@@ -63,7 +63,9 @@ export async function POST(request: NextRequest) {
     return clearSessionCookie(NextResponse.json({ ok: true }));
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
-      return apiError("Unauthorized", 401);
+      return clearSessionCookie(
+        NextResponse.json({ ok: true, alreadySignedOut: true }),
+      );
     }
 
     console.error("Logout route error:", error);

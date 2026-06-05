@@ -89,17 +89,17 @@ export default function ShopPage() {
   }
 
   return (
-    <div className="theme-page min-h-screen">
+    <div className="theme-page min-h-screen pb-16">
       <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 lg:px-8">
         {/* Header */}
-        <div className="mb-5 rounded-2xl border border-black/10 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-white/[0.04] sm:p-5">
+        <div className="apple-surface mb-5 rounded-[2rem] p-5 sm:p-6">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-lg border border-[#8dc9ff]/25 bg-[#8dc9ff]/8 px-3 py-1.5 text-xs font-medium text-[#8dc9ff]">
+            <div className="inline-flex items-center gap-2 rounded-full border border-black/[0.08] bg-white/64 px-3 py-1.5 text-xs font-semibold text-[#0071e3] backdrop-blur dark:border-white/[0.09] dark:bg-white/[0.06] dark:text-[#8ec5ff]">
               <ShoppingCart className="h-3.5 w-3.5" />
               Marketplace
             </div>
-            <h1 className="theme-heading mt-3 text-3xl font-semibold">Shop Zimbabwe</h1>
+            <h1 className="theme-heading mt-3 text-4xl font-bold leading-tight">Shop Zimbabwe</h1>
             <p className="theme-muted mt-2 max-w-2xl text-sm leading-6">
               Handcrafted goods, local art, and authentic Zimbabwean products — delivered or
               ready for pick-up.
@@ -107,7 +107,7 @@ export default function ShopPage() {
           </div>
           <Link
             href="/cart"
-            className="flex w-fit items-center gap-2 rounded-xl border border-white/10 px-4 py-2.5 text-sm font-medium text-white/70 transition hover:bg-white/5 hover:text-white"
+            className="apple-action-secondary w-fit"
           >
             <ShoppingCart className="h-4 w-4" />
             View cart
@@ -118,13 +118,13 @@ export default function ShopPage() {
         {/* Search + Category filter */}
         <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative flex-1">
-            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+            <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#86868b] dark:text-white/35" />
             <input
               type="text"
               placeholder="Search products…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="theme-input w-full rounded-xl py-3 pl-11 pr-4 text-sm"
+              className="theme-input w-full rounded-full py-3 pl-11 pr-4 text-sm"
             />
           </div>
           <div className="flex gap-2 overflow-x-auto pb-1 sm:pb-0">
@@ -132,10 +132,10 @@ export default function ShopPage() {
               <button
                 key={cat}
                 onClick={() => setCategory(cat)}
-                className={`shrink-0 rounded-lg px-3 py-2 text-xs font-semibold transition ${
+                className={`shrink-0 rounded-full px-3 py-2 text-xs font-semibold transition ${
                   category === cat
-                    ? "bg-[#8dc9ff] text-[#0a1628]"
-                    : "border border-white/10 text-white/55 hover:border-white/20 hover:text-white/80"
+                    ? "bg-[#1d1d1f] text-white dark:bg-white dark:text-[#1d1d1f]"
+                    : "theme-chip"
                 }`}
               >
                 {cat === "All"
@@ -168,8 +168,8 @@ export default function ShopPage() {
             ))}
           </div>
         ) : products.length === 0 ? (
-            <div className="theme-panel rounded-xl p-8 text-center">
-            <ShoppingCart className="mx-auto mb-3 h-10 w-10 text-white/20" />
+            <div className="theme-panel rounded-[1.5rem] p-8 text-center">
+            <ShoppingCart className="mx-auto mb-3 h-10 w-10 text-[#86868b] dark:text-white/20" />
             <p className="theme-heading font-semibold">No products found</p>
             <p className="theme-muted mt-1 text-sm">
               {search || category !== "All"
@@ -191,7 +191,7 @@ export default function ShopPage() {
                 <button
                   onClick={() => loadProducts(false)}
                   disabled={loadingMore}
-                  className="rounded-xl border border-white/10 px-8 py-3 text-sm font-medium text-white/70 transition hover:bg-white/5 hover:text-white disabled:opacity-50"
+                  className="apple-action-secondary px-8 py-3 disabled:opacity-50"
                 >
                   {loadingMore ? "Loading…" : "Load more"}
                 </button>
@@ -210,15 +210,15 @@ function ProductCard({ product }: { product: Product }) {
   return (
     <Link
       href={`/shop/${product.slug}`}
-      className="theme-panel group overflow-hidden rounded-xl transition hover:shadow-lg"
+      className="theme-card group overflow-hidden rounded-[1.5rem]"
     >
       {/* Image */}
-      <div className="relative h-36 overflow-hidden bg-white/5">
+      <div className="relative h-40 overflow-hidden bg-black/[0.035] dark:bg-white/[0.05]">
         {product.images[0] ? (
           <img
             src={product.images[0]}
             alt={product.title}
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-[1.04]"
           />
         ) : (
           <div className="flex h-full items-center justify-center">
@@ -233,7 +233,7 @@ function ProductCard({ product }: { product: Product }) {
           </div>
         )}
         {product.offersShipping && (
-          <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-[#8dc9ff]/15 px-2.5 py-1 text-xs text-[#8dc9ff]">
+          <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full bg-white/78 px-2.5 py-1 text-xs font-semibold text-[#0071e3] backdrop-blur-xl dark:bg-black/55 dark:text-[#8ec5ff]">
             <Truck className="h-3 w-3" />
             Ships
           </div>
@@ -246,13 +246,13 @@ function ProductCard({ product }: { product: Product }) {
           <p className="theme-heading line-clamp-2 text-sm font-semibold leading-snug">
             {product.title}
           </p>
-          <span className="shrink-0 text-sm font-bold text-[#8dc9ff]">
+          <span className="shrink-0 text-sm font-bold text-[#0071e3] dark:text-[#8ec5ff]">
             ${product.price}
           </span>
         </div>
 
-        <div className="mt-2 flex items-center gap-1.5 text-xs text-white/45">
-          <MapPin className="h-3 w-3 shrink-0" />
+        <div className="theme-muted mt-2 flex items-center gap-1.5 text-xs">
+          <MapPin className="h-3 w-3 shrink-0 text-[#0071e3]" />
           <span className="truncate">{product.vendor.companyName}</span>
           {product.vendor.isVerified && <VerifiedBadge size="sm" showLabel={false} />}
         </div>
@@ -262,7 +262,7 @@ function ProductCard({ product }: { product: Product }) {
             {product.tags.slice(0, 3).map((tag) => (
               <span
                 key={tag}
-                className="flex items-center gap-1 rounded-full border border-white/8 px-2 py-0.5 text-xs text-white/40"
+                className="theme-chip flex items-center gap-1 rounded-full px-2 py-0.5 text-xs"
               >
                 <Tag className="h-2.5 w-2.5" />
                 {tag}
@@ -272,12 +272,12 @@ function ProductCard({ product }: { product: Product }) {
         )}
 
         <div className="mt-3 flex items-center justify-between">
-          <span className="text-xs text-white/35">
+          <span className="theme-subtle text-xs">
             {inStock ? `${product.stockQuantity} in stock` : "Out of stock"}
           </span>
           {inStock && (
-            <span className="rounded-full bg-[#ff5630]/10 px-3 py-1 text-xs font-medium text-[#ff5630]">
-              View →
+            <span className="rounded-full bg-[#0071e3]/10 px-3 py-1 text-xs font-semibold text-[#0071e3] dark:text-[#8ec5ff]">
+              View
             </span>
           )}
         </div>

@@ -60,7 +60,7 @@ const sections = [
 export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
   const { user, isLoading, logout } = useAuth();
   const router = useRouter();
-  const [openSection, setOpenSection] = useState("Explore");
+  const [openSection, setOpenSection] = useState("Discover");
   const accountRoute = getAccountRoute(user);
 
   const handleLogout = async () => {
@@ -83,7 +83,7 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
 
   useEffect(() => {
     if (isOpen) {
-      setOpenSection("Explore");
+      setOpenSection("Discover");
     }
   }, [isOpen]);
 
@@ -93,21 +93,21 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
     <>
       <button
         type="button"
-        className="fixed inset-0 z-[190] bg-black/72 backdrop-blur-sm md:hidden"
+        className="fixed inset-0 z-[190] bg-black/62 backdrop-blur-md md:hidden"
         onClick={onClose}
         aria-label="Close menu overlay"
       />
 
       <div
-        className="fixed inset-y-0 left-0 z-[200] flex w-full max-w-[25rem] flex-col bg-white text-slate-950 shadow-[0_24px_80px_rgba(15,23,42,0.22)] dark:bg-[#090909] dark:text-white dark:shadow-[0_24px_80px_rgba(0,0,0,0.55)] md:hidden"
+        className="fixed inset-y-0 left-0 z-[200] flex w-full max-w-[25rem] flex-col border-r border-black/[0.08] bg-white/88 text-[#1d1d1f] shadow-[0_30px_90px_rgba(0,0,0,0.22)] backdrop-blur-2xl dark:border-white/[0.09] dark:bg-[#101010]/88 dark:text-white dark:shadow-[0_30px_90px_rgba(0,0,0,0.62)] md:hidden"
         onClick={(event) => event.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-black/10 px-5 pb-4 pt-5 dark:border-white/10">
+        <div className="flex items-center justify-between border-b border-black/[0.08] px-5 pb-4 pt-5 dark:border-white/[0.09]">
           <SiteLogo width={122} height={38} className="h-9 w-auto" priority />
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-[#f3d8d0] text-[#ff5630] dark:bg-[#2a1614] dark:text-[#ff7352]"
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/[0.055] text-[#1d1d1f] transition hover:bg-black/[0.08] dark:bg-white/[0.08] dark:text-white dark:hover:bg-white/[0.12]"
             aria-label="Close menu"
           >
             <X className="h-5 w-5" />
@@ -116,14 +116,14 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
 
         <div className="flex-1 overflow-y-auto px-5 pb-6 pt-5">
           {user ? (
-            <div className="border-b border-black/10 pb-5 dark:border-white/10">
-              <div className="text-xs uppercase tracking-[0.28em] text-black/45 dark:text-white/42">
+            <div className="border-b border-black/[0.08] pb-5 dark:border-white/[0.09]">
+              <div className="text-xs uppercase tracking-[0.28em] text-[#86868b] dark:text-white/42">
                 Signed in
               </div>
-              <div className="mt-3 text-2xl font-semibold leading-tight text-slate-950 dark:text-white">
+              <div className="mt-3 text-2xl font-semibold leading-tight text-[#1d1d1f] dark:text-white">
                 {[user.firstName, user.lastName].filter(Boolean).join(" ").trim() || user.email}
               </div>
-              <div className="mt-2 text-sm text-slate-600 dark:text-white/62">
+              <div className="mt-2 text-sm text-[#6e6e73] dark:text-white/62">
                 Your trip plans, saved places, and account tools are ready.
               </div>
 
@@ -131,7 +131,7 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
                 <Link
                   href={accountRoute}
                   onClick={onClose}
-                  className="inline-flex items-center justify-center gap-2 rounded-full bg-[#ff5630] px-4 py-3 text-sm font-semibold text-white"
+                  className="apple-action"
                 >
                   <LayoutDashboard className="h-4 w-4" />
                   Open account
@@ -139,7 +139,7 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
                 <Link
                   href={getSurfaceHref("explorer", "/profile")}
                   onClick={onClose}
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-black/10 px-4 py-3 text-sm font-medium text-slate-900 dark:border-white/10 dark:text-white/90"
+                  className="apple-action-secondary"
                 >
                   <Settings className="h-4 w-4" />
                   Profile settings
@@ -147,7 +147,7 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="inline-flex items-center justify-center gap-2 rounded-full border border-black/10 px-4 py-3 text-sm font-medium text-slate-900 dark:border-white/10 dark:text-white/90"
+                  className="apple-action-secondary"
                 >
                   <LogOut className="h-4 w-4" />
                   Sign out
@@ -155,11 +155,11 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
               </div>
             </div>
           ) : (
-            <div className="border-b border-black/10 pb-5 dark:border-white/10">
-              <div className="text-xs uppercase tracking-[0.28em] text-black/45 dark:text-white/42">
+            <div className="border-b border-black/[0.08] pb-5 dark:border-white/[0.09]">
+              <div className="text-xs uppercase tracking-[0.28em] text-[#86868b] dark:text-white/42">
                 Explore | Experience | Enjoy
               </div>
-              <div className="mt-3 text-2xl font-semibold leading-tight text-slate-950 dark:text-white">
+              <div className="mt-3 text-2xl font-semibold leading-tight text-[#1d1d1f] dark:text-white">
                 Choose a destination first, then explore the services available there.
               </div>
             </div>
@@ -173,7 +173,7 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
               return (
                 <div
                   key={section.label}
-                  className="rounded-[24px] border border-black/10 bg-black/[0.03] px-4 py-2 dark:border-white/10 dark:bg-white/[0.05]"
+                  className="rounded-[1.5rem] border border-black/[0.08] bg-black/[0.035] px-4 py-2 backdrop-blur dark:border-white/[0.09] dark:bg-white/[0.055]"
                 >
                   <button
                     type="button"
@@ -186,15 +186,15 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
                     aria-expanded={isSectionOpen}
                   >
                     <span className="flex items-center gap-3">
-                      <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-[#f3d8d0] text-[#ff5630] dark:bg-[#2a1614] dark:text-[#ff7352]">
+                      <span className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/70 text-[#0071e3] shadow-sm dark:bg-black/35 dark:text-[#8ec5ff]">
                         <Icon className="h-4 w-4" />
                       </span>
-                      <span className="text-base font-semibold text-slate-950 dark:text-white">
+                      <span className="text-base font-semibold text-[#1d1d1f] dark:text-white">
                         {section.label}
                       </span>
                     </span>
                     <ChevronDown
-                      className={`h-4 w-4 text-black/45 transition dark:text-white/45 ${
+                      className={`h-4 w-4 text-[#86868b] transition dark:text-white/45 ${
                         isSectionOpen ? "rotate-180" : ""
                       }`}
                     />
@@ -207,7 +207,7 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
                           key={link.label}
                           href={link.href}
                           onClick={onClose}
-                          className="rounded-[18px] px-3 py-3 text-sm font-medium text-slate-800 transition hover:bg-black/[0.05] hover:text-slate-950 dark:text-white/84 dark:hover:bg-white/8 dark:hover:text-white"
+                          className="rounded-[1rem] px-3 py-3 text-sm font-semibold text-[#424245] transition hover:bg-black/[0.05] hover:text-[#1d1d1f] dark:text-white/78 dark:hover:bg-white/[0.08] dark:hover:text-white"
                         >
                           {link.label}
                         </Link>
@@ -224,31 +224,31 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
               <Link
                 href={getSurfaceHref("explorer", "/login")}
                 onClick={onClose}
-                className="inline-flex items-center justify-center rounded-full border border-black/10 px-4 py-3 text-sm font-medium text-slate-900 dark:border-white/10 dark:text-white/90"
+                className="apple-action-secondary"
               >
                 Traveler login
               </Link>
               <Link
                 href={getSurfaceHref("explorer", "/register")}
                 onClick={onClose}
-                className="inline-flex items-center justify-center rounded-full bg-[#ff5630] px-4 py-3 text-sm font-semibold text-white"
+                className="apple-action"
               >
                 Create account
               </Link>
             </div>
           ) : null}
 
-          <div className="mt-6 flex items-center gap-3 border-t border-black/10 pt-5 text-sm text-slate-600 dark:border-white/10 dark:text-white/62">
-            <CalendarDays className="h-4 w-4 text-[#ff7352]" />
+          <div className="mt-6 flex items-center gap-3 border-t border-black/[0.08] pt-5 text-sm text-[#6e6e73] dark:border-white/[0.09] dark:text-white/62">
+            <CalendarDays className="h-4 w-4 text-[#0071e3]" />
             Book, plan, and move from one place.
           </div>
 
           <Link
             href="/checkout"
             onClick={onClose}
-            className="mt-4 inline-flex items-center gap-2 text-sm font-medium text-slate-800 dark:text-white/84"
+            className="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#424245] dark:text-white/84"
           >
-            <ShoppingBag className="h-4 w-4 text-[#ff7352]" />
+            <ShoppingBag className="h-4 w-4 text-[#0071e3]" />
             View basket
           </Link>
         </div>

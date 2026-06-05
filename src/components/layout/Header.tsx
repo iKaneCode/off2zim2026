@@ -9,28 +9,30 @@ import {
   LayoutDashboard,
   LogOut,
   Menu,
+  Search,
   Settings,
   ShoppingBag,
   User,
 } from "lucide-react";
 import { MobileMenu } from "../ui/MobileMenu";
 import { useAuth } from "@/contexts/AuthContext";
-import CartComponent from "@/components/payment/CartComponent";
+import { usePayment } from "@/contexts/PaymentContext";
 import { getAccountRoute } from "@/lib/auth-routing";
 import { getSurfaceHref } from "@/lib/app-surface";
 import ThemeToggle from "./ThemeToggle";
 import SiteLogo from "./SiteLogo";
 
-const topTabs = [
+const navLinks = [
   { label: "Featured", href: "/" },
+  { label: "Destinations", href: "/travel-guide" },
   { label: "Stays", href: "/accommodation" },
   { label: "Events", href: "/events" },
-  { label: "Experiences", href: "/activities" },
+  { label: "Things To Do", href: "/activities" },
   { label: "Transport", href: "/transport" },
-  { label: "Flights", href: "/transport/flights" },
+  { label: "Shop", href: "/shop" },
 ];
 
-function ActionCircle({
+function HeaderIconButton({
   children,
   label,
   onClick,
@@ -43,7 +45,7 @@ function ActionCircle({
     <button
       type="button"
       onClick={onClick}
-      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black/[0.06] text-[#1c1c1e] transition hover:bg-black/[0.09] dark:bg-white/[0.08] dark:text-white dark:hover:bg-white/[0.12]"
+      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#1d1d1f] transition hover:bg-black/[0.055] dark:text-white dark:hover:bg-white/[0.09]"
       aria-label={label}
     >
       {children}
@@ -53,6 +55,7 @@ function ActionCircle({
 
 export default function Header() {
   const { user, isLoading, logout } = useAuth();
+  const { getItemCount } = usePayment();
   const router = useRouter();
   const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -60,6 +63,7 @@ export default function Header() {
   const [hasMounted, setHasMounted] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
   const accountRoute = getAccountRoute(user);
+  const cartCount = getItemCount();
 
   const userInitials = useMemo(() => {
     if (!user) return "";
@@ -76,9 +80,7 @@ export default function Header() {
   }, []);
 
   useEffect(() => {
-    if (!isAccountMenuOpen) {
-      return;
-    }
+    if (!isAccountMenuOpen) return;
 
     const handlePointerDown = (event: MouseEvent) => {
       if (!accountMenuRef.current?.contains(event.target as Node)) {
@@ -108,52 +110,100 @@ export default function Header() {
     router.refresh();
   };
 
-  const isActiveTab = (href: string) =>
+  const isActive = (href: string) =>
     href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
 
   return (
     <>
-      <header className="sticky top-0 z-[120] bg-[#f2f2f7] text-[#1c1c1e] dark:bg-black dark:text-white">
-        <div className="mx-auto flex h-[58px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-          <div className="flex w-24 items-center justify-start">
-            <ActionCircle label="Open menu" onClick={() => setIsMobileMenuOpen(true)}>
-              <Menu className="h-5 w-5 text-[#ff3b30]" />
-            </ActionCircle>
-          </div>
-
-          <div className="flex min-w-0 flex-1 justify-center">
-            <SiteLogo width={156} height={52} className="h-[52px] w-auto" priority />
-          </div>
-
-          <div className="flex w-24 items-center justify-end gap-2 sm:w-auto">
+      <header className="sticky top-0 z-[120] border-b border-black/[0.08] bg-white/72 text-[#1d1d1f] backdrop-blur-2xl dark:border-white/[0.09] dark:bg-[#050505]/72 dark:text-white">
+        <div className="mx-auto grid h-12 max-w-7xl grid-cols-[auto_1fr_auto] items-center gap-3 px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-1.5">
+            <HeaderIconButton label="Open menu" onClick={() => setIsMobileMenuOpen(true)}>
+              <Menu className="h-[18px] w-[18px] text-[#1d1d1f] dark:text-white" />
+            </HeaderIconButton>
             <div className="hidden sm:block">
+              <SiteLogo width={104} height={34} className="h-8 w-auto" priority />
+            </div>
+          </div>
+
+          <div className="flex justify-center sm:hidden">
+            <SiteLogo width={104} height={34} className="h-8 w-auto" priority />
+          </div>
+
+          <nav className="hidden items-center justify-center gap-1 lg:flex" aria-label="Primary navigation">
+            {navLinks.map((link) => {
+              const active = hasMounted && isActive(link.href);
+
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  className={`rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                    active
+                      ? "bg-black text-white dark:bg-white dark:text-[#1d1d1f]"
+                      : "text-[#424245] hover:bg-black/[0.055] hover:text-[#1d1d1f] dark:text-white/68 dark:hover:bg-white/[0.09] dark:hover:text-white"
+                  }`}
+                >
+                  {link.label}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <div className="flex items-center justify-end gap-1.5">
+            <Link
+              href="/travel-guide"
+              className="hidden h-9 w-9 items-center justify-center rounded-full text-[#1d1d1f] transition hover:bg-black/[0.055] dark:text-white dark:hover:bg-white/[0.09] md:inline-flex"
+              aria-label="Search destinations"
+            >
+              <Search className="h-[18px] w-[18px]" />
+            </Link>
+
+            <div className="hidden md:block">
               <ThemeToggle />
             </div>
-            <div className="hidden sm:block">
-              <CartComponent />
-            </div>
+
+            <Link
+              href="/checkout"
+              className="relative inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#1d1d1f] transition hover:bg-black/[0.055] dark:text-white dark:hover:bg-white/[0.09]"
+              aria-label="Open basket"
+            >
+              <ShoppingBag className="h-[18px] w-[18px]" />
+              {cartCount > 0 ? (
+                <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-[#0071e3] px-1 text-[10px] font-bold text-white">
+                  {cartCount}
+                </span>
+              ) : null}
+            </Link>
+
+            <Link
+              href="/trip-planner"
+              className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0071e3] text-white transition hover:bg-[#147ce5] md:inline-flex"
+              aria-label="Open trip planner"
+            >
+              <CalendarDays className="h-[18px] w-[18px]" />
+            </Link>
 
             {user ? (
               <div className="relative" ref={accountMenuRef}>
                 <button
                   type="button"
                   onClick={() => setIsAccountMenuOpen((current) => !current)}
-                  className="flex h-11 min-w-11 items-center justify-center gap-2 rounded-full bg-black/[0.06] px-3 text-[#1c1c1e] transition hover:bg-black/[0.09] dark:bg-white/[0.08] dark:text-white dark:hover:bg-white/[0.12] sm:px-4"
+                  className="inline-flex h-9 items-center justify-center gap-2 rounded-full px-1.5 text-[#1d1d1f] transition hover:bg-black/[0.055] dark:text-white dark:hover:bg-white/[0.09] sm:px-2.5"
                   aria-label="Open account menu"
                   aria-expanded={isAccountMenuOpen}
                 >
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#1c1c1e] text-xs font-bold text-white dark:bg-white dark:text-[#1c1c1e]">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#1d1d1f] text-[11px] font-bold text-white dark:bg-white dark:text-[#1d1d1f]">
                     {userInitials}
                   </span>
-                  <span className="hidden text-sm font-bold sm:inline">{user.firstName}</span>
-                  <ChevronDown className={`hidden h-4 w-4 transition sm:block ${isAccountMenuOpen ? "rotate-180" : ""}`} />
+                  <ChevronDown className={`hidden h-3.5 w-3.5 transition sm:block ${isAccountMenuOpen ? "rotate-180" : ""}`} />
                 </button>
 
                 {isAccountMenuOpen ? (
-                  <div className="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-[18rem] rounded-2xl border border-black/10 bg-white p-2 shadow-[0_24px_70px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-[#1c1c1e]">
-                    <div className="rounded-xl bg-black/[0.04] px-4 py-3 dark:bg-white/[0.06]">
-                      <div className="text-sm font-bold text-[#1c1c1e] dark:text-white">{userDisplayName}</div>
-                      <div className="mt-1 text-xs font-bold uppercase text-[#8e8e93]">
+                  <div className="absolute right-0 top-[calc(100%+0.7rem)] z-50 w-[18rem] rounded-[1.35rem] border border-black/[0.08] bg-white/92 p-2 shadow-[0_26px_80px_rgba(0,0,0,0.2)] backdrop-blur-2xl dark:border-white/[0.1] dark:bg-[#1d1d1f]/92">
+                    <div className="rounded-[1rem] bg-black/[0.035] px-4 py-3 dark:bg-white/[0.065]">
+                      <div className="truncate text-sm font-bold text-[#1d1d1f] dark:text-white">{userDisplayName}</div>
+                      <div className="mt-1 text-xs font-semibold uppercase text-[#86868b]">
                         {user.role} account
                       </div>
                     </div>
@@ -162,25 +212,25 @@ export default function Header() {
                       <Link
                         href={accountRoute}
                         onClick={() => setIsAccountMenuOpen(false)}
-                        className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-[#1c1c1e] transition hover:bg-black/[0.04] dark:text-white dark:hover:bg-white/[0.06]"
+                        className="flex items-center gap-3 rounded-[1rem] px-3 py-3 text-sm font-semibold text-[#1d1d1f] transition hover:bg-black/[0.045] dark:text-white dark:hover:bg-white/[0.07]"
                       >
-                        <LayoutDashboard className="h-4 w-4 text-[#ff3b30]" />
+                        <LayoutDashboard className="h-4 w-4 text-[#0071e3]" />
                         Workspace
                       </Link>
                       <Link
                         href={getSurfaceHref("explorer", "/profile")}
                         onClick={() => setIsAccountMenuOpen(false)}
-                        className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-[#1c1c1e] transition hover:bg-black/[0.04] dark:text-white dark:hover:bg-white/[0.06]"
+                        className="flex items-center gap-3 rounded-[1rem] px-3 py-3 text-sm font-semibold text-[#1d1d1f] transition hover:bg-black/[0.045] dark:text-white dark:hover:bg-white/[0.07]"
                       >
-                        <Settings className="h-4 w-4 text-[#ff3b30]" />
+                        <Settings className="h-4 w-4 text-[#0071e3]" />
                         Profile settings
                       </Link>
                       <button
                         type="button"
                         onClick={handleLogout}
-                        className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-bold text-[#1c1c1e] transition hover:bg-black/[0.04] dark:text-white dark:hover:bg-white/[0.06]"
+                        className="flex w-full items-center gap-3 rounded-[1rem] px-3 py-3 text-left text-sm font-semibold text-[#1d1d1f] transition hover:bg-black/[0.045] dark:text-white dark:hover:bg-white/[0.07]"
                       >
-                        <LogOut className="h-4 w-4 text-[#ff3b30]" />
+                        <LogOut className="h-4 w-4 text-[#0071e3]" />
                         Sign out
                       </button>
                     </div>
@@ -190,56 +240,35 @@ export default function Header() {
             ) : !isLoading ? (
               <Link
                 href={getSurfaceHref("explorer", "/login")}
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black/[0.06] text-[#1c1c1e] transition hover:bg-black/[0.09] dark:bg-white/[0.08] dark:text-white dark:hover:bg-white/[0.12]"
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[#1d1d1f] transition hover:bg-black/[0.055] dark:text-white dark:hover:bg-white/[0.09]"
                 aria-label="Traveler login"
               >
-                <User className="h-5 w-5" />
+                <User className="h-[18px] w-[18px]" />
               </Link>
             ) : (
-              <span className="h-11 w-11" />
+              <span className="h-9 w-9" />
             )}
-
-            <Link
-              href="/trip-planner"
-              className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#ff3b30] text-white transition hover:bg-[#ff5630] sm:flex"
-              aria-label="Open trip planner"
-            >
-              <CalendarDays className="h-5 w-5" />
-            </Link>
-
-            <Link
-              href="/checkout"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#ff3b30] text-white transition hover:bg-[#ff5630] sm:hidden"
-              aria-label="Open cart"
-            >
-              <ShoppingBag className="h-5 w-5" />
-            </Link>
           </div>
         </div>
 
-        <nav className="mx-auto max-w-7xl overflow-x-auto px-2 pb-1 scrollbar-hide sm:px-4 lg:px-6">
-          <div className="flex min-w-max items-center">
-            {topTabs.map((tab) => {
-              const active = hasMounted && isActiveTab(tab.href);
+        <nav className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 pb-2 scrollbar-hide sm:px-6 lg:hidden lg:px-8" aria-label="Mobile public navigation">
+          {navLinks.map((link) => {
+            const active = hasMounted && isActive(link.href);
 
-              return (
-                <Link
-                  key={tab.href}
-                  href={tab.href}
-                  className={`relative px-4 py-3 text-sm transition ${
-                    active
-                      ? "font-bold text-[#1c1c1e] dark:text-white"
-                      : "font-normal text-[#8e8e93]"
-                  }`}
-                >
-                  {tab.label}
-                  {active ? (
-                    <span className="absolute inset-x-4 bottom-0 h-1 rounded-full bg-[#1c1c1e] dark:bg-white" />
-                  ) : null}
-                </Link>
-              );
-            })}
-          </div>
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
+                  active
+                    ? "bg-black text-white dark:bg-white dark:text-[#1d1d1f]"
+                    : "text-[#6e6e73] hover:bg-black/[0.055] dark:text-white/62 dark:hover:bg-white/[0.08]"
+                }`}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
         </nav>
       </header>
 

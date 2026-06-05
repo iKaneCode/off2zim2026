@@ -18,28 +18,29 @@ export default function CompactPageHero({
   className = "",
 }: CompactPageHeroProps) {
   return (
-    <section className={`mx-auto max-w-7xl px-4 pb-3 pt-5 sm:px-6 lg:px-8 ${className}`}>
+    <section className={`mx-auto max-w-7xl px-4 pb-4 pt-5 sm:px-6 lg:px-8 ${className}`}>
       <div
-        className="relative overflow-hidden rounded-2xl border border-black/10 bg-cover bg-center shadow-sm dark:border-white/10"
+        className="apple-scale-in relative overflow-hidden rounded-[2rem] border border-black/[0.08] bg-cover bg-center shadow-[0_32px_100px_-74px_rgba(0,0,0,0.55)] dark:border-white/[0.1]"
         style={{
-          backgroundImage: `linear-gradient(90deg, rgba(0,0,0,0.74), rgba(0,0,0,0.34) 58%, rgba(0,0,0,0.48)), url('${imageUrl}')`,
+          backgroundImage: `linear-gradient(180deg, rgba(0,0,0,0.14), rgba(0,0,0,0.62)), url('${imageUrl}')`,
         }}
       >
-        <div className="flex min-h-[250px] flex-col justify-end p-4 text-white sm:p-5 lg:p-6">
-          <div className="max-w-3xl">
-            <div className="inline-flex rounded-lg bg-black/42 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/76 backdrop-blur">
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,0.66),rgba(0,0,0,0.16)_58%,rgba(0,0,0,0.08))]" />
+        <div className="relative flex min-h-[282px] flex-col justify-end p-4 text-white sm:p-6 lg:min-h-[330px] lg:p-8">
+          <div className="apple-fade-up max-w-3xl">
+            <div className="inline-flex rounded-full border border-white/18 bg-white/12 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/78 backdrop-blur-xl">
               {eyebrow}
             </div>
-            <h1 className="mt-3 max-w-4xl text-3xl font-bold leading-tight md:text-5xl">
+            <h1 className="mt-4 max-w-4xl text-3xl font-bold leading-[1.04] md:text-5xl">
               {title}
             </h1>
             {description ? (
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-white/78 md:text-base">
+              <p className="mt-4 max-w-2xl text-sm leading-6 text-white/76 md:text-base">
                 {description}
               </p>
             ) : null}
           </div>
-          {children ? <div className="mt-4">{children}</div> : null}
+          {children ? <div className="apple-fade-up mt-5" style={{ animationDelay: "120ms" }}>{children}</div> : null}
         </div>
       </div>
     </section>

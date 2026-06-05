@@ -80,20 +80,23 @@ function MarketplacePageContent() {
     : "Shop trusted stays, experiences, services, and travel essentials.";
 
   return (
-    <div className="theme-page min-h-screen">
-      <div className="border-b border-black/10 bg-white/88 backdrop-blur-xl dark:border-white/10 dark:bg-[#0a0a0a]/94">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+    <div className="theme-page min-h-screen pb-16">
+      <div className="mx-auto max-w-7xl px-4 pt-5 sm:px-6 lg:px-8">
+        <div className="apple-surface rounded-[2rem] p-4 sm:p-5">
           <div className="mb-4 flex items-center gap-3">
             <Link
               href="/"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-black/10 bg-white text-slate-700 transition hover:bg-slate-50 hover:text-slate-950 dark:border-white/10 dark:bg-[#151515] dark:text-white/72 dark:hover:bg-[#1b1b1b] dark:hover:text-white"
+              className="apple-action-secondary h-10 w-10 p-0"
               title="Back to home"
             >
               <ArrowLeft className="h-5 w-5" />
             </Link>
             <div>
-              <h1 className="text-2xl font-bold theme-heading">Marketplace</h1>
-              <p className="mt-0.5 text-sm text-slate-600 dark:text-white/60">
+              <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#86868b] dark:text-white/42">
+                Traveler marketplace
+              </p>
+              <h1 className="mt-1 text-3xl font-bold theme-heading">Marketplace</h1>
+              <p className="mt-1 text-sm text-[#6e6e73] dark:text-white/60">
                 {listingSummary}
               </p>
             </div>
@@ -101,43 +104,43 @@ function MarketplacePageContent() {
 
           <div className="flex flex-col gap-3 lg:flex-row">
             <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-slate-400 dark:text-white/35" />
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-[#86868b] dark:text-white/35" />
               <input
                 type="text"
                 placeholder="Search listings, locations, or experiences..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-11 w-full rounded-xl border border-black/10 bg-white pl-10 pr-4 text-sm text-slate-950 placeholder:text-slate-400 focus:border-[#ff5630] focus:outline-none focus:ring-2 focus:ring-[#ff5630]/20 dark:border-white/10 dark:bg-[#151515] dark:text-white dark:placeholder:text-white/28"
+                className="theme-input h-12 w-full rounded-full pl-12 pr-4 text-sm"
               />
             </div>
 
             <div className="flex items-center gap-2">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="flex h-11 items-center gap-2 rounded-xl border border-black/10 bg-white px-3 text-sm text-slate-800 transition hover:bg-slate-50 dark:border-white/10 dark:bg-[#151515] dark:text-white dark:hover:bg-[#1c1c1c]"
+                className="apple-action-secondary h-12 px-4"
                 title="Show category filters"
               >
                 <Filter className="h-4 w-4" />
                 Filters
               </button>
 
-              <div className="flex rounded-xl border border-black/10 bg-white p-1 dark:border-white/10 dark:bg-[#151515]">
+              <div className="flex rounded-full border border-black/[0.08] bg-white/70 p-1 backdrop-blur-xl dark:border-white/[0.09] dark:bg-white/[0.06]">
                 <button
                   onClick={() => setViewMode("grid")}
-                    className={`rounded-lg p-2 transition ${
+                    className={`rounded-full p-2 transition ${
                     viewMode === "grid"
-                      ? "bg-[#ff5630]/12 text-[#ff5630] dark:bg-[#ff5630]/18"
-                      : "text-slate-500 hover:bg-slate-100 dark:text-white/55 dark:hover:bg-white/7"
+                      ? "bg-[#1d1d1f] text-white dark:bg-white dark:text-[#1d1d1f]"
+                      : "text-[#86868b] hover:bg-black/[0.05] dark:text-white/55 dark:hover:bg-white/[0.08]"
                   }`}
                 >
                   <Grid className="h-5 w-5" />
                 </button>
                 <button
                   onClick={() => setViewMode("list")}
-                    className={`rounded-lg p-2 transition ${
+                    className={`rounded-full p-2 transition ${
                     viewMode === "list"
-                      ? "bg-[#ff5630]/12 text-[#ff5630] dark:bg-[#ff5630]/18"
-                      : "text-slate-500 hover:bg-slate-100 dark:text-white/55 dark:hover:bg-white/7"
+                      ? "bg-[#1d1d1f] text-white dark:bg-white dark:text-[#1d1d1f]"
+                      : "text-[#86868b] hover:bg-black/[0.05] dark:text-white/55 dark:hover:bg-white/[0.08]"
                   }`}
                 >
                   <List className="h-5 w-5" />
@@ -233,7 +236,7 @@ function MarketplacePageContent() {
                 {listings.map((listing) => (
                   <article
                     key={listing.id}
-                    className={`group theme-panel overflow-hidden rounded-xl transition hover:shadow-[0_16px_42px_rgba(0,0,0,0.18)] ${
+                    className={`group theme-card overflow-hidden rounded-[1.5rem] ${
                       viewMode === "list" ? "flex flex-col md:flex-row" : "flex flex-col"
                     }`}
                   >
@@ -243,7 +246,7 @@ function MarketplacePageContent() {
                       className={`block ${viewMode === "list" ? "md:w-60 md:shrink-0" : ""}`}
                     >
                       <div
-                        className={`relative bg-gradient-to-br from-[#2a1f18] via-[#1c1815] to-[#141218] ${
+                        className={`relative bg-[linear-gradient(180deg,#f5f5f7,#e8e8ed)] dark:bg-[linear-gradient(180deg,#1d1d1f,#0b0b0d)] ${
                           viewMode === "list" ? "h-full min-h-[118px]" : "h-32"
                         } overflow-hidden`}
                       >
@@ -251,24 +254,24 @@ function MarketplacePageContent() {
                           <img
                             src={listing.images[0]}
                             alt={listing.title}
-                            className="h-full w-full object-cover transition group-hover:scale-105"
+                            className="h-full w-full object-cover transition duration-700 group-hover:scale-[1.04]"
                           />
                         ) : (
                           <div className="flex h-full items-end p-4">
-                            <span className="rounded-full bg-white/10 px-3 py-1 text-xs font-medium text-white/70 backdrop-blur-sm">
+                            <span className="rounded-full bg-white/18 px-3 py-1 text-xs font-semibold text-white/80 backdrop-blur-xl">
                               {inferServiceGroup(listing).label}
                             </span>
                           </div>
                         )}
                         {listing.provider.hasVerifiedBadge ? (
-                          <div className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 backdrop-blur-sm">
+                          <div className="absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-full bg-black/50 backdrop-blur-xl">
                             <ShieldCheck className="h-3.5 w-3.5 text-[#8dc9ff]" />
                           </div>
                         ) : null}
                       </div>
                     </Link>
 
-                    <div className="flex flex-1 flex-col p-3">
+                    <div className="flex flex-1 flex-col p-4">
                       {/* Linked title + description */}
                       <Link href={`/marketplace/${listing.slug}`} className="block flex-1">
                         <div className="flex items-start justify-between gap-2">
@@ -287,9 +290,9 @@ function MarketplacePageContent() {
                           {listing.shortDescription || listing.description}
                         </p>
 
-                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-white/50">
+                        <div className="theme-muted mt-2 flex flex-wrap items-center gap-2 text-xs">
                           <span className="inline-flex items-center gap-1">
-                            <MapPin className="h-3.5 w-3.5 text-[#ff7352]" />
+                            <MapPin className="h-3.5 w-3.5 text-[#0071e3]" />
                             {listing.location}
                           </span>
                           {listing.bookingMode === "instant" ? (
@@ -298,23 +301,23 @@ function MarketplacePageContent() {
                               Instant
                             </span>
                           ) : null}
-                          <span className="ml-auto text-white/30">
+                          <span className="ml-auto text-[#86868b] dark:text-white/35">
                             {inferServiceSubtype(listing)?.label || listing.provider.companyName}
                           </span>
                         </div>
                       </Link>
 
                       {/* CTA row */}
-                      <div className="mt-3 flex items-center gap-2 border-t border-white/[0.06] pt-3">
+                      <div className="mt-3 flex items-center gap-2 border-t border-black/[0.08] pt-3 dark:border-white/[0.08]">
                         <Link
                           href={`/marketplace/${listing.slug}`}
-                          className="theme-button-secondary flex-1 rounded-full px-4 py-2.5 text-center text-xs font-semibold transition"
+                          className="apple-action-secondary flex-1 px-4 py-2.5 text-center text-xs"
                         >
                           See details
                         </Link>
                         <Link
                           href={`/marketplace/${listing.slug}#booking`}
-                          className="flex-1 rounded-full bg-[#ff5630] px-4 py-2.5 text-center text-xs font-semibold text-white transition hover:bg-[#ff7352]"
+                          className="apple-action flex-1 px-4 py-2.5 text-center text-xs"
                         >
                           Book now
                         </Link>

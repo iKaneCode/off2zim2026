@@ -172,7 +172,8 @@ export default function TravelGuidePage() {
 
   return (
     <div className="theme-page pb-20">
-      <section className="relative border-b border-black/10 dark:border-white/10">
+      <section className="mx-auto max-w-7xl px-4 pb-4 pt-5 sm:px-6 lg:px-8">
+        <div className="apple-scale-in relative overflow-hidden rounded-[2rem] border border-black/[0.08] bg-cover bg-center shadow-[0_32px_100px_-74px_rgba(0,0,0,0.55)] dark:border-white/[0.1]">
         <div
           className="absolute inset-0 bg-cover bg-center"
           style={{
@@ -180,31 +181,32 @@ export default function TravelGuidePage() {
               "linear-gradient(180deg, rgba(0,0,0,0.42), rgba(0,0,0,0.72)), url('/images/victoria-falls.jpg')",
           }}
         />
-        <div className="relative mx-auto flex min-h-[360px] max-w-7xl flex-col justify-end px-4 pb-24 pt-12 text-white sm:px-6 lg:px-8">
-          <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/72">
+        <div className="relative flex min-h-[330px] flex-col justify-end p-4 text-white sm:p-6 lg:p-8">
+          <p className="inline-flex w-fit rounded-full border border-white/18 bg-white/12 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/78 backdrop-blur-xl">
             Zimbabwe destination guide
           </p>
-          <h1 className="mt-3 max-w-3xl text-4xl font-bold leading-tight md:text-6xl">
+          <h1 className="mt-4 max-w-3xl text-4xl font-bold leading-[1.02] md:text-6xl">
             Explore Zimbabwe
           </h1>
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-white/78 md:text-base">
+          <p className="mt-4 max-w-2xl text-sm leading-6 text-white/76 md:text-base">
             Pick a destination, then compare the stays, activities, dining, transport, events, and local help available there.
           </p>
         </div>
+        </div>
       </section>
 
-      <section className="relative z-10 mx-auto -mt-16 max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="rounded-xl border border-black/10 bg-white p-3 shadow-[0_12px_36px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-[#101010]">
+      <section className="relative z-10 mx-auto max-w-7xl px-4 py-2 sm:px-6 lg:px-8">
+        <div className="apple-surface rounded-[1.75rem] p-3">
           <div className="grid gap-2 lg:grid-cols-[1.25fr_0.78fr_auto]">
-            <label className="flex min-h-12 items-center gap-3 rounded-lg border-2 border-[#ffca74] bg-white px-3 dark:bg-[#171717]">
-              <Search className="h-5 w-5 shrink-0 text-[#ff5630]" />
+            <label className="flex min-h-12 items-center gap-3 rounded-full border border-black/[0.08] bg-white/88 px-4 backdrop-blur-xl dark:border-white/[0.09] dark:bg-white/[0.07]">
+              <Search className="h-5 w-5 shrink-0 text-[#0071e3]" />
               <span className="sr-only">Search destinations</span>
               <input
                 type="text"
                 value={searchTerm}
                 onChange={(event) => setSearchTerm(event.target.value)}
                 placeholder="Where in Zimbabwe are you going?"
-                className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-slate-950 outline-none placeholder:text-slate-500 dark:text-white dark:placeholder:text-white/45"
+                className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-[#1d1d1f] outline-none placeholder:text-[#86868b] dark:text-white dark:placeholder:text-white/45"
               />
             </label>
             <div className="grid grid-cols-3 gap-2">
@@ -218,7 +220,7 @@ export default function TravelGuidePage() {
             </div>
             <Link
               href="#destinations"
-              className="inline-flex min-h-12 items-center justify-center gap-2 rounded-lg bg-[#ff5630] px-5 text-sm font-semibold text-white"
+              className="apple-action min-h-12 px-5"
             >
               Search
               <ArrowRight className="h-4 w-4" />
@@ -235,7 +237,7 @@ export default function TravelGuidePage() {
                   type="button"
                   onClick={() => setSearchTerm(season.months)}
                   title={season.description}
-                  className="flex min-w-[190px] items-center gap-3 rounded-lg border border-black/10 px-3 py-2 text-left transition hover:border-[#ff5630] dark:border-white/10"
+                  className="flex min-w-[190px] items-center gap-3 rounded-full border border-black/[0.08] bg-white/58 px-3 py-2 text-left backdrop-blur transition hover:bg-white dark:border-white/[0.09] dark:bg-white/[0.06] dark:hover:bg-white/[0.1]"
                 >
                   <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ${season.accent}`}>
                     <Icon className="h-4 w-4" />
@@ -254,9 +256,9 @@ export default function TravelGuidePage() {
                 key={label}
                 type="button"
                 title={`${label}: ${value}`}
-                className="flex min-w-[150px] items-center gap-3 rounded-lg border border-black/10 px-3 py-2 text-left dark:border-white/10"
+                className="flex min-w-[150px] items-center gap-3 rounded-full border border-black/[0.08] bg-white/58 px-3 py-2 text-left backdrop-blur transition hover:bg-white dark:border-white/[0.09] dark:bg-white/[0.06] dark:hover:bg-white/[0.1]"
               >
-                <CalendarDays className="h-4 w-4 shrink-0 text-[#ff5630]" />
+                <CalendarDays className="h-4 w-4 shrink-0 text-[#0071e3]" />
                 <span className="min-w-0">
                   <span className="theme-subtle block truncate text-[10px] uppercase tracking-[0.16em]">{label}</span>
                   <span className="theme-heading block truncate text-sm font-semibold">{value}</span>
@@ -274,7 +276,7 @@ export default function TravelGuidePage() {
                   if (!group.globalBrowse) setSearchTerm(group.label);
                 }}
                 title={group.description}
-                className="theme-chip inline-flex shrink-0 items-center rounded-lg px-3 py-2 text-xs font-semibold"
+                className="theme-chip inline-flex shrink-0 items-center rounded-full px-3 py-2 text-xs font-semibold"
               >
                 {group.label}
               </Link>
@@ -457,9 +459,9 @@ function FacetGroup({
   }
 
   return (
-    <div className="rounded-xl border border-black/10 bg-white px-3 py-3 dark:border-white/10 dark:bg-white/[0.03]">
+    <div className="min-w-0 rounded-xl border border-black/10 bg-white px-3 py-3 dark:border-white/10 dark:bg-white/[0.03]">
       <p className="theme-subtle text-xs uppercase tracking-[0.22em]">{label}</p>
-      <div className="mt-2 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <div className="mt-2 flex min-w-0 gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {cleanValues.map((value) => (
           <button
             key={value}

@@ -2,19 +2,15 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
-  BedDouble,
-  Bus,
   CalendarDays,
   ChevronDown,
-  Compass,
-  LogOut,
-  MapPinned,
-  Settings,
-  Menu,
-  ShoppingBag,
   LayoutDashboard,
+  LogOut,
+  Menu,
+  Settings,
+  ShoppingBag,
   User,
 } from "lucide-react";
 import { MobileMenu } from "../ui/MobileMenu";
@@ -25,26 +21,43 @@ import { getSurfaceHref } from "@/lib/app-surface";
 import ThemeToggle from "./ThemeToggle";
 import SiteLogo from "./SiteLogo";
 
-type NavLinkItem = {
-  label: string;
-  href: string;
-  icon: React.ComponentType<{ className?: string }>;
-};
-
-const navLinks: NavLinkItem[] = [
-  { label: "Destinations", href: "/travel-guide", icon: Compass },
-  { label: "Stays", href: "/accommodation", icon: BedDouble },
-  { label: "Things to do", href: "/activities", icon: MapPinned },
-  { label: "Events", href: "/events", icon: CalendarDays },
-  { label: "Transport", href: "/transport", icon: Bus },
-  { label: "Marketplace", href: "/marketplace", icon: ShoppingBag },
+const topTabs = [
+  { label: "Featured", href: "/" },
+  { label: "Stays", href: "/accommodation" },
+  { label: "Events", href: "/events" },
+  { label: "Experiences", href: "/activities" },
+  { label: "Transport", href: "/transport" },
+  { label: "Flights", href: "/transport/flights" },
 ];
+
+function ActionCircle({
+  children,
+  label,
+  onClick,
+}: {
+  children: React.ReactNode;
+  label: string;
+  onClick?: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black/[0.06] text-[#1c1c1e] transition hover:bg-black/[0.09] dark:bg-white/[0.08] dark:text-white dark:hover:bg-white/[0.12]"
+      aria-label={label}
+    >
+      {children}
+    </button>
+  );
+}
 
 export default function Header() {
   const { user, isLoading, logout } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const [hasMounted, setHasMounted] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
   const accountRoute = getAccountRoute(user);
 
@@ -57,6 +70,10 @@ export default function Header() {
     if (!user) return "";
     return [user.firstName, user.lastName].filter(Boolean).join(" ").trim() || user.email;
   }, [user]);
+
+  useEffect(() => {
+    setHasMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!isAccountMenuOpen) {
@@ -91,89 +108,52 @@ export default function Header() {
     router.refresh();
   };
 
+  const isActiveTab = (href: string) =>
+    href === "/" ? pathname === "/" : pathname === href || pathname.startsWith(`${href}/`);
+
   return (
     <>
-      <header className="sticky top-0 z-[120] border-b border-black/10 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.04)] dark:border-white/10 dark:bg-[#050505] dark:shadow-[0_10px_30px_rgba(0,0,0,0.35)]">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={(event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                setIsMobileMenuOpen(true);
-              }}
-              className="relative z-[130] inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-white/10 bg-[#2a1614] text-[#ff7352] transition hover:bg-[#351b18] md:hidden"
-              aria-label="Open menu"
-              aria-expanded={isMobileMenuOpen}
-            >
-              <Menu className="h-5 w-5" />
-            </button>
-
-            <SiteLogo
-              width={128}
-              height={40}
-              className="h-9 w-auto sm:h-10"
-              priority
-            />
+      <header className="sticky top-0 z-[120] bg-[#f2f2f7] text-[#1c1c1e] dark:bg-black dark:text-white">
+        <div className="mx-auto flex h-[58px] max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+          <div className="flex w-24 items-center justify-start">
+            <ActionCircle label="Open menu" onClick={() => setIsMobileMenuOpen(true)}>
+              <Menu className="h-5 w-5 text-[#ff3b30]" />
+            </ActionCircle>
           </div>
 
-          <nav className="hidden items-center gap-1 lg:flex">
-            {navLinks.map((item) => {
-              const Icon = item.icon;
+          <div className="flex min-w-0 flex-1 justify-center">
+            <SiteLogo width={156} height={52} className="h-[52px] w-auto" priority />
+          </div>
 
-              return (
-                <Link
-                  key={item.href}
-                  href={item.href}
-                  className="inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-black/[0.06] hover:text-slate-950 dark:text-white/82 dark:hover:bg-white/10 dark:hover:text-white"
-                >
-                  <Icon className="h-4 w-4 text-[#ff5630]" />
-                  {item.label}
-                </Link>
-              );
-            })}
-          </nav>
-
-          <div className="flex items-center gap-2 sm:gap-3">
-            {!isLoading && !user ? (
-              <Link
-                href={getSurfaceHref("explorer", "/register")}
-                className="hidden items-center gap-2 whitespace-nowrap rounded-full bg-[#ff5630] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#ff6f4d] md:inline-flex"
-              >
-                Create account
-              </Link>
-            ) : null}
-
-            <ThemeToggle />
-
-            <div className="hidden md:block">
+          <div className="flex w-24 items-center justify-end gap-2 sm:w-auto">
+            <div className="hidden sm:block">
+              <ThemeToggle />
+            </div>
+            <div className="hidden sm:block">
               <CartComponent />
             </div>
 
             {user ? (
-              <div className="relative hidden md:block" ref={accountMenuRef}>
+              <div className="relative" ref={accountMenuRef}>
                 <button
                   type="button"
                   onClick={() => setIsAccountMenuOpen((current) => !current)}
-                  className="inline-flex h-11 min-w-11 items-center justify-center gap-2 rounded-full border border-black/10 bg-white px-3 text-slate-800 transition hover:bg-slate-50 dark:border-white/10 dark:bg-[#161616] dark:text-white dark:hover:bg-[#1d1d1d] md:px-4"
+                  className="flex h-11 min-w-11 items-center justify-center gap-2 rounded-full bg-black/[0.06] px-3 text-[#1c1c1e] transition hover:bg-black/[0.09] dark:bg-white/[0.08] dark:text-white dark:hover:bg-white/[0.12] sm:px-4"
                   aria-label="Open account menu"
                   aria-expanded={isAccountMenuOpen}
                 >
-                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#0f3f87] text-xs font-semibold text-white">
+                  <span className="flex h-7 w-7 items-center justify-center rounded-full bg-[#1c1c1e] text-xs font-bold text-white dark:bg-white dark:text-[#1c1c1e]">
                     {userInitials}
                   </span>
-                  <span className="hidden text-sm font-medium sm:inline">
-                    {user.firstName}
-                  </span>
-                  <ChevronDown className={`h-4 w-4 transition ${isAccountMenuOpen ? "rotate-180" : ""}`} />
+                  <span className="hidden text-sm font-bold sm:inline">{user.firstName}</span>
+                  <ChevronDown className={`hidden h-4 w-4 transition sm:block ${isAccountMenuOpen ? "rotate-180" : ""}`} />
                 </button>
 
                 {isAccountMenuOpen ? (
-                  <div className="absolute right-0 top-[calc(100%+0.9rem)] z-50 w-[18rem] rounded-[28px] border border-black/12 bg-white p-3 shadow-[0_28px_80px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-[#0e0e0e] dark:shadow-[0_28px_80px_rgba(0,0,0,0.6)]">
-                    <div className="rounded-[22px] bg-black/[0.035] px-4 py-4 dark:bg-white/[0.04]">
-                      <div className="text-sm font-semibold text-black dark:text-white">{userDisplayName}</div>
-                      <div className="mt-1 text-xs uppercase tracking-[0.18em] text-black/45 dark:text-white/45">
+                  <div className="absolute right-0 top-[calc(100%+0.75rem)] z-50 w-[18rem] rounded-2xl border border-black/10 bg-white p-2 shadow-[0_24px_70px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-[#1c1c1e]">
+                    <div className="rounded-xl bg-black/[0.04] px-4 py-3 dark:bg-white/[0.06]">
+                      <div className="text-sm font-bold text-[#1c1c1e] dark:text-white">{userDisplayName}</div>
+                      <div className="mt-1 text-xs font-bold uppercase text-[#8e8e93]">
                         {user.role} account
                       </div>
                     </div>
@@ -182,61 +162,88 @@ export default function Header() {
                       <Link
                         href={accountRoute}
                         onClick={() => setIsAccountMenuOpen(false)}
-                        className="flex items-center gap-3 rounded-[20px] px-3 py-3 text-sm font-medium text-slate-900 transition hover:bg-black/[0.055] dark:text-white/90 dark:hover:bg-white/7"
+                        className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-[#1c1c1e] transition hover:bg-black/[0.04] dark:text-white dark:hover:bg-white/[0.06]"
                       >
-                        <LayoutDashboard className="h-4 w-4 text-[#ff5630]" />
+                        <LayoutDashboard className="h-4 w-4 text-[#ff3b30]" />
                         Workspace
                       </Link>
                       <Link
                         href={getSurfaceHref("explorer", "/profile")}
                         onClick={() => setIsAccountMenuOpen(false)}
-                        className="flex items-center gap-3 rounded-[20px] px-3 py-3 text-sm font-medium text-slate-900 transition hover:bg-black/[0.055] dark:text-white/90 dark:hover:bg-white/7"
+                        className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-bold text-[#1c1c1e] transition hover:bg-black/[0.04] dark:text-white dark:hover:bg-white/[0.06]"
                       >
-                        <Settings className="h-4 w-4 text-[#ff5630]" />
+                        <Settings className="h-4 w-4 text-[#ff3b30]" />
                         Profile settings
                       </Link>
                       <button
                         type="button"
                         onClick={handleLogout}
-                        className="flex w-full items-center gap-3 rounded-[20px] px-3 py-3 text-left text-sm font-medium text-slate-900 transition hover:bg-black/[0.055] dark:text-white/90 dark:hover:bg-white/7"
+                        className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left text-sm font-bold text-[#1c1c1e] transition hover:bg-black/[0.04] dark:text-white dark:hover:bg-white/[0.06]"
                       >
-                        <LogOut className="h-4 w-4 text-[#ff5630]" />
+                        <LogOut className="h-4 w-4 text-[#ff3b30]" />
                         Sign out
                       </button>
                     </div>
                   </div>
                 ) : null}
               </div>
-            ) : (
+            ) : !isLoading ? (
               <Link
                 href={getSurfaceHref("explorer", "/login")}
-                className="inline-flex h-11 min-w-11 items-center justify-center rounded-full border border-black/10 bg-white px-3 text-slate-800 transition hover:bg-slate-50 dark:border-white/10 dark:bg-[#161616] dark:text-white dark:hover:bg-[#1d1d1d] md:px-4"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-black/[0.06] text-[#1c1c1e] transition hover:bg-black/[0.09] dark:bg-white/[0.08] dark:text-white dark:hover:bg-white/[0.12]"
                 aria-label="Traveler login"
               >
-                <span className="flex items-center gap-2">
-                  <User className="h-5 w-5" />
-                  <span className="hidden text-sm font-medium md:inline">
-                    Account
-                  </span>
-                </span>
+                <User className="h-5 w-5" />
               </Link>
+            ) : (
+              <span className="h-11 w-11" />
             )}
 
             <Link
+              href="/trip-planner"
+              className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#ff3b30] text-white transition hover:bg-[#ff5630] sm:flex"
+              aria-label="Open trip planner"
+            >
+              <CalendarDays className="h-5 w-5" />
+            </Link>
+
+            <Link
               href="/checkout"
-              className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#ff5630] text-white transition hover:bg-[#ff6f4d] md:hidden"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#ff3b30] text-white transition hover:bg-[#ff5630] sm:hidden"
               aria-label="Open cart"
             >
               <ShoppingBag className="h-5 w-5" />
             </Link>
           </div>
         </div>
+
+        <nav className="mx-auto max-w-7xl overflow-x-auto px-2 pb-1 scrollbar-hide sm:px-4 lg:px-6">
+          <div className="flex min-w-max items-center">
+            {topTabs.map((tab) => {
+              const active = hasMounted && isActiveTab(tab.href);
+
+              return (
+                <Link
+                  key={tab.href}
+                  href={tab.href}
+                  className={`relative px-4 py-3 text-sm transition ${
+                    active
+                      ? "font-bold text-[#1c1c1e] dark:text-white"
+                      : "font-normal text-[#8e8e93]"
+                  }`}
+                >
+                  {tab.label}
+                  {active ? (
+                    <span className="absolute inset-x-4 bottom-0 h-1 rounded-full bg-[#1c1c1e] dark:bg-white" />
+                  ) : null}
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
       </header>
 
-      <MobileMenu
-        isOpen={isMobileMenuOpen}
-        onClose={() => setIsMobileMenuOpen(false)}
-      />
+      <MobileMenu isOpen={isMobileMenuOpen} onClose={() => setIsMobileMenuOpen(false)} />
     </>
   );
 }

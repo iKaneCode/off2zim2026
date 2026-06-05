@@ -304,9 +304,17 @@ function getBaseUrl(surface: AppSurface = "public") {
 export function getSurfaceHref(surface: AppSurface, pathname = "/") {
   const normalizedPath = pathname.startsWith("/") ? pathname : `/${pathname}`;
   const forcedSurface = getForcedSurface();
+  const isAuthRoute =
+    normalizedPath === "/login" ||
+    normalizedPath === "/register" ||
+    normalizedPath.startsWith("/auth/");
   const hasExplicitExplorerUrl = Boolean(
     process.env.NEXT_PUBLIC_EXPLORER_APP_URL?.trim(),
   );
+
+  if (surface !== "public" && isAuthRoute && !forcedSurface) {
+    return getSurfaceHref("public", normalizedPath);
+  }
 
   if (surface === "explorer" && !hasExplicitExplorerUrl && !forcedSurface) {
     return getSurfaceHref("public", normalizedPath);

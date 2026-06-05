@@ -92,6 +92,22 @@ function getSessionCookieDomain() {
   }
 }
 
+function appendHostOnlySessionCookieClear(response: NextResponse) {
+  const attributes = [
+    `${SESSION_COOKIE_NAME}=`,
+    "Path=/",
+    "Expires=Thu, 01 Jan 1970 00:00:00 GMT",
+    "HttpOnly",
+    "SameSite=Lax",
+  ];
+
+  if (process.env.NODE_ENV === "production") {
+    attributes.splice(4, 0, "Secure");
+  }
+
+  response.headers.append("Set-Cookie", attributes.join("; "));
+}
+
 export async function deleteSession(sessionToken: string) {
   await prisma.session.deleteMany({
     where: {
@@ -108,15 +124,7 @@ export function setSessionCookie(
   const domain = getSessionCookieDomain();
 
   if (domain) {
-    response.cookies.set({
-      name: SESSION_COOKIE_NAME,
-      value: "",
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      expires: new Date(0),
-    });
+    appendHostOnlySessionCookieClear(response);
   }
 
   response.cookies.set({
@@ -155,6 +163,7 @@ export function clearSessionCookie(response: NextResponse) {
       domain,
       expires: new Date(0),
     });
+    appendHostOnlySessionCookieClear(response);
   }
 
   return response;

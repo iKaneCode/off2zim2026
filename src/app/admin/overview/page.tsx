@@ -20,6 +20,7 @@ import AdminStatGrid from "@/components/admin/AdminStatGrid";
 import AdminTable from "@/components/admin/AdminTable";
 import StatusBadge from "@/components/admin/StatusBadge";
 import { apiFetch } from "@/lib/client-api";
+import { useSoftRefresh } from "@/hooks/useSoftRefresh";
 import { getSurfaceHref } from "@/lib/app-surface";
 import { serviceProviderIdToRouteSegment } from "@/lib/service-provider-id";
 import { cn } from "@/lib/utils";
@@ -72,36 +73,40 @@ function AdminOverviewContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const load = async () => {
-      try {
-        const [providers, bookings, listings, disputes] = await Promise.all([
-          apiFetch<{ providers: ProviderCompanyRecord[] }>(
-            "/api/admin/providers",
-          ),
-          apiFetch<{ bookings: AdminBookingRecord[] }>("/api/admin/bookings"),
-          apiFetch<{ listings: AdminListingRecord[] }>("/api/admin/listings"),
-          apiFetch<{ disputes: DisputeRecord[] }>("/api/admin/disputes"),
-        ]);
+  const load = async (quiet = false) => {
+    if (!quiet) setLoading(true);
+    try {
+      const [providers, bookings, listings, disputes] = await Promise.all([
+        apiFetch<{ providers: ProviderCompanyRecord[] }>(
+          "/api/admin/providers",
+        ),
+        apiFetch<{ bookings: AdminBookingRecord[] }>("/api/admin/bookings"),
+        apiFetch<{ listings: AdminListingRecord[] }>("/api/admin/listings"),
+        apiFetch<{ disputes: DisputeRecord[] }>("/api/admin/disputes"),
+      ]);
 
-        setState({
-          providers: providers.providers,
-          bookings: bookings.bookings,
-          listings: listings.listings,
-          disputes: disputes.disputes,
-        });
-        setError("");
-      } catch (err) {
+      setState({
+        providers: providers.providers,
+        bookings: bookings.bookings,
+        listings: listings.listings,
+        disputes: disputes.disputes,
+      });
+      setError("");
+    } catch (err) {
+      if (!quiet) {
         setError(
           err instanceof Error ? err.message : "Unable to load admin overview.",
         );
-      } finally {
-        setLoading(false);
       }
-    };
+    } finally {
+      if (!quiet) setLoading(false);
+    }
+  };
 
-    load();
+  useEffect(() => {
+    void load();
   }, []);
+  useSoftRefresh(() => load(true));
 
   const totalRevenue = useMemo(
     () => state.bookings.reduce((sum, booking) => sum + booking.totalAmount, 0),

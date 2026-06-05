@@ -23,14 +23,15 @@ function confirmationNumber() {
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const { user } = await requireSessionUser();
     const payload = bookingRequestSchema.parse(await request.json());
 
     const listing = await prisma.providerListing.findUnique({
-      where: { slug: params.slug },
+      where: { slug: resolvedParams.slug },
       include: {
         company: true,
         availability: true,
@@ -50,7 +51,10 @@ export async function POST(
       : null;
 
     if (listing.instantBooking && !selectedSlot) {
-      return apiError("Choose an available slot before booking instantly.", 422);
+      return apiError(
+        "Choose an available slot before booking instantly.",
+        422,
+      );
     }
 
     if (selectedSlot) {
@@ -62,17 +66,26 @@ export async function POST(
         selectedSlot.unitsAvailable !== null &&
         selectedSlot.unitsAvailable < payload.guests
       ) {
-        return apiError("This slot does not have enough remaining capacity.", 422);
+        return apiError(
+          "This slot does not have enough remaining capacity.",
+          422,
+        );
       }
     }
 
     const checkIn =
-      selectedSlot?.startDate ?? (payload.checkIn ? new Date(payload.checkIn) : null);
+      selectedSlot?.startDate ??
+      (payload.checkIn ? new Date(payload.checkIn) : null);
     const checkOut =
-      selectedSlot?.endDate ?? (payload.checkOut ? new Date(payload.checkOut) : null);
+      selectedSlot?.endDate ??
+      (payload.checkOut ? new Date(payload.checkOut) : null);
 
     const booking = await prisma.$transaction(async (tx) => {
-      if (selectedSlot && listing.instantBooking && selectedSlot.unitsAvailable !== null) {
+      if (
+        selectedSlot &&
+        listing.instantBooking &&
+        selectedSlot.unitsAvailable !== null
+      ) {
         const nextUnits = selectedSlot.unitsAvailable - payload.guests;
         const updatedSlot = await tx.listingAvailability.updateMany({
           where: {
@@ -164,15 +177,24 @@ export async function POST(
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return apiError(error.issues[0]?.message || "Invalid booking request", 422);
+      return apiError(
+        error.issues[0]?.message || "Invalid booking request",
+        422,
+      );
     }
 
     if (error instanceof Error && error.message === "Unauthorized") {
       return apiError("Please sign in to place a booking request.", 401);
     }
 
-    if (error instanceof Error && error.message === "SLOT_CAPACITY_UNAVAILABLE") {
-      return apiError("This slot no longer has enough remaining capacity.", 422);
+    if (
+      error instanceof Error &&
+      error.message === "SLOT_CAPACITY_UNAVAILABLE"
+    ) {
+      return apiError(
+        "This slot no longer has enough remaining capacity.",
+        422,
+      );
     }
 
     console.error("Public booking request error:", error);

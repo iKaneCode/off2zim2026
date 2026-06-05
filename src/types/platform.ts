@@ -15,6 +15,32 @@ export type ProviderTierStatus =
   | "past_due"
   | "cancelled";
 
+export type ProviderPremiumUpgradeStatus =
+  | "none"
+  | "pending"
+  | "approved"
+  | "rejected";
+
+export type ProviderPayoutMethod =
+  | "bank_transfer"
+  | "ecocash"
+  | "onemoney"
+  | "innbucks"
+  | "omari"
+  | "telecash";
+
+export interface ProviderPayoutSettings {
+  method?: ProviderPayoutMethod | "";
+  accountName?: string;
+  bankName?: string;
+  branchName?: string;
+  accountNumber?: string;
+  mobileNumber?: string;
+  walletName?: string;
+  notes?: string;
+  updatedAt?: string;
+}
+
 export type ServiceProviderCategoryId =
   | "stays"
   | "events"
@@ -115,6 +141,12 @@ export interface ProviderCompanyRecord {
   providerTier: ProviderTier;
   tierStatus: ProviderTierStatus | string;
   tierFeatures: string[];
+  galleryEnabled?: boolean | null;
+  premiumUpgradeStatus?: ProviderPremiumUpgradeStatus | null;
+  premiumUpgradeRequestedAt?: string | null;
+  tierChangeRequestedTier?: ProviderTier | null;
+  pendingReviewSections?: string[];
+  payoutSettings?: ProviderPayoutSettings | null;
   serviceCategories: ServiceProviderCategoryId[];
   reviewSubmittedAt?: string | null;
   basicApprovedAt?: string | null;
@@ -315,6 +347,79 @@ export interface AdminUserRecord {
   bookingCount: number;
   providerCompanyCount: number;
   disputeCount: number;
+}
+
+export interface AdminActivityLogRecord {
+  id: string;
+  action: string;
+  targetType: string;
+  targetId: string;
+  targetDisplayId?: string | null;
+  summary: string;
+  metadata: Record<string, unknown>;
+  createdAt: string;
+  actor: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  };
+  company?: {
+    id: string;
+    serviceProviderId?: string | null;
+    companyName: string;
+  } | null;
+}
+
+export interface SupportContactRecord {
+  id: string;
+  userId: string;
+  companyId?: string | null;
+  serviceProviderId?: string | null;
+  name: string;
+  contactName: string;
+  email: string;
+  role: string;
+  avatarUrl?: string | null;
+  recipientType: "service_provider" | "user";
+}
+
+export interface SupportMessageAttachmentRecord {
+  fileName: string;
+  fileUrl: string;
+  contentType: string;
+  size: number;
+}
+
+export interface SupportMessageRecord {
+  id: string;
+  conversationId: string;
+  senderUserId: string;
+  body: string;
+  attachments: SupportMessageAttachmentRecord[];
+  deliveredAt?: string | null;
+  readAt?: string | null;
+  createdAt: string;
+  sender: {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+  };
+}
+
+export interface SupportConversationRecord {
+  id: string;
+  subject: string;
+  status: string;
+  participant: SupportContactRecord;
+  unreadCount: number;
+  lastMessage?: SupportMessageRecord | null;
+  lastMessageAt: string;
+  createdAt: string;
+  updatedAt: string;
+  firstUnreadMessageId?: string | null;
+  messages?: SupportMessageRecord[];
 }
 
 export interface AdminListingRecord {

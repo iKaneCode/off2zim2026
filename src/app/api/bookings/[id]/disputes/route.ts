@@ -14,15 +14,16 @@ const createDisputeSchema = z.object({
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const { user } = await requireSessionUser();
     const payload = createDisputeSchema.parse(await request.json());
 
     const booking = await prisma.booking.findFirst({
       where: {
-        confirmationNumber: params.id,
+        confirmationNumber: resolvedParams.id,
         OR: [
           { userId: user.id },
           ...(user.role === "provider"
@@ -78,7 +79,10 @@ export async function POST(
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return apiError(error.issues[0]?.message || "Invalid dispute request", 422);
+      return apiError(
+        error.issues[0]?.message || "Invalid dispute request",
+        422,
+      );
     }
     if (error instanceof Error && error.message === "Unauthorized") {
       return apiError("Unauthorized", 401);

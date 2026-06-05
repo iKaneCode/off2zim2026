@@ -18,13 +18,13 @@ const migrationPath = join(
 );
 const migrationSQL = readFileSync(migrationPath, 'utf8');
 
-// Supabase configuration
-const supabaseUrl = 'https://yrulftpiwdgrejvmzkgb.supabase.co';
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+// Server-only Supabase configuration
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServiceKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseServiceKey) {
-  console.error('SUPABASE_SERVICE_ROLE_KEY environment variable is required');
-  console.log('You can find this key in your Supabase dashboard under Settings > API');
+if (!supabaseUrl || !supabaseServiceKey) {
+  console.error('SUPABASE_URL and SUPABASE_SECRET_KEY are required');
+  console.log('Create a server-only key in Supabase Settings > API Keys');
   process.exit(1);
 }
 

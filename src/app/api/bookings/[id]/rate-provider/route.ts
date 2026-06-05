@@ -14,9 +14,10 @@ const rateSchema = z.object({
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  const rl = rateLimit(request, "rate-provider", RATING_LIMIT);
+  const resolvedParams = await params;
+  const rl = await rateLimit(request, "rate-provider", RATING_LIMIT);
   if (!rl.success) return rateLimitResponse(rl);
 
   try {
@@ -25,7 +26,7 @@ export async function POST(
 
     // Booking must belong to this explorer and be completed
     const booking = await prisma.booking.findFirst({
-      where: { id: params.id, userId: user.id },
+      where: { id: resolvedParams.id, userId: user.id },
       select: {
         id: true,
         status: true,
@@ -48,23 +49,25 @@ export async function POST(
     const now = new Date();
     const bothRated = booking.isProviderRated; // if provider already rated, this completes both sides
     const revealAt = bothRated
-      ? now  // reveal immediately when both have rated
+      ? now // reveal immediately when both have rated
       : new Date(now.getTime() + BLIND_REVEAL_DAYS * 24 * 60 * 60 * 1000);
 
     await prisma.booking.update({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       data: {
         explorerRating: payload.rating,
         explorerRatingNote: payload.note ?? null,
         isExplorerRated: true,
         // Reveal now if both have rated; otherwise set future reveal window
-        ratingsRevealedAt: bothRated ? now : booking.ratingsRevealedAt ?? revealAt,
+        ratingsRevealedAt: bothRated
+          ? now
+          : (booking.ratingsRevealedAt ?? revealAt),
       },
     });
 
     // Fire-and-forget — the explorer rated the provider, which feeds into
     // review aggregation (not explorer score; explorer score is provider→explorer)
-    void prisma.booking.findFirst({ where: { id: params.id } });
+    void prisma.booking.findFirst({ where: { id: resolvedParams.id } });
 
     return NextResponse.json({
       success: true,

@@ -9,7 +9,9 @@ import {
 } from "react";
 import { actionButtonVariants } from "@/components/admin/ActionButton";
 import { serviceProviderCategoryLabels } from "@/components/admin/ServiceProviderProfile";
+import LocationPill, { LocationIconBubble } from "@/components/ui/LocationPill";
 import { apiFetch } from "@/lib/client-api";
+import { scrollToDetailSection } from "@/lib/detail-scroll";
 import { curatedZimbabweDestinations } from "@/lib/destination-explorer";
 import {
   SERVICE_PROVIDER_FILTERS,
@@ -24,9 +26,11 @@ import type {
   AdminListingRecord,
   ProviderCompanyRecord,
   ProviderDocumentRecord,
+  ProviderListingRecord,
   ProviderRatingReviewRecord,
 } from "@/types/platform";
 import {
+  AlertTriangle,
   Building2,
   CalendarDays,
   CheckCircle2,
@@ -39,8 +43,8 @@ import {
   ImagePlus,
   ListPlus,
   Plus,
+  Power,
   ReceiptText,
-  Save,
   Star,
   Trash2,
   Upload,
@@ -68,7 +72,11 @@ interface ReviewDecisionProps {
   internalSummary: string;
   setInternalSummary: (summary: string) => void;
   saving: boolean;
-  submitReview: () => void;
+  submitReview: (
+    statusOverride?: ReviewStatus,
+    notesOverride?: string,
+    internalSummaryOverride?: string,
+  ) => void;
 }
 
 interface ProviderFormState {
@@ -173,6 +181,36 @@ interface ProviderMediaRecord {
   reviewedAt?: string | null;
   createdAt: string;
   updatedAt: string;
+}
+
+type RequirementSection =
+  | "Profile"
+  | "Operating Time"
+  | "Contact Person"
+  | "Listings"
+  | "Gallery"
+  | "Premium Upgrade"
+  | "Company Verification"
+  | "ZIMRA and Tax Clearance";
+
+export type ProviderDetailSection =
+  | "all"
+  | "readiness"
+  | "profile"
+  | "operating-time"
+  | "contact-person"
+  | "listings"
+  | "gallery"
+  | "verification"
+  | "admin-review";
+
+interface MissingRequirement {
+  key: string;
+  section: RequirementSection;
+  label: string;
+  detail: string;
+  state?: "incomplete" | "pending_review";
+  blocksActivation?: boolean;
 }
 
 const SERVICE_OPTIONS = SERVICE_PROVIDER_FILTERS.filter(
@@ -402,6 +440,17 @@ const TIER_FEATURES = [
   { id: "priority", label: "Priority review queue", basic: false },
 ];
 
+const REQUIREMENT_SECTION_ORDER: RequirementSection[] = [
+  "Profile",
+  "Operating Time",
+  "Contact Person",
+  "Listings",
+  "Gallery",
+  "Premium Upgrade",
+  "Company Verification",
+  "ZIMRA and Tax Clearance",
+];
+
 const MAX_LISTING_GALLERY_IMAGES = 12;
 
 const LISTING_SERVICE_CONFIG: Record<
@@ -477,12 +526,37 @@ const LEGACY_DEFAULT_LISTING_PRICING_MODELS: Record<
 export default function EditableServiceProviderProfile({
   provider,
   onProviderChange,
-  reviewDecision,
+  onProviderListingsChange,
+  onActivityLogChange,
+  reviewDecision: reviewDecisionProp,
+  mode = "admin",
+  activeSection = "all",
+  onReadinessNavigate,
+  onReadinessAttentionChange,
 }: {
   provider: ProviderCompanyRecord;
   onProviderChange: (provider: ProviderCompanyRecord) => void;
-  reviewDecision: ReviewDecisionProps;
+  onProviderListingsChange?: (listings: ProviderListingRecord[]) => void;
+  onActivityLogChange?: () => void;
+  reviewDecision?: ReviewDecisionProps;
+  mode?: "admin" | "provider";
+  activeSection?: ProviderDetailSection;
+  onReadinessNavigate?: (section: ProviderDetailSection) => void;
+  onReadinessAttentionChange?: (sections: ProviderDetailSection[]) => void;
 }) {
+  const isProviderMode = mode === "provider";
+  const showSection = (...sections: ProviderDetailSection[]) =>
+    activeSection === "all" || sections.includes(activeSection);
+  const reviewDecision = reviewDecisionProp ?? {
+    status: "changes_requested" as ReviewStatus,
+    setStatus: () => undefined,
+    notes: "",
+    setNotes: () => undefined,
+    internalSummary: "",
+    setInternalSummary: () => undefined,
+    saving: false,
+    submitReview: () => undefined,
+  };
   const hasGalleryAccess = provider.tierFeatures.includes("gallery_management");
   const [form, setForm] = useState<ProviderFormState>(() => toForm(provider));
   const [savedSnapshot, setSavedSnapshot] = useState(() =>
@@ -505,10 +579,11 @@ export default function EditableServiceProviderProfile({
   const [listingValidationAttemptedIds, setListingValidationAttemptedIds] =
     useState<Set<string>>(new Set());
   const [tierSaving, setTierSaving] = useState(false);
+  const [activationSaving, setActivationSaving] = useState(false);
   const [reviewingMediaId, setReviewingMediaId] = useState("");
   const [selectedGalleryListingId, setSelectedGalleryListingId] = useState("");
   const [galleryPanelEnabled, setGalleryPanelEnabled] = useState(
-    () => hasGalleryAccess,
+    () => hasGalleryAccess && provider.galleryEnabled !== false,
   );
   const [reviewsOpen, setReviewsOpen] = useState(false);
   const [message, setMessage] = useState("");
@@ -517,20 +592,141 @@ export default function EditableServiceProviderProfile({
     new Set(),
   );
   const ratingSummary = getProviderRatingSummary(provider);
+  const savedGalleryEnabled =
+    hasGalleryAccess && provider.galleryEnabled !== false;
   const gallerySectionActive = hasGalleryAccess && galleryPanelEnabled;
-  const coverImageEditable = hasGalleryAccess;
+  const isGalleryDirty = galleryPanelEnabled !== savedGalleryEnabled;
+  const galleryReadinessAccess =
+    hasGalleryAccess && provider.galleryEnabled !== false;
+  const coverImageEditable = isProviderMode && hasGalleryAccess;
+  const profileImageEditable = isProviderMode;
   const selectedService = form.selectedServices[0] || "things_to_do";
   const listingServiceConfig = LISTING_SERVICE_CONFIG[selectedService];
+  const pendingReviewSections = useMemo(
+    () => provider.pendingReviewSections ?? [],
+    [provider.pendingReviewSections],
+  );
+  const [reviewingSection, setReviewingSection] = useState<
+    RequirementSection | ""
+  >("");
+
+  const reviewSection = async (
+    section: RequirementSection,
+    decision: "accepted" | "rejected",
+  ) => {
+    if (isProviderMode || section === "Premium Upgrade") return;
+
+    const incompleteItems = missingRequirements.filter(
+      (item) =>
+        item.section === section &&
+        (item.state ?? "incomplete") === "incomplete",
+    );
+    if (decision === "accepted" && incompleteItems.length > 0) {
+      flagRequirements(incompleteItems);
+      setError(
+        `${section} still has ${incompleteItems.length} missing ${
+          incompleteItems.length === 1 ? "requirement" : "requirements"
+        }.`,
+      );
+      return;
+    }
+
+    const sectionItems = missingRequirements.filter(
+      (item) => item.section === section,
+    );
+    const note =
+      decision === "rejected" && sectionItems.length > 0
+        ? `${section} needs changes:\n${sectionItems
+            .map((item) => `- ${item.label}: ${item.detail}`)
+            .join("\n")}`
+        : decision === "rejected"
+          ? `${section} needs changes. Please update this section and resubmit for admin review.`
+          : `${section} reviewed and accepted.`;
+
+    setReviewingSection(section);
+    setError("");
+    setMessage("");
+    try {
+      const payload = await apiFetch<{ provider: ProviderCompanyRecord }>(
+        `/api/admin/providers/${provider.id}/sections`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ section, decision, notes: note }),
+        },
+      );
+      onProviderChange(payload.provider);
+      clearRequirementFlags(section);
+      if (decision === "rejected") {
+        reviewDecision.setStatus("changes_requested");
+        reviewDecision.setNotes(appendReviewNote(reviewDecision.notes, note));
+      }
+      setMessage(
+        decision === "accepted"
+          ? `${section} accepted.`
+          : `${section} rejected and returned to the service provider.`,
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Unable to review this section.",
+      );
+    } finally {
+      setReviewingSection("");
+    }
+  };
+
+  const acceptSection = (section: RequirementSection) => {
+    void reviewSection(section, "accepted");
+  };
+
+  const rejectSection = (section: RequirementSection) => {
+    void reviewSection(section, "rejected");
+  };
+
+  const flagRequirements = (requirements: MissingRequirement[]) => {
+    setValidationErrors((current) => {
+      const next = new Set(current);
+      requirements.forEach((requirement) => next.add(requirement.key));
+      return next;
+    });
+    const listingIds = requirements
+      .map((requirement) => requirement.key.match(/^listing:([^:]+)/)?.[1])
+      .filter((value): value is string => Boolean(value));
+    if (listingIds.length > 0) {
+      setListingValidationAttemptedIds((current) => {
+        const next = new Set(current);
+        listingIds.forEach((id) => next.add(id));
+        return next;
+      });
+    }
+  };
+
+  const clearRequirementFlags = (section: RequirementSection) => {
+    const sectionKeys = new Set(
+      missingRequirements
+        .filter((requirement) => requirement.section === section)
+        .map((requirement) => requirement.key),
+    );
+    if (sectionKeys.size === 0) return;
+    setValidationErrors((current) => {
+      const next = new Set(current);
+      sectionKeys.forEach((key) => next.delete(key));
+      return next;
+    });
+  };
 
   useEffect(() => {
     const nextForm = toForm(provider);
     setForm(nextForm);
     setSavedSnapshot(snapshotPayload(nextForm));
-  }, [provider.id]);
+    setValidationErrors(new Set());
+    setListingValidationAttemptedIds(new Set());
+  }, [provider.id, provider.updatedAt]);
 
   useEffect(() => {
-    setGalleryPanelEnabled(hasGalleryAccess);
-  }, [provider.id, hasGalleryAccess]);
+    setGalleryPanelEnabled(
+      hasGalleryAccess && provider.galleryEnabled !== false,
+    );
+  }, [provider.id, provider.galleryEnabled, hasGalleryAccess]);
 
   useEffect(() => {
     if (hasGalleryAccess) {
@@ -555,7 +751,7 @@ export default function EditableServiceProviderProfile({
         return current;
       }
 
-      return matchingListings[0]?.id || "";
+      return "";
     });
   }, [listings, provider.id, selectedService]);
 
@@ -597,6 +793,109 @@ export default function EditableServiceProviderProfile({
         }),
     [gallery, selectedGalleryListingId],
   );
+
+  const missingRequirements = useMemo(
+    () =>
+      getMissingRequirements({
+        provider,
+        form,
+        documentsByType,
+        listings,
+        gallery,
+        hasGalleryAccess: galleryReadinessAccess,
+      }),
+    [
+      provider,
+      form,
+      documentsByType,
+      listings,
+      gallery,
+      galleryReadinessAccess,
+    ],
+  );
+  const activationRequirementsMet =
+    missingRequirements.every(
+      (requirement) => requirement.blocksActivation === false,
+    ) &&
+    pendingReviewSections.length === 0 &&
+    !loadingListings &&
+    (!galleryReadinessAccess || !loadingGallery);
+  const readinessAttentionSections = useMemo(
+    () =>
+      getReadinessAttentionSections({
+        requirements: missingRequirements,
+        pendingReviewSections,
+        premiumUpgradeStatus: provider.premiumUpgradeStatus,
+        hasGalleryAccess: galleryReadinessAccess,
+        operatingTimeEnabled: form.operatingTimeEnabled,
+      }),
+    [
+      missingRequirements,
+      pendingReviewSections,
+      provider.premiumUpgradeStatus,
+      galleryReadinessAccess,
+      form.operatingTimeEnabled,
+    ],
+  );
+  useEffect(() => {
+    onReadinessAttentionChange?.(readinessAttentionSections);
+  }, [onReadinessAttentionChange, readinessAttentionSections]);
+  const serviceProviderActive = isProviderActivated(provider);
+  const sectionHasSubmittedChanges = (section: RequirementSection) =>
+    pendingReviewSections.includes(section);
+  const sectionNeedsReview = (section: RequirementSection) => {
+    if (isProviderMode) return false;
+    if (sectionHasSubmittedChanges(section)) return true;
+
+    if (section === "Profile") {
+      return provider.premiumUpgradeStatus === "pending";
+    }
+    if (section === "Contact Person") {
+      return isDocumentAwaitingReview(documentsByType.contact_person_id);
+    }
+    if (section === "Listings") {
+      return serviceListings.some((listing) =>
+        ["pending", "pending_review"].includes(listing.status),
+      );
+    }
+    if (section === "Gallery") {
+      return gallery.some((image) => image.status === "pending_review");
+    }
+    if (section === "Company Verification") {
+      return isDocumentAwaitingReview(
+        documentsByType.certificate_of_incorporation,
+      );
+    }
+    if (section === "ZIMRA and Tax Clearance") {
+      return isDocumentAwaitingReview(documentsByType.tax_clearance);
+    }
+
+    return false;
+  };
+  const sectionReviewActionEnabled = (section: RequirementSection) => {
+    if (sectionHasSubmittedChanges(section)) return true;
+    if (section === "Contact Person") {
+      return isDocumentAwaitingReview(documentsByType.contact_person_id);
+    }
+    if (section === "Company Verification") {
+      return isDocumentAwaitingReview(
+        documentsByType.certificate_of_incorporation,
+      );
+    }
+    if (section === "ZIMRA and Tax Clearance") {
+      return isDocumentAwaitingReview(documentsByType.tax_clearance);
+    }
+    return false;
+  };
+
+  const scrollToRequirementSection = (section: RequirementSection) => {
+    if (onReadinessNavigate) {
+      onReadinessNavigate(requirementSectionDetailSection(section));
+      return;
+    }
+
+    scrollToDetailSection(requirementSectionTargetId(section));
+  };
 
   const isDirty = useMemo(
     () => snapshotPayload(form) !== savedSnapshot,
@@ -641,6 +940,7 @@ export default function EditableServiceProviderProfile({
   }, [form, provider]);
 
   const updateField = (field: keyof ProviderFormState, value: string) => {
+    if (!isProviderMode) return;
     setForm((current) => ({ ...current, [field]: value }));
     setValidationErrors((current) => {
       if (!current.has(field)) return current;
@@ -651,48 +951,36 @@ export default function EditableServiceProviderProfile({
   };
 
   const toggleOperatingTime = (enabled: boolean) => {
-    setForm((current) => {
-      const hasActiveDay = Object.values(current.operatingSchedule).some(
-        (day) => day.enabled,
-      );
-
-      return {
-        ...current,
-        operatingTimeEnabled: enabled,
-        operatingSchedule:
-          enabled && !hasActiveDay
-            ? createDefaultOperatingSchedule()
-            : current.operatingSchedule,
-      };
-    });
+    if (!isProviderMode) return;
+    setForm((current) => ({ ...current, operatingTimeEnabled: enabled }));
   };
 
   const toggleDay = (day: OperatingDayId) => {
+    if (!isProviderMode) return;
     setForm((current) => ({
       ...current,
       operatingSchedule: {
         ...current.operatingSchedule,
         [day]: {
           ...current.operatingSchedule[day],
-          enabled: !current.operatingSchedule[day].enabled,
+          enabled: !current.operatingSchedule[day]?.enabled,
         },
       },
     }));
   };
 
   const selectService = (service: ServiceProviderCategoryId | "") => {
+    if (!isProviderMode) return;
     setForm((current) => ({
       ...current,
       selectedServices: service ? [service] : [],
     }));
-    if (service) {
-      setValidationErrors((current) => {
-        if (!current.has("selectedServices")) return current;
-        const next = new Set(current);
-        next.delete("selectedServices");
-        return next;
-      });
-    }
+    setValidationErrors((current) => {
+      if (!current.has("selectedServices")) return current;
+      const next = new Set(current);
+      next.delete("selectedServices");
+      return next;
+    });
   };
 
   const updateOperatingTime = (
@@ -700,6 +988,7 @@ export default function EditableServiceProviderProfile({
     field: "opensAt" | "closesAt",
     value: string,
   ) => {
+    if (!isProviderMode) return;
     setForm((current) => ({
       ...current,
       operatingSchedule: {
@@ -713,39 +1002,70 @@ export default function EditableServiceProviderProfile({
   };
 
   const togglePremiumTier = async (enabled: boolean) => {
+    const rejectingPendingTierChange =
+      !isProviderMode &&
+      provider.premiumUpgradeStatus === "pending" &&
+      (enabled ? "premium" : "basic") !== provider.tierChangeRequestedTier;
     setTierSaving(true);
     setError("");
     setMessage("");
-
     try {
-      const payload = await apiFetch<{
-        company: Pick<
-          ProviderCompanyRecord,
-          "id" | "providerTier" | "tierStatus" | "tierFeatures"
-        >;
-      }>(`/api/admin/providers/${provider.id}/tier`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          providerTier: enabled ? "premium" : "basic",
-          tierStatus: "active",
-          billingCycle: enabled ? "monthly" : null,
-        }),
-      });
+      if (isProviderMode) {
+        const cancellingRequest =
+          provider.premiumUpgradeStatus === "pending";
+        const payload = await apiFetch<{ company: ProviderCompanyRecord }>(
+          "/api/provider/company",
+          {
+            method: "PATCH",
+            body: JSON.stringify(
+              cancellingRequest
+                ? {
+                    premiumUpgradeStatus: "none",
+                    premiumUpgradeRequestedAt: null,
+                  }
+                : {
+                    providerTier: enabled ? "premium" : "basic",
+                    premiumUpgradeStatus: "pending",
+                    premiumUpgradeRequestedAt: new Date().toISOString(),
+                  },
+            ),
+          },
+        );
+        onProviderChange(payload.company);
+        setMessage(
+          cancellingRequest
+            ? "Subscription tier change request cancelled."
+            : `${
+                enabled ? "Premium upgrade" : "Basic tier downgrade"
+              } request submitted. Off2Zim must approve it before your tier changes.`,
+        );
+        return;
+      }
 
-      onProviderChange({
-        ...provider,
-        providerTier: payload.company.providerTier,
-        tierStatus: payload.company.tierStatus,
-        tierFeatures: payload.company.tierFeatures,
-      });
+      const payload = await apiFetch<{ company: ProviderCompanyRecord }>(
+        `/api/admin/providers/${provider.id}/tier`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            providerTier: enabled ? "premium" : "basic",
+            tierStatus: "active",
+            billingCycle: enabled ? "monthly" : null,
+          }),
+        },
+      );
+      onProviderChange(payload.company);
       setMessage(
-        enabled
-          ? "Provider upgraded to premium."
-          : "Provider moved back to basic.",
+        rejectingPendingTierChange
+          ? "Subscription tier change request rejected."
+          : enabled
+            ? "Premium upgrade approved and unlocked."
+            : "Basic tier change approved.",
       );
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Unable to update subscription.",
+        err instanceof Error
+          ? err.message
+          : "Unable to update the subscription request right now.",
       );
     } finally {
       setTierSaving(false);
@@ -753,11 +1073,11 @@ export default function EditableServiceProviderProfile({
   };
 
   const selectLocation = (location: string) => {
-    if (!location || form.serviceAreas.includes(location)) return;
-    setForm((current) => ({
-      ...current,
-      serviceAreas: [...current.serviceAreas, location],
-    }));
+    if (!isProviderMode || !location) return;
+    setForm((current) => {
+      if (current.serviceAreas.includes(location)) return current;
+      return { ...current, serviceAreas: [...current.serviceAreas, location] };
+    });
     setValidationErrors((current) => {
       if (!current.has("serviceAreas")) return current;
       const next = new Set(current);
@@ -767,6 +1087,7 @@ export default function EditableServiceProviderProfile({
   };
 
   const removeLocation = (location: string) => {
+    if (!isProviderMode) return;
     setForm((current) => ({
       ...current,
       serviceAreas: current.serviceAreas.filter((item) => item !== location),
@@ -777,34 +1098,77 @@ export default function EditableServiceProviderProfile({
     type: string,
     patch: Partial<Pick<EditableDocument, "status" | "notes">>,
   ) => {
-    setForm((current) => {
-      const existing = current.documents.find(
-        (document) => document.type === type,
-      );
-      const documents = existing
-        ? current.documents.map((document) =>
-            document.type === type ? { ...document, ...patch } : document,
-          )
-        : [
-            ...current.documents,
-            {
-              id: documentsByType[type]?.id || "",
-              type,
-              status:
-                patch.status || documentsByType[type]?.status || "uploaded",
-              notes: patch.notes || documentsByType[type]?.notes || "",
-            },
-          ];
+    if (!isProviderMode) return;
+    setForm((current) => ({
+      ...current,
+      documents: current.documents.map((document) =>
+        document.type === type ? { ...document, ...patch } : document,
+      ),
+    }));
+  };
 
-      return { ...current, documents };
-    });
+  const updateProviderActivation = async (active: boolean) => {
+    if (isProviderMode) {
+      setMessage(
+        active
+          ? "Off2Zim activates the profile after every required section is accepted."
+          : "Ask Off2Zim support if you need the profile deactivated.",
+      );
+      return;
+    }
+
+    if (active && !activationRequirementsMet) {
+      const blockingRequirements = missingRequirements.filter(
+        (requirement) => requirement.blocksActivation !== false,
+      );
+      flagRequirements(blockingRequirements);
+      setError(
+        pendingReviewSections.length > 0
+          ? "Review every submitted section before activating this service provider."
+          : `Complete ${blockingRequirements.length} missing ${
+              blockingRequirements.length === 1 ? "requirement" : "requirements"
+            } before activating this service provider.`,
+      );
+      return;
+    }
+
+    setActivationSaving(true);
+    setError("");
+    setMessage("");
+    try {
+      const payload = await apiFetch<{ provider: ProviderCompanyRecord }>(
+        `/api/admin/providers/${provider.id}/activation`,
+        {
+          method: "PATCH",
+          body: JSON.stringify({ active }),
+        },
+      );
+      onProviderChange(payload.provider);
+      setMessage(
+        active
+          ? "Service provider activated."
+          : "Service provider deactivated.",
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to update service provider activation.",
+      );
+    } finally {
+      setActivationSaving(false);
+    }
   };
 
   const loadGallery = async () => {
     setLoadingGallery(true);
     try {
       const payload = await apiFetch<{ media: ProviderMediaRecord[] }>(
-        `/api/admin/provider-media?companyId=${encodeURIComponent(provider.id)}`,
+        isProviderMode
+          ? "/api/provider/media"
+          : `/api/admin/provider-media?companyId=${encodeURIComponent(
+              provider.id,
+            )}`,
       );
       setGallery(
         payload.media.filter(
@@ -821,12 +1185,26 @@ export default function EditableServiceProviderProfile({
   const loadListings = async () => {
     setLoadingListings(true);
     try {
-      const payload = await apiFetch<{ listings: AdminListingRecord[] }>(
-        "/api/admin/listings",
-      );
-      setListings(
-        payload.listings.filter((listing) => listing.companyId === provider.id),
-      );
+      if (isProviderMode) {
+        const payload = await apiFetch<{ listings: ProviderListingRecord[] }>(
+          "/api/provider/listings",
+        );
+        onProviderListingsChange?.(payload.listings);
+        setListings(
+          payload.listings.map((listing) =>
+            providerListingToAdminListing(listing, provider),
+          ),
+        );
+      } else {
+        const payload = await apiFetch<{ listings: AdminListingRecord[] }>(
+          "/api/admin/listings",
+        );
+        setListings(
+          payload.listings.filter(
+            (listing) => listing.companyId === provider.id,
+          ),
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to load listings.");
     } finally {
@@ -835,22 +1213,52 @@ export default function EditableServiceProviderProfile({
   };
 
   const uploadMedia = async (slot: "profile" | "cover", file?: File | null) => {
+    if (!isProviderMode) {
+      setMessage("Images must be updated by the service provider.");
+      return;
+    }
     if (!file) return;
+    if (slot === "cover" && !coverImageEditable) {
+      setMessage("Cover images are available on the premium tier.");
+      return;
+    }
 
     setUploading(slot);
     setError("");
     setMessage("");
     try {
-      const body = new FormData();
-      body.append("slot", slot);
-      body.append("file", file);
-      const payload = await apiFetch<{ provider: ProviderCompanyRecord }>(
-        `/api/admin/providers/${provider.id}/media`,
-        { method: "POST", body },
+      const data = new FormData();
+      data.append("file", file);
+      data.append("contentType", slot);
+      data.append("contentId", provider.id);
+      const upload = await apiFetch<{
+        asset: { fileUrl: string; fileName: string };
+      }>("/api/provider/uploads/content", {
+        method: "POST",
+        body: data,
+      });
+      const payload = await apiFetch<{ company: ProviderCompanyRecord }>(
+        "/api/provider/company",
+        {
+          method: "PATCH",
+          body: JSON.stringify(
+            slot === "profile"
+              ? {
+                  profileImageUrl: upload.asset.fileUrl,
+                  reviewSection: "Profile",
+                }
+              : {
+                  coverImageUrl: upload.asset.fileUrl,
+                  reviewSection: "Profile",
+                },
+          ),
+        },
       );
-      onProviderChange(payload.provider);
+      onProviderChange(payload.company);
       setMessage(
-        slot === "profile" ? "Profile image updated." : "Cover image updated.",
+        slot === "profile"
+          ? "Profile picture updated."
+          : "Cover image updated.",
       );
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to upload image.");
@@ -863,32 +1271,50 @@ export default function EditableServiceProviderProfile({
     listingId: string,
     files: File[],
   ) => {
-    if (files.length === 0) return;
-    if (!listingId) {
-      setError("Select a listing before uploading gallery images.");
+    if (!isProviderMode) {
+      setMessage("Gallery images must be uploaded by the service provider.");
       return;
     }
+    if (!listingId || files.length === 0) return;
 
     setUploading(`gallery:${listingId}`);
     setError("");
     setMessage("");
     try {
       for (const file of files) {
-        const body = new FormData();
-        body.append("slot", "gallery");
-        body.append("listingId", listingId);
-        body.append("file", file);
-        await apiFetch<{ media: ProviderMediaRecord }>(
-          `/api/admin/providers/${provider.id}/media`,
-          { method: "POST", body },
-        );
+        const data = new FormData();
+        data.append("file", file);
+        data.append("contentType", "gallery");
+        data.append("contentId", listingId);
+        const upload = await apiFetch<{
+          asset: {
+            fileUrl: string;
+            fileName: string;
+            contentType: string;
+            size: number;
+          };
+        }>("/api/provider/uploads/content", {
+          method: "POST",
+          body: data,
+        });
+        await apiFetch("/api/provider/media", {
+          method: "POST",
+          body: JSON.stringify({
+            listingId,
+            mediaType: "image",
+            title: upload.asset.fileName,
+            altText: upload.asset.fileName,
+            url: upload.asset.fileUrl,
+            thumbnailUrl: upload.asset.fileUrl,
+            mimeType: upload.asset.contentType,
+            sizeBytes: upload.asset.size,
+            visibility: "private",
+          }),
+        });
       }
       await loadGallery();
-      setMessage(
-        files.length === 1
-          ? "Gallery image uploaded for review."
-          : `${files.length} gallery images uploaded for review.`,
-      );
+      onActivityLogChange?.();
+      setMessage("Gallery images uploaded for Off2Zim review.");
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Unable to upload gallery images.",
@@ -902,6 +1328,13 @@ export default function EditableServiceProviderProfile({
     image: ProviderMediaRecord,
     status: "approved" | "rejected" | "pending_review",
   ) => {
+    if (isProviderMode) {
+      void image;
+      void status;
+      setMessage("Off2Zim reviews gallery images before they go live.");
+      return;
+    }
+
     let rejectionReason: string | null = null;
     if (status === "rejected") {
       const reason = window.prompt(
@@ -927,6 +1360,7 @@ export default function EditableServiceProviderProfile({
         },
       );
       await loadGallery();
+      onActivityLogChange?.();
       setMessage(
         status === "approved"
           ? "Gallery image approved."
@@ -943,26 +1377,103 @@ export default function EditableServiceProviderProfile({
     }
   };
 
+  const saveGallerySettings = async () => {
+    if (!isProviderMode) {
+      setMessage("Gallery availability is controlled by the service provider.");
+      return;
+    }
+
+    setSaving(true);
+    setError("");
+    setMessage("");
+    try {
+      const payload = await apiFetch<{ company: ProviderCompanyRecord }>(
+        "/api/provider/company",
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            galleryEnabled: galleryPanelEnabled,
+            reviewSection: "Gallery",
+          }),
+        },
+      );
+      onProviderChange(payload.company);
+      setMessage(
+        galleryPanelEnabled
+          ? "Gallery enabled."
+          : "Gallery disabled and marked unavailable.",
+      );
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to update gallery settings.",
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const uploadDocument = async (type: string, file?: File | null) => {
+    if (!isProviderMode) {
+      setMessage("Documents must be uploaded by the service provider.");
+      return;
+    }
     if (!file) return;
 
     setUploading(type);
     setError("");
     setMessage("");
     try {
-      const body = new FormData();
-      body.append("documentType", type);
-      body.append("file", file);
-      const payload = await apiFetch<{ provider: ProviderCompanyRecord }>(
-        `/api/admin/providers/${provider.id}/documents`,
-        { method: "POST", body },
+      const data = new FormData();
+      data.append("file", file);
+      data.append("documentType", type);
+      const upload = await apiFetch<{
+        asset: {
+          type: string;
+          fileName: string;
+          fileUrl?: string | null;
+        };
+      }>("/api/provider/uploads/documents", {
+        method: "POST",
+        body: data,
+      });
+      const existingDocuments = provider.documents.filter(
+        (document) => document.type !== type,
       );
-      onProviderChange(payload.provider);
-      setForm((current) => ({
-        ...current,
-        documents: toEditableDocuments(payload.provider.documents),
-      }));
-      setMessage("Document uploaded and marked pending review.");
+      const payload = await apiFetch<{ company: ProviderCompanyRecord }>(
+        "/api/provider/company",
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            documents: [
+              ...existingDocuments.map((document) => ({
+                type: document.type,
+                fileName: document.fileName,
+                fileUrl: document.fileUrl ?? null,
+                status: document.status || "uploaded",
+                notes: document.notes ?? null,
+              })),
+              {
+                type,
+                fileName: upload.asset.fileName,
+                fileUrl: upload.asset.fileUrl ?? null,
+                status: "uploaded",
+                notes: null,
+              },
+            ],
+            reviewSection: reviewSectionForDocumentType(type),
+          }),
+        },
+      );
+      onProviderChange(payload.company);
+      setValidationErrors((current) => {
+        if (!current.has(type)) return current;
+        const next = new Set(current);
+        next.delete(type);
+        return next;
+      });
+      setMessage("Document uploaded for Off2Zim review.");
     } catch (err) {
       setError(
         err instanceof Error ? err.message : "Unable to upload document.",
@@ -973,127 +1484,210 @@ export default function EditableServiceProviderProfile({
   };
 
   const deleteDocument = async (type: string) => {
+    if (!isProviderMode) {
+      setMessage("Documents must be changed by the service provider.");
+      return;
+    }
+
     setUploading(type);
     setError("");
     setMessage("");
     try {
-      const payload = await apiFetch<{ provider: ProviderCompanyRecord }>(
-        `/api/admin/providers/${provider.id}/documents?type=${encodeURIComponent(type)}`,
-        { method: "DELETE" },
+      const payload = await apiFetch<{ company: ProviderCompanyRecord }>(
+        "/api/provider/company",
+        {
+          method: "PATCH",
+          body: JSON.stringify({
+            documents: provider.documents
+              .filter((document) => document.type !== type)
+              .map((document) => ({
+                type: document.type,
+                fileName: document.fileName,
+                fileUrl: document.fileUrl ?? null,
+                status: document.status || "uploaded",
+                notes: document.notes ?? null,
+              })),
+            reviewSection: reviewSectionForDocumentType(type),
+          }),
+        },
       );
-      onProviderChange(payload.provider);
-      setForm((current) => ({
-        ...current,
-        documents: toEditableDocuments(payload.provider.documents),
-      }));
+      onProviderChange(payload.company);
       setMessage("Document removed.");
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Unable to delete document.",
+        err instanceof Error ? err.message : "Unable to remove document.",
       );
     } finally {
       setUploading("");
     }
   };
 
-  const saveProfile = async () => {
-    if (!isDirty) return;
-
-    const errors = new Set<string>();
-    // Profile
-    if (!form.companyName.trim()) errors.add("companyName");
-    if (!form.tradingName.trim()) errors.add("tradingName");
-    if (!form.headquartersCity) errors.add("headquartersCity");
-    if (!form.businessDescription.trim()) errors.add("businessDescription");
-    if (form.selectedServices.length === 0) errors.add("selectedServices");
-    if (form.serviceAreas.length === 0) errors.add("serviceAreas");
-    if (!form.businessPhone.trim()) errors.add("businessPhone");
-    // Contact Person
-    if (!form.mainContactPerson.trim()) errors.add("mainContactPerson");
-    if (!form.contactPersonPhone.trim()) errors.add("contactPersonPhone");
-    if (!form.businessEmail.trim()) errors.add("businessEmail");
-    if (!form.physicalAddress.trim()) errors.add("physicalAddress");
-    if (!form.contactPersonIdType) errors.add("contactPersonIdType");
-    if (!form.contactPersonIdNumber.trim()) errors.add("contactPersonIdNumber");
-    if (!documentsByType.contact_person_id) errors.add("contact_person_id");
-    // Company verification
-    if (!form.legalCompanyName.trim()) errors.add("legalCompanyName");
-    if (!form.businessRegistrationNumber.trim())
-      errors.add("businessRegistrationNumber");
-    // ZIMRA
-    if (!form.zimraBpNumber.trim()) errors.add("zimraBpNumber");
-    if (!form.tinNumber.trim()) errors.add("tinNumber");
-    if (errors.size > 0) {
-      setValidationErrors(errors);
+  const saveCompanySection = async (section: RequirementSection) => {
+    if (!isProviderMode) {
+      setMessage("Only the service provider can edit submitted information.");
       return;
     }
-    setValidationErrors(new Set());
+
+    const sectionErrors = getProviderSaveErrors({
+      section,
+      provider,
+      form,
+      documentsByType,
+    });
+    if (sectionErrors.size > 0) {
+      setValidationErrors((current) => new Set([...current, ...sectionErrors]));
+      setError(
+        `${section} still has missing required ${
+          sectionErrors.size === 1 ? "field" : "fields"
+        }.`,
+      );
+      return;
+    }
 
     setSaving(true);
     setError("");
     setMessage("");
-
     try {
-      const payload = await apiFetch<{ provider: ProviderCompanyRecord }>(
-        `/api/admin/providers/${provider.id}`,
+      const payload = await apiFetch<{ company: ProviderCompanyRecord }>(
+        "/api/provider/company",
         {
           method: "PATCH",
-          body: JSON.stringify(formToPayload(form)),
+          body: JSON.stringify({
+            ...formToProviderPayload(form),
+            reviewSection: section,
+          }),
         },
       );
-      const nextForm = toForm(payload.provider);
-      onProviderChange(payload.provider);
-      setForm(nextForm);
-      setSavedSnapshot(snapshotPayload(nextForm));
-      setMessage("Service provider profile saved.");
+      onProviderChange(payload.company);
+      setSavedSnapshot(snapshotPayload(toForm(payload.company)));
+      clearRequirementFlags(section);
+      setMessage(`${section} saved and submitted for Off2Zim review.`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to save profile.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Unable to save this section right now.",
+      );
     } finally {
       setSaving(false);
     }
   };
 
+  const saveProfile = async () => {
+    await saveCompanySection("Profile");
+  };
+
   const cancelChanges = () => {
-    const nextForm = toForm(provider);
-    setForm(nextForm);
-    setSavedSnapshot(snapshotPayload(nextForm));
-    setError("");
-    setMessage("Unsaved changes discarded.");
+    if (isProviderMode) {
+      const nextForm = toForm(provider);
+      setForm(nextForm);
+      setListingEditForm(emptyListingEditForm);
+      setEditingListingId("");
+      setValidationErrors(new Set());
+      setListingValidationAttemptedIds(new Set());
+      setMessage("Changes cancelled.");
+      return;
+    }
+
+    setMessage(
+      "No admin edits to discard. Use Reject to request provider changes.",
+    );
   };
 
   const addListing = async () => {
+    if (!isProviderMode) {
+      setMessage("Listings must be created by the service provider.");
+      return;
+    }
+
+    if (provider.onboardingStatus !== "basic_approved") {
+      setError(
+        "Listings unlock after Off2Zim approves the service provider profile.",
+      );
+      return;
+    }
+
+    if (!form.selectedServices[0]) {
+      setValidationErrors((current) =>
+        new Set(current).add("selectedServices"),
+      );
+      setError(
+        "Select one service in the Profile section before adding a listing.",
+      );
+      return;
+    }
+
     setAddingListing(true);
     setError("");
     setMessage("");
     try {
-      const primaryService = selectedService;
-      const config = LISTING_SERVICE_CONFIG[primaryService];
-      const payload = await apiFetch<{ listing: AdminListingRecord }>(
-        `/api/admin/providers/${provider.id}/listings`,
+      const service = form.selectedServices[0];
+      const config = LISTING_SERVICE_CONFIG[service];
+      const location = form.serviceAreas[0] || "";
+      const destination = curatedZimbabweDestinations.find(
+        (item) => item.name === location,
+      );
+      const title = `${getProviderDisplayName(provider, form)} ${config.singular}`;
+      const payload = await apiFetch<{ listing: ProviderListingRecord }>(
+        "/api/provider/listings",
         {
           method: "POST",
           body: JSON.stringify({
-            title: getProviderDisplayName(provider, form),
-            category: serviceProviderCategoryLabels[primaryService],
-            listingType: config.defaultListingType,
-            location: "",
-            pricingModel: config.defaultPricingModel,
-            serviceCategory: primaryService,
+            title,
+            category: serviceProviderCategoryLabels[service],
+            listingType: config.defaultListingType || config.singular,
+            shortDescription: "",
+            description: `${title} listing submitted from the provider dashboard.`,
+            location,
+            pricingModel: config.defaultPricingModel || "per_service",
+            basePrice: null,
+            currency: "USD",
+            bookingMode: "request",
+            instantBooking: false,
+            status: "pending_review",
+            visibility: "private",
+            capacity: null,
+            images: [],
+            tags: [],
+            amenities: [],
+            policies: {},
+            metadata: {
+              serviceCategory: service,
+              ...(destination
+                ? {
+                    destinationId: destination.id,
+                    destinationName: destination.name,
+                    destinationLocation: destination.location,
+                  }
+                : {}),
+            },
+            availability: [],
           }),
         },
       );
-      await loadListings();
-      setSelectedGalleryListingId(payload.listing.id);
-      startEditListing(payload.listing);
-      setMessage("Listing added.");
+      const nextListing = providerListingToAdminListing(
+        payload.listing,
+        provider,
+      );
+      setListings((current) => [nextListing, ...current]);
+      void loadListings();
+      onActivityLogChange?.();
+      startEditListing(nextListing);
+      setMessage("Listing created. Complete the required fields and save it.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Unable to add listing.");
+      setError(
+        err instanceof Error ? err.message : "Unable to create listing.",
+      );
     } finally {
       setAddingListing(false);
     }
   };
 
   const deleteListing = (listing: AdminListingRecord) => {
+    if (!isProviderMode) {
+      setMessage("Listings must be removed by the service provider.");
+      return;
+    }
     setDeleteConfirmationListing(listing);
   };
 
@@ -1105,10 +1699,15 @@ export default function EditableServiceProviderProfile({
     setMessage("");
     try {
       const payload = await apiFetch<{ archived: boolean; deleted: boolean }>(
-        `/api/admin/listings/${deleteConfirmationListing.id}`,
+        isProviderMode
+          ? `/api/provider/listings/${encodeURIComponent(
+              deleteConfirmationListing.id,
+            )}`
+          : `/api/admin/listings/${deleteConfirmationListing.id}`,
         { method: "DELETE" },
       );
       await loadListings();
+      onActivityLogChange?.();
       setDeleteConfirmationListing(null);
       setMessage(payload.archived ? "Listing archived." : "Listing deleted.");
     } catch (err) {
@@ -1137,16 +1736,18 @@ export default function EditableServiceProviderProfile({
   ) => {
     setSelectedGalleryListingId(listing.id);
     setEditingListingId(listing.id);
-    setListingEditForm((current) => ({
-      ...(editingListingId === listing.id
-        ? current
-        : toListingEditForm(
-            listing,
-            getProviderDisplayName(provider, form),
-            form.serviceAreas,
-          )),
-      ...patch,
-    }));
+    if (!isProviderMode) return;
+    setListingEditForm((current) => {
+      const base =
+        editingListingId === listing.id
+          ? current
+          : toListingEditForm(
+              listing,
+              getProviderDisplayName(provider, form),
+              form.serviceAreas,
+            );
+      return { ...base, ...patch };
+    });
   };
 
   const cancelEditListing = () => {
@@ -1160,94 +1761,155 @@ export default function EditableServiceProviderProfile({
     });
   };
 
-  const saveListingEdit = async () => {
-    if (!editingListingId) return;
-    const listingErrors = getListingValidationErrors(
-      listingEditForm,
-      selectedService,
-      form.serviceAreas,
-    );
-    if (listingErrors.size > 0) {
-      setListingValidationAttemptedIds((current) => {
-        const next = new Set(current);
-        next.add(editingListingId);
-        return next;
-      });
+  const saveListingEdit = async (listing?: AdminListingRecord) => {
+    if (!isProviderMode) {
+      await reviewListing(listing, "active");
       return;
     }
 
-    setSavingListingId(editingListingId);
+    const target =
+      listing ??
+      listings.find((item) => item.id === editingListingId) ??
+      listings[0];
+    if (!target) return;
+    const values =
+      target.id === editingListingId
+        ? listingEditForm
+        : toListingEditForm(
+            target,
+            getProviderDisplayName(provider, form),
+            form.serviceAreas,
+          );
+    const errors = getListingValidationErrors(
+      values,
+      selectedService,
+      form.serviceAreas,
+    );
+    if (errors.size > 0) {
+      setListingValidationAttemptedIds((current) =>
+        new Set(current).add(target.id),
+      );
+      setError(
+        `${getListingDisplayId(
+          getServiceProviderDisplayId(provider),
+          target,
+          listings,
+        )} still has missing required fields.`,
+      );
+      return;
+    }
+
+    setSavingListingId(target.id);
+    setError("");
+    setMessage("");
+    try {
+      const payload = await apiFetch<{ listing: ProviderListingRecord }>(
+        `/api/provider/listings/${target.id}`,
+        {
+          method: "PATCH",
+          body: JSON.stringify(
+            listingFormToProviderPayload(values, selectedService, target),
+          ),
+        },
+      );
+      const updated = providerListingToAdminListing(payload.listing, provider);
+      setListings((current) =>
+        current.map((item) => (item.id === updated.id ? updated : item)),
+      );
+      void loadListings();
+      onActivityLogChange?.();
+      setEditingListingId("");
+      setListingEditForm(emptyListingEditForm);
+      setListingValidationAttemptedIds((current) => {
+        const next = new Set(current);
+        next.delete(target.id);
+        return next;
+      });
+      setMessage("Listing saved and submitted for Off2Zim review.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Unable to save listing.");
+    } finally {
+      setSavingListingId("");
+    }
+  };
+
+  const reviewListing = async (
+    listing: AdminListingRecord | undefined,
+    status: "active" | "rejected",
+  ) => {
+    if (isProviderMode) return;
+    const target =
+      listing ?? listings.find((item) => item.id === editingListingId);
+    if (!target) return;
+
+    setSavingListingId(target.id);
     setError("");
     setMessage("");
     try {
       const payload = await apiFetch<{ listing: AdminListingRecord }>(
-        `/api/admin/listings/${editingListingId}`,
+        `/api/admin/listings/${target.id}`,
         {
           method: "PATCH",
           body: JSON.stringify({
-            title: listingEditForm.title || undefined,
-            shortDescription: listingEditForm.shortDescription || undefined,
-            status: getPersistedListingStatus(listingEditForm.status),
-            visibility: listingEditForm.visibility || undefined,
-            location: listingEditForm.location || undefined,
-            bookingMode: listingEditForm.bookingMode || undefined,
-            instantBooking: listingEditForm.instantBooking,
-            listingType: listingEditForm.listingType || undefined,
-            pricingModel: listingEditForm.pricingModel || undefined,
-            basePrice: listingEditForm.basePrice
-              ? parseFloat(listingEditForm.basePrice)
-              : undefined,
-            capacity:
-              selectedService === "events"
-                ? null
-                : selectedService === "things_to_do"
-                  ? listingEditForm.maxParticipants
-                    ? parseInt(listingEditForm.maxParticipants, 10)
-                    : null
-                  : listingEditForm.capacity
-                    ? parseInt(listingEditForm.capacity, 10)
-                    : null,
-            amenities: listingEditForm.included.filter(
-              (item) => item !== "No inclusions listed",
-            ),
-            policies: {
-              notAllowed: listingEditForm.notAllowed.filter(
-                (item) => item !== "No restrictions listed",
-              ),
-            },
-            metadata:
-              selectedService === "stays"
-                ? { stayDetails: toStayDetailsPayload(listingEditForm) }
-                : selectedService === "events"
-                  ? { eventDetails: toEventDetailsPayload(listingEditForm) }
-                  : selectedService === "things_to_do"
-                    ? {
-                        activityDetails:
-                          toActivityDetailsPayload(listingEditForm),
-                      }
-                    : undefined,
+            status,
+            visibility: status === "active" ? "public" : "private",
           }),
         },
       );
-      setListings((prev) =>
-        prev.map((l) => (l.id === editingListingId ? payload.listing : l)),
+      setListings((current) =>
+        current.map((item) =>
+          item.id === payload.listing.id ? payload.listing : item,
+        ),
       );
-      setEditingListingId("");
-      setListingEditForm(emptyListingEditForm);
-      setListingValidationAttemptedIds((current) => {
-        if (!current.has(editingListingId)) return current;
-        const next = new Set(current);
-        next.delete(editingListingId);
-        return next;
-      });
-      setMessage("Listing updated.");
+      void loadListings();
+      onActivityLogChange?.();
+      setMessage(
+        status === "active"
+          ? "Listing accepted and published."
+          : "Listing rejected and returned to the service provider.",
+      );
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Unable to update listing.",
+        err instanceof Error ? err.message : "Unable to review listing.",
       );
     } finally {
       setSavingListingId("");
     }
+  };
+
+  const blockApprovalIfMissing = () => {
+    const blockingRequirements = missingRequirements.filter(
+      (requirement) => requirement.blocksActivation !== false,
+    );
+    if (blockingRequirements.length === 0) return false;
+    flagRequirements(blockingRequirements);
+    setError(
+      `Resolve ${blockingRequirements.length} missing ${
+        blockingRequirements.length === 1 ? "requirement" : "requirements"
+      } before accepting this service provider.`,
+    );
+    return true;
+  };
+
+  const submitAdminReviewDecision = () => {
+    if (
+      reviewDecision.status !== "changes_requested" &&
+      blockApprovalIfMissing()
+    ) {
+      return;
+    }
+    reviewDecision.submitReview();
+  };
+
+  const acceptOverall = () => {
+    if (blockApprovalIfMissing()) return;
+    reviewDecision.submitReview(
+      provider.providerTier === "premium"
+        ? "verified_premium"
+        : "basic_approved",
+      reviewDecision.notes || "Service provider profile reviewed and accepted.",
+      reviewDecision.internalSummary,
+    );
   };
 
   return (
@@ -1298,31 +1960,70 @@ export default function EditableServiceProviderProfile({
         />
       ) : null}
 
-      <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-white/10 dark:bg-[#101010]">
-        {/* Cover image */}
-        <div
-          className={cn(
-            "relative h-80 bg-slate-200 transition dark:bg-white/[0.06]",
-            !coverImageEditable && "opacity-45 grayscale",
-          )}
-        >
-          {provider.coverImageUrl ? (
-            <>
-              <img
-                src={provider.coverImageUrl}
-                alt=""
-                className="h-full w-full object-cover"
-              />
+      {showSection("profile") ? (
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white dark:border-white/10 dark:bg-[#101010]">
+          {/* Cover image */}
+          <div
+            className={cn(
+              "relative h-80 bg-slate-200 transition dark:bg-white/[0.06]",
+              !coverImageEditable && "opacity-45 grayscale",
+            )}
+          >
+            {provider.coverImageUrl ? (
+              <>
+                <img
+                  src={provider.coverImageUrl}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+                <label
+                  aria-disabled={!coverImageEditable}
+                  className={cn(
+                    actionButtonVariants({ variant: "secondary", size: "sm" }),
+                    "absolute right-4 top-4 bg-white/95 shadow-sm transition hover:-translate-y-0.5 hover:scale-[1.02] motion-safe:animate-pulse dark:bg-[#151515]/95",
+                    coverImageEditable
+                      ? "cursor-pointer"
+                      : "cursor-not-allowed",
+                  )}
+                >
+                  <ImagePlus className="h-4 w-4" />
+                  {uploading === "cover" ? "Uploading..." : "Edit cover"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={!coverImageEditable}
+                    className="sr-only"
+                    onChange={(event) =>
+                      handleFileChange(event, (file) =>
+                        uploadMedia("cover", file),
+                      )
+                    }
+                  />
+                </label>
+              </>
+            ) : (
               <label
                 aria-disabled={!coverImageEditable}
                 className={cn(
-                  actionButtonVariants({ variant: "secondary", size: "sm" }),
-                  "absolute right-4 top-4 bg-white/95 shadow-sm transition hover:-translate-y-0.5 hover:scale-[1.02] motion-safe:animate-pulse dark:bg-[#151515]/95",
-                  coverImageEditable ? "cursor-pointer" : "cursor-not-allowed",
+                  "flex h-full flex-col items-center justify-center transition dark:hover:bg-white/[0.04]",
+                  coverImageEditable
+                    ? "cursor-pointer hover:bg-slate-300/30"
+                    : "cursor-not-allowed",
                 )}
               >
-                <ImagePlus className="h-4 w-4" />
-                {uploading === "cover" ? "Uploading..." : "Edit cover"}
+                <span
+                  className={cn(
+                    "flex h-12 w-12 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm transition motion-safe:animate-pulse dark:bg-[#1c1c1e]",
+                  )}
+                >
+                  <ImagePlus className="h-5 w-5" />
+                </span>
+                <span className="mt-3 text-sm font-semibold text-slate-950 dark:text-white">
+                  {uploading === "cover" ? "Uploading..." : "Add cover image"}
+                </span>
+                <span className="mt-1 text-xs text-slate-500 dark:text-white/45">
+                  Recommended upload 1200 x 400 px
+                </span>
                 <input
                   type="file"
                   accept="image/*"
@@ -1335,444 +2036,489 @@ export default function EditableServiceProviderProfile({
                   }
                 />
               </label>
-            </>
-          ) : (
-            <label
-              aria-disabled={!coverImageEditable}
-              className={cn(
-                "flex h-full flex-col items-center justify-center transition dark:hover:bg-white/[0.04]",
-                coverImageEditable
-                  ? "cursor-pointer hover:bg-slate-300/30"
-                  : "cursor-not-allowed",
-              )}
-            >
-              <span
-                className={cn(
-                  "flex h-12 w-12 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm transition motion-safe:animate-pulse dark:bg-[#1c1c1e]",
-                )}
-              >
-                <ImagePlus className="h-5 w-5" />
-              </span>
-              <span className="mt-3 text-sm font-semibold text-slate-950 dark:text-white">
-                {uploading === "cover" ? "Uploading..." : "Add cover image"}
-              </span>
-              <span className="mt-1 text-xs text-slate-500 dark:text-white/45">
-                Recommended upload 1200 x 400 px
-              </span>
-              <input
-                type="file"
-                accept="image/*"
-                disabled={!coverImageEditable}
-                className="sr-only"
-                onChange={(event) =>
-                  handleFileChange(event, (file) => uploadMedia("cover", file))
-                }
-              />
-            </label>
-          )}
-        </div>
+            )}
+          </div>
 
-        <div className="relative z-10 px-6 pb-6 pt-5">
-          <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex min-w-0 items-end gap-5">
-              {/* Profile picture */}
-              <label
-                aria-label="Upload profile image"
-                className="relative flex h-32 w-32 shrink-0 cursor-pointer flex-col items-center justify-center overflow-hidden rounded-full border-[3px] border-slate-300 bg-white bg-cover bg-center bg-no-repeat text-center transition hover:scale-[1.02] dark:border-white/25 dark:bg-[#101010]"
-                style={
-                  provider.profileImageUrl
-                    ? { backgroundImage: `url("${provider.profileImageUrl}")` }
-                    : undefined
-                }
-              >
-                {provider.profileImageUrl ? (
-                  <span className="absolute inset-0 bg-black/15" />
-                ) : null}
-                <span className="relative flex h-12 w-12 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm transition motion-safe:animate-pulse dark:bg-[#1c1c1e]">
-                  <ImagePlus className="h-5 w-5" />
-                </span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="sr-only"
-                  onChange={(event) =>
-                    handleFileChange(event, (file) =>
-                      uploadMedia("profile", file),
-                    )
+          <div className="relative z-10 px-6 pb-6 pt-5">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-end gap-5">
+                {/* Profile picture */}
+                <label
+                  aria-label="Upload profile image"
+                  aria-disabled={!profileImageEditable}
+                  className={cn(
+                    "relative flex h-32 w-32 shrink-0 flex-col items-center justify-center overflow-hidden rounded-full border-[3px] bg-white bg-cover bg-center bg-no-repeat text-center transition dark:bg-[#101010]",
+                    profileImageEditable
+                      ? "cursor-pointer hover:scale-[1.01]"
+                      : "cursor-not-allowed",
+                    validationErrors.has("profileImageUrl")
+                      ? "border-rose-400 dark:border-rose-500"
+                      : "border-slate-300 dark:border-white/25",
+                  )}
+                  style={
+                    provider.profileImageUrl
+                      ? {
+                          backgroundImage: `url("${provider.profileImageUrl}")`,
+                        }
+                      : undefined
                   }
-                />
-              </label>
-              {/* Title + location */}
-              <div className="min-w-0 pb-1">
-                <div className="flex min-w-0 items-center gap-2">
-                  <h2 className="truncate text-2xl font-bold text-slate-950 dark:text-white">
-                    {getProviderDisplayName(provider, form)}
-                  </h2>
-                  <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-black bg-blue-500 dark:border-white">
-                    <svg
-                      viewBox="0 0 10 8"
-                      className="h-3 w-3 fill-none"
-                      aria-hidden="true"
-                    >
-                      <path
-                        d="M1 4l2.5 2.5L9 1"
-                        stroke="white"
-                        strokeWidth="1.8"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
+                >
+                  {provider.profileImageUrl ? (
+                    <span className="absolute inset-0 bg-black/15" />
+                  ) : null}
+                  <span className="relative flex h-12 w-12 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm transition motion-safe:animate-pulse dark:bg-[#1c1c1e]">
+                    <ImagePlus className="h-5 w-5" />
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    disabled={!profileImageEditable}
+                    className="sr-only"
+                    onChange={(event) =>
+                      handleFileChange(event, (file) =>
+                        uploadMedia("profile", file),
+                      )
+                    }
+                  />
+                </label>
+                {/* Title + location */}
+                <div className="min-w-0 pb-1">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <h2 className="truncate text-2xl font-bold text-slate-950 dark:text-white">
+                      {getProviderDisplayName(provider, form)}
+                    </h2>
+                    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-black bg-blue-500 dark:border-white">
+                      <svg
+                        viewBox="0 0 10 8"
+                        className="h-3 w-3 fill-none"
+                        aria-hidden="true"
+                      >
+                        <path
+                          d="M1 4l2.5 2.5L9 1"
+                          stroke="white"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                        />
+                      </svg>
+                    </div>
+                  </div>
+                  {form.serviceAreas[0] ||
+                  provider.headquartersCity ||
+                  provider.physicalAddress ? (
+                    <div className="mt-2">
+                      <LocationPill
+                        location={
+                          form.serviceAreas[0] ||
+                          provider.headquartersCity ||
+                          provider.physicalAddress
+                        }
                       />
-                    </svg>
-                  </div>
+                    </div>
+                  ) : null}
                 </div>
-                {provider.headquartersCity || provider.physicalAddress ? (
-                  <div className="mt-2">
-                    <LocationPill
-                      location={
-                        provider.headquartersCity || provider.physicalAddress
-                      }
-                    />
-                  </div>
-                ) : null}
               </div>
-            </div>
-            <div className="pb-1 sm:ml-auto">
-              <RatingPill
-                average={ratingSummary.average}
-                reviewCount={ratingSummary.reviewCount}
-                onClick={() => setReviewsOpen(true)}
-              />
+              {!isProviderMode ? (
+                <div className="pb-1 sm:ml-auto">
+                  <RatingPill
+                    average={ratingSummary.average}
+                    reviewCount={ratingSummary.reviewCount}
+                    onClick={() => setReviewsOpen(true)}
+                  />
+                </div>
+              ) : null}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+      ) : null}
 
-      <FormPanel title="Profile">
-        <div className="grid gap-4 md:grid-cols-2">
-          <div>
-            <label className="block text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40 mb-1.5">
-              Service Provider ID
-            </label>
-            <input
-              type="text"
-              value={getServiceProviderDisplayId(provider)}
-              disabled
-              className="w-full min-h-11 px-3 rounded-md border border-slate-200 bg-slate-100 text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500 cursor-not-allowed font-mono"
-              readOnly
-              tabIndex={-1}
+      {showSection("readiness") ? (
+        <ReadinessSummaryPanel
+          requirements={missingRequirements}
+          pendingReviewSections={pendingReviewSections}
+          premiumUpgradeStatus={provider.premiumUpgradeStatus}
+          hasGalleryAccess={galleryReadinessAccess}
+          operatingTimeEnabled={form.operatingTimeEnabled}
+          serviceProviderActive={serviceProviderActive}
+          activationReady={activationRequirementsMet}
+          activationSaving={activationSaving}
+          checkingRequirements={
+            loadingListings || (hasGalleryAccess && loadingGallery)
+          }
+          canManageActivation={!isProviderMode}
+          onToggleActivation={updateProviderActivation}
+          onNavigateSection={scrollToRequirementSection}
+        />
+      ) : null}
+
+      {showSection("profile") ? (
+        <FormPanel
+          id="profile"
+          title="Profile"
+          attention={!isProviderMode && sectionNeedsReview("Profile")}
+        >
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <label className="block text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40 mb-1.5">
+                Service Provider ID
+              </label>
+              <input
+                type="text"
+                value={getServiceProviderDisplayId(provider)}
+                disabled
+                className="w-full min-h-11 px-3 rounded-md border border-slate-200 bg-slate-100 text-slate-400 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-500 cursor-not-allowed font-mono"
+                readOnly
+                tabIndex={-1}
+              />
+            </div>
+            <Field
+              label="Display name"
+              value={form.tradingName}
+              initialValue={provider.tradingName ?? ""}
+              onChange={(value) => updateField("tradingName", value)}
+              hasError={validationErrors.has("tradingName")}
+            />
+            <Field
+              label="Business phone"
+              value={form.businessPhone}
+              initialValue={provider.businessPhone ?? ""}
+              onChange={(value) => updateField("businessPhone", value)}
+              hasError={validationErrors.has("businessPhone")}
+            />
+            <Field
+              label="Business email"
+              value={form.businessEmail}
+              initialValue={provider.businessEmail ?? ""}
+              onChange={(value) => updateField("businessEmail", value)}
+              hasError={validationErrors.has("businessEmail")}
             />
           </div>
-          <Field
-            label="Display name"
-            value={form.tradingName}
-            initialValue={provider.tradingName ?? ""}
-            onChange={(value) => updateField("tradingName", value)}
-            hasError={validationErrors.has("tradingName")}
-          />
-          <Field
-            label="Business phone"
-            value={form.businessPhone}
-            initialValue={provider.businessPhone ?? ""}
-            onChange={(value) => updateField("businessPhone", value)}
-            hasError={validationErrors.has("businessPhone")}
-          />
-          <Field
-            label="Business email"
-            value={form.businessEmail}
-            initialValue={provider.businessEmail ?? ""}
-            onChange={(value) => updateField("businessEmail", value)}
-            hasError={validationErrors.has("businessEmail")}
-          />
-        </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2">
-          <label className="block">
-            <div className="mb-1.5 flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
-                Office location
-              </span>
-              {validationErrors.has("headquartersCity") && (
-                <span className="text-xs font-bold text-rose-500">
-                  Required
+          <div className="mt-6 grid gap-4 md:grid-cols-2">
+            <label className="block">
+              <div className="mb-1.5 flex items-center justify-between">
+                <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
+                  Office location
                 </span>
-              )}
-            </div>
-            {form.headquartersCity ? (
-              <div className="flex items-center gap-2">
-                <div className="inline-flex max-w-full items-center rounded-full bg-black/[0.04] px-3.5 py-2 text-sm dark:bg-white/10">
-                  <LocationIconBubble />
-                  <span className="truncate font-semibold text-slate-950 dark:text-white">
-                    {form.headquartersCity}
+                {validationErrors.has("headquartersCity") && (
+                  <span className="text-xs font-bold text-rose-500">
+                    Required
                   </span>
-                  <button
-                    type="button"
-                    onClick={() => updateField("headquartersCity", "")}
-                    className="ml-2 shrink-0 rounded-full p-0.5 text-slate-400 hover:text-slate-700 dark:text-white/40 dark:hover:text-white"
-                    aria-label="Clear office location"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
+                )}
               </div>
-            ) : (
+              {form.headquartersCity ? (
+                <div className="flex items-center gap-2">
+                  <div className="inline-flex max-w-full items-center rounded-full bg-black/[0.04] px-3.5 py-2 text-sm dark:bg-white/10">
+                    <LocationIconBubble />
+                    <span className="truncate font-semibold text-slate-950 dark:text-white">
+                      {form.headquartersCity}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => updateField("headquartersCity", "")}
+                      className="ml-2 shrink-0 rounded-full p-0.5 text-slate-400 hover:text-slate-700 dark:text-white/40 dark:hover:text-white"
+                      aria-label="Clear office location"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <select
+                  value=""
+                  onChange={(event) =>
+                    updateField("headquartersCity", event.target.value)
+                  }
+                  className={cn(
+                    inputClassName,
+                    validationErrors.has("headquartersCity")
+                      ? "border-rose-400 dark:border-rose-500"
+                      : "",
+                  )}
+                >
+                  <option value="">Select</option>
+                  {LOCATION_OPTIONS.map((location) => (
+                    <option key={location.value} value={location.value}>
+                      {location.label}
+                    </option>
+                  ))}
+                </select>
+              )}
+            </label>
+            <label className="block self-start">
+              <div className="mb-1.5 flex items-center justify-between">
+                <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
+                  Operating locations
+                </span>
+                {validationErrors.has("serviceAreas") && (
+                  <span className="text-xs font-bold text-rose-500">
+                    Required
+                  </span>
+                )}
+              </div>
               <select
                 value=""
-                onChange={(event) =>
-                  updateField("headquartersCity", event.target.value)
-                }
+                onChange={(event) => selectLocation(event.target.value)}
                 className={cn(
                   inputClassName,
-                  validationErrors.has("headquartersCity")
+                  validationErrors.has("serviceAreas")
                     ? "border-rose-400 dark:border-rose-500"
                     : "",
                 )}
               >
                 <option value="">Select</option>
                 {LOCATION_OPTIONS.map((location) => (
-                  <option key={location.value} value={location.value}>
+                  <option
+                    key={location.value}
+                    value={location.value}
+                    disabled={form.serviceAreas.includes(location.value)}
+                  >
                     {location.label}
                   </option>
                 ))}
               </select>
-            )}
-          </label>
-          <label className="block self-start">
-            <div className="mb-1.5 flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
-                Operating locations
-              </span>
-              {validationErrors.has("serviceAreas") && (
-                <span className="text-xs font-bold text-rose-500">
-                  Required
-                </span>
-              )}
-            </div>
-            <select
-              value=""
-              onChange={(event) => selectLocation(event.target.value)}
-              className={cn(
-                inputClassName,
-                validationErrors.has("serviceAreas")
-                  ? "border-rose-400 dark:border-rose-500"
-                  : "",
-              )}
-            >
-              <option value="">Select</option>
-              {LOCATION_OPTIONS.map((location) => (
-                <option
-                  key={location.value}
-                  value={location.value}
-                  disabled={form.serviceAreas.includes(location.value)}
-                >
-                  {location.label}
-                </option>
-              ))}
-            </select>
-            {form.serviceAreas.length > 0 ? (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {form.serviceAreas.map((location) => (
-                  <div
-                    key={location}
-                    className="inline-flex max-w-full items-center rounded-full bg-black/[0.04] px-3.5 py-2 text-sm dark:bg-white/10"
-                  >
-                    <LocationIconBubble />
-                    <span className="truncate font-semibold text-slate-950 dark:text-white">
-                      {location}
-                    </span>
-                    <button
-                      type="button"
-                      onClick={() => removeLocation(location)}
-                      className="ml-2 shrink-0 rounded-full p-0.5 text-slate-400 hover:text-slate-700 dark:text-white/40 dark:hover:text-white"
-                      aria-label={`Remove ${location}`}
+              {form.serviceAreas.length > 0 ? (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {form.serviceAreas.map((location) => (
+                    <div
+                      key={location}
+                      className="inline-flex max-w-full items-center rounded-full bg-black/[0.04] px-3.5 py-2 text-sm dark:bg-white/10"
                     >
-                      <X className="h-3 w-3" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-            ) : null}
-          </label>
-        </div>
-
-        <div className="mt-6">
-          <TextArea
-            label="About us"
-            value={form.businessDescription}
-            initialValue={provider.businessDescription ?? ""}
-            onChange={(value) => updateField("businessDescription", value)}
-            hasError={validationErrors.has("businessDescription")}
-          />
-        </div>
-
-        <div className="mt-6 md:w-[calc(50%-0.5rem)]">
-          <label className="block">
-            <div className="mb-1.5 flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
-                Services
-              </span>
-              {validationErrors.has("selectedServices") && (
-                <span className="text-xs font-bold text-rose-500">
-                  Required
-                </span>
-              )}
-            </div>
-            <select
-              value={form.selectedServices[0] || ""}
-              onChange={(event) =>
-                selectService(
-                  event.target.value as ServiceProviderCategoryId | "",
-                )
-              }
-              className={cn(
-                inputClassName,
-                validationErrors.has("selectedServices")
-                  ? "border-rose-400 dark:border-rose-500"
-                  : "",
-              )}
-            >
-              <option value="">Select</option>
-              {SERVICE_OPTIONS.map((service) => (
-                <option key={service.id} value={service.id}>
-                  {service.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-
-        <SubscriptionTierPanel
-          provider={provider}
-          saving={tierSaving}
-          onTogglePremium={togglePremiumTier}
-        />
-
-        <div className="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-center">
-          <button
-            type="button"
-            onClick={cancelChanges}
-            disabled={!isProfileDirty || saving}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-slate-100 px-5 text-sm font-medium text-slate-700 transition hover:bg-slate-200 disabled:pointer-events-none disabled:opacity-50 dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={saveProfile}
-            disabled={!isProfileDirty || saving}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-slate-900 px-5 text-sm font-medium text-white transition hover:bg-slate-700 disabled:pointer-events-none disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              className="h-4 w-4"
-            >
-              <path
-                fillRule="evenodd"
-                d="M4.5 2A2.5 2.5 0 0 0 2 4.5v11A2.5 2.5 0 0 0 4.5 18h11a2.5 2.5 0 0 0 2.5-2.5V7.414a1 1 0 0 0-.293-.707l-4.414-4.414A1 1 0 0 0 12.586 2H4.5ZM5.5 3.75H12.5V7H5.5V3.75Z"
-                clipRule="evenodd"
-              />
-            </svg>
-            {saving ? "Saving..." : "Save"}
-          </button>
-        </div>
-      </FormPanel>
-
-      <FormPanel
-        title="Operating Time"
-        action={
-          <SectionToggle
-            checked={form.operatingTimeEnabled}
-            ariaLabel="Toggle Operating Time"
-            onChange={toggleOperatingTime}
-          />
-        }
-      >
-        <div
-          className={cn(
-            "transition-opacity duration-200",
-            !form.operatingTimeEnabled && "pointer-events-none opacity-40",
-          )}
-        >
-          {/* Day rows */}
-          <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-white/10">
-            {DAY_OPTIONS.map((day, index) => {
-              const schedule = form.operatingSchedule[day.id];
-
-              return (
-                <div
-                  key={day.id}
-                  className={cn(
-                    "transition-colors duration-150",
-                    index > 0 &&
-                      "border-t border-slate-100 dark:border-white/[0.05]",
-                    schedule.enabled
-                      ? "bg-white dark:bg-transparent"
-                      : "bg-slate-50/60 dark:bg-white/[0.01]",
-                  )}
-                >
-                  {/* Main row */}
-                  <div className="flex items-center gap-4 px-4 py-3">
-                    {/* Toggle */}
-                    <button
-                      type="button"
-                      onClick={() => toggleDay(day.id)}
-                      aria-pressed={schedule.enabled}
-                      disabled={!form.operatingTimeEnabled}
-                      className={cn(
-                        "relative h-6 w-10 shrink-0 rounded-full transition disabled:cursor-not-allowed",
-                        schedule.enabled
-                          ? "bg-neutral-900 dark:bg-white"
-                          : "bg-neutral-200 dark:bg-white/10",
-                      )}
-                    >
-                      <span
-                        className={cn(
-                          "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition",
-                          schedule.enabled
-                            ? "left-[18px] dark:bg-neutral-900"
-                            : "left-0.5",
-                        )}
-                      />
-                      <span className="sr-only">
-                        {schedule.enabled ? "Close" : "Open"} {day.fullLabel}
+                      <LocationIconBubble />
+                      <span className="truncate font-semibold text-slate-950 dark:text-white">
+                        {location}
                       </span>
-                    </button>
+                      <button
+                        type="button"
+                        onClick={() => removeLocation(location)}
+                        className="ml-2 shrink-0 rounded-full p-0.5 text-slate-400 hover:text-slate-700 dark:text-white/40 dark:hover:text-white"
+                        aria-label={`Remove ${location}`}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </label>
+          </div>
 
-                    {/* Day name + status */}
-                    <div className="w-28 shrink-0">
-                      <div
+          <div className="mt-6">
+            <TextArea
+              label="About us"
+              value={form.businessDescription}
+              initialValue={provider.businessDescription ?? ""}
+              onChange={(value) => updateField("businessDescription", value)}
+              hasError={validationErrors.has("businessDescription")}
+            />
+          </div>
+
+          <div className="mt-6 md:w-[calc(50%-0.5rem)]">
+            <label className="block">
+              <div className="mb-1.5 flex items-center justify-between">
+                <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
+                  Services
+                </span>
+                {validationErrors.has("selectedServices") && (
+                  <span className="text-xs font-bold text-rose-500">
+                    Required
+                  </span>
+                )}
+              </div>
+              <select
+                value={form.selectedServices[0] || ""}
+                onChange={(event) =>
+                  selectService(
+                    event.target.value as ServiceProviderCategoryId | "",
+                  )
+                }
+                className={cn(
+                  inputClassName,
+                  validationErrors.has("selectedServices")
+                    ? "border-rose-400 dark:border-rose-500"
+                    : "",
+                )}
+              >
+                <option value="">Select</option>
+                {SERVICE_OPTIONS.map((service) => (
+                  <option key={service.id} value={service.id}>
+                    {service.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
+          <SubscriptionTierPanel
+            provider={provider}
+            saving={tierSaving}
+            canApprovePending={!isProviderMode}
+            onTogglePremium={togglePremiumTier}
+          />
+
+          {isProviderMode ? (
+            <ProviderSectionActions
+              changed={isProfileDirty}
+              saving={saving}
+              onCancel={cancelChanges}
+              onSave={saveProfile}
+            />
+          ) : (
+            <SectionReviewActions
+              section="Profile"
+              saving={reviewDecision.saving || reviewingSection === "Profile"}
+              enabled={sectionReviewActionEnabled("Profile")}
+              onAccept={acceptSection}
+              onReject={rejectSection}
+            />
+          )}
+        </FormPanel>
+      ) : null}
+
+      {showSection("operating-time") ? (
+        <FormPanel
+          id="operating-time"
+          title="Operating Time"
+          attention={!isProviderMode && sectionNeedsReview("Operating Time")}
+          action={
+            <SectionToggle
+              checked={form.operatingTimeEnabled}
+              ariaLabel="Toggle Operating Time"
+              onChange={toggleOperatingTime}
+            />
+          }
+        >
+          <div
+            className={cn(
+              "transition-opacity duration-200",
+              !form.operatingTimeEnabled && "pointer-events-none opacity-40",
+            )}
+          >
+            {/* Day rows */}
+            <div className="overflow-hidden rounded-xl border border-slate-200 dark:border-white/10">
+              {DAY_OPTIONS.map((day, index) => {
+                const schedule = form.operatingSchedule[day.id];
+
+                return (
+                  <div
+                    key={day.id}
+                    className={cn(
+                      "transition-colors duration-150",
+                      index > 0 &&
+                        "border-t border-slate-100 dark:border-white/[0.05]",
+                      schedule.enabled
+                        ? "bg-white dark:bg-transparent"
+                        : "bg-slate-50/60 dark:bg-white/[0.01]",
+                    )}
+                  >
+                    {/* Main row */}
+                    <div className="flex items-center gap-4 px-4 py-3">
+                      {/* Toggle */}
+                      <button
+                        type="button"
+                        onClick={() => toggleDay(day.id)}
+                        aria-pressed={schedule.enabled}
+                        disabled={!form.operatingTimeEnabled}
                         className={cn(
-                          "text-sm font-semibold transition-colors duration-150",
+                          "relative h-6 w-10 shrink-0 rounded-full transition disabled:cursor-not-allowed",
                           schedule.enabled
-                            ? "text-slate-900 dark:text-white"
-                            : "text-slate-300 dark:text-white/20",
+                            ? "bg-neutral-900 dark:bg-white"
+                            : "bg-neutral-200 dark:bg-white/10",
                         )}
                       >
-                        {day.fullLabel}
+                        <span
+                          className={cn(
+                            "absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition",
+                            schedule.enabled
+                              ? "left-[18px] dark:bg-neutral-900"
+                              : "left-0.5",
+                          )}
+                        />
+                        <span className="sr-only">
+                          {schedule.enabled ? "Close" : "Open"} {day.fullLabel}
+                        </span>
+                      </button>
+
+                      {/* Day name + status */}
+                      <div className="w-28 shrink-0">
+                        <div
+                          className={cn(
+                            "text-sm font-semibold transition-colors duration-150",
+                            schedule.enabled
+                              ? "text-slate-900 dark:text-white"
+                              : "text-slate-300 dark:text-white/20",
+                          )}
+                        >
+                          {day.fullLabel}
+                        </div>
+                        <div
+                          className={cn(
+                            "text-[11px] font-semibold transition-colors duration-150",
+                            schedule.enabled
+                              ? "text-emerald-500 dark:text-emerald-400"
+                              : "text-rose-300 dark:text-rose-400/50",
+                          )}
+                        >
+                          {schedule.enabled ? "Open" : "Closed"}
+                        </div>
                       </div>
+
+                      {/* Time range — desktop */}
                       <div
                         className={cn(
-                          "text-[11px] font-semibold transition-colors duration-150",
-                          schedule.enabled
-                            ? "text-emerald-500 dark:text-emerald-400"
-                            : "text-rose-300 dark:text-rose-400/50",
+                          "ml-auto hidden items-end gap-3 transition-opacity duration-200 sm:flex",
+                          !schedule.enabled && "pointer-events-none opacity-0",
                         )}
                       >
-                        {schedule.enabled ? "Open" : "Closed"}
+                        <label className="flex flex-col gap-1">
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/30">
+                            Opens
+                          </span>
+                          <input
+                            type="time"
+                            value={schedule.opensAt}
+                            onChange={(e) =>
+                              updateOperatingTime(
+                                day.id,
+                                "opensAt",
+                                e.target.value,
+                              )
+                            }
+                            disabled={
+                              !form.operatingTimeEnabled || !schedule.enabled
+                            }
+                            className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10 dark:border-white/10 dark:bg-white/[0.05] dark:text-white dark:focus:border-white/30"
+                          />
+                        </label>
+                        <span className="mb-1.5 text-slate-300 dark:text-white/20">
+                          —
+                        </span>
+                        <label className="flex flex-col gap-1">
+                          <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/30">
+                            Closes
+                          </span>
+                          <input
+                            type="time"
+                            value={schedule.closesAt}
+                            onChange={(e) =>
+                              updateOperatingTime(
+                                day.id,
+                                "closesAt",
+                                e.target.value,
+                              )
+                            }
+                            disabled={
+                              !form.operatingTimeEnabled || !schedule.enabled
+                            }
+                            className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10 dark:border-white/10 dark:bg-white/[0.05] dark:text-white dark:focus:border-white/30"
+                          />
+                        </label>
                       </div>
                     </div>
 
-                    {/* Time range — desktop */}
-                    <div
-                      className={cn(
-                        "ml-auto hidden items-end gap-3 transition-opacity duration-200 sm:flex",
-                        !schedule.enabled && "pointer-events-none opacity-0",
-                      )}
-                    >
-                      <label className="flex flex-col gap-1">
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/30">
-                          Opens
-                        </span>
+                    {/* Time range — mobile (below when open) */}
+                    {schedule.enabled && (
+                      <div className="flex items-center gap-2 px-4 pb-3 pl-[72px] sm:hidden">
                         <input
                           type="time"
                           value={schedule.opensAt}
@@ -1783,18 +2529,11 @@ export default function EditableServiceProviderProfile({
                               e.target.value,
                             )
                           }
-                          disabled={
-                            !form.operatingTimeEnabled || !schedule.enabled
-                          }
+                          disabled={!form.operatingTimeEnabled}
                           className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10 dark:border-white/10 dark:bg-white/[0.05] dark:text-white dark:focus:border-white/30"
                         />
-                      </label>
-                      <span className="mb-1.5 text-slate-300 dark:text-white/20">
-                        —
-                      </span>
-                      <label className="flex flex-col gap-1">
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-white/30">
-                          Closes
+                        <span className="text-sm text-slate-300 dark:text-white/20">
+                          —
                         </span>
                         <input
                           type="time"
@@ -1806,564 +2545,631 @@ export default function EditableServiceProviderProfile({
                               e.target.value,
                             )
                           }
-                          disabled={
-                            !form.operatingTimeEnabled || !schedule.enabled
-                          }
+                          disabled={!form.operatingTimeEnabled}
                           className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10 dark:border-white/10 dark:bg-white/[0.05] dark:text-white dark:focus:border-white/30"
                         />
-                      </label>
-                    </div>
+                      </div>
+                    )}
                   </div>
-
-                  {/* Time range — mobile (below when open) */}
-                  {schedule.enabled && (
-                    <div className="flex items-center gap-2 px-4 pb-3 pl-[72px] sm:hidden">
-                      <input
-                        type="time"
-                        value={schedule.opensAt}
-                        onChange={(e) =>
-                          updateOperatingTime(day.id, "opensAt", e.target.value)
-                        }
-                        disabled={!form.operatingTimeEnabled}
-                        className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10 dark:border-white/10 dark:bg-white/[0.05] dark:text-white dark:focus:border-white/30"
-                      />
-                      <span className="text-sm text-slate-300 dark:text-white/20">
-                        —
-                      </span>
-                      <input
-                        type="time"
-                        value={schedule.closesAt}
-                        onChange={(e) =>
-                          updateOperatingTime(
-                            day.id,
-                            "closesAt",
-                            e.target.value,
-                          )
-                        }
-                        disabled={!form.operatingTimeEnabled}
-                        className="h-8 rounded-lg border border-slate-200 bg-white px-2 text-xs text-slate-900 outline-none transition focus:border-slate-400 focus:ring-2 focus:ring-slate-900/10 dark:border-white/10 dark:bg-white/[0.05] dark:text-white dark:focus:border-white/30"
-                      />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
-        </div>
-        <div className="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-center">
-          <button
-            type="button"
-            onClick={cancelChanges}
-            disabled={!isOperatingTimeDirty || saving}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-slate-100 px-5 text-sm font-medium text-slate-700 transition hover:bg-slate-200 disabled:pointer-events-none disabled:opacity-50 dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={saveProfile}
-            disabled={!isOperatingTimeDirty || saving}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-slate-900 px-5 text-sm font-medium text-white transition hover:bg-slate-700 disabled:pointer-events-none disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              className="h-4 w-4"
-            >
-              <path
-                fillRule="evenodd"
-                d="M4.5 2A2.5 2.5 0 0 0 2 4.5v11A2.5 2.5 0 0 0 4.5 18h11a2.5 2.5 0 0 0 2.5-2.5V7.414a1 1 0 0 0-.293-.707l-4.414-4.414A1 1 0 0 0 12.586 2H4.5ZM5.5 3.75H12.5V7H5.5V3.75Z"
-                clipRule="evenodd"
-              />
-            </svg>
-            {saving ? "Saving..." : "Save"}
-          </button>
-        </div>
-      </FormPanel>
+          {isProviderMode ? (
+            <ProviderSectionActions
+              changed={isOperatingTimeDirty}
+              saving={saving}
+              onCancel={cancelChanges}
+              onSave={() => saveCompanySection("Operating Time")}
+            />
+          ) : (
+            <SectionReviewActions
+              section="Operating Time"
+              saving={
+                reviewDecision.saving || reviewingSection === "Operating Time"
+              }
+              enabled={sectionReviewActionEnabled("Operating Time")}
+              onAccept={acceptSection}
+              onReject={rejectSection}
+            />
+          )}
+        </FormPanel>
+      ) : null}
 
-      <FormPanel title="Contact Person">
-        <div className="grid gap-4 md:grid-cols-2">
-          <Field
-            label="Name"
-            value={form.mainContactPerson}
-            initialValue={provider.mainContactPerson ?? ""}
-            onChange={(value) => updateField("mainContactPerson", value)}
-            hasError={validationErrors.has("mainContactPerson")}
-          />
-          <Field
-            label="Phone number"
-            value={form.contactPersonPhone}
-            initialValue={
-              provider.contactPersonPhone || provider.businessPhone || ""
-            }
-            onChange={(value) => updateField("contactPersonPhone", value)}
-            hasError={validationErrors.has("contactPersonPhone")}
-          />
-          <Field
-            label="Email address"
-            value={form.businessEmail}
-            initialValue={provider.businessEmail ?? ""}
-            onChange={(value) => updateField("businessEmail", value)}
-            hasError={validationErrors.has("businessEmail")}
-          />
-          <TextArea
-            label="Physical address"
-            value={form.physicalAddress}
-            initialValue={provider.physicalAddress ?? ""}
-            onChange={(value) => updateField("physicalAddress", value)}
-            className="md:col-span-2"
-            hasError={validationErrors.has("physicalAddress")}
-          />
-          <label className="block">
-            <div className="mb-1.5 flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
-                ID type
-              </span>
-              {validationErrors.has("contactPersonIdType") && (
+      {showSection("contact-person") ? (
+        <FormPanel
+          id="contact-person"
+          title="Contact Person"
+          attention={!isProviderMode && sectionNeedsReview("Contact Person")}
+        >
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field
+              label="Name"
+              value={form.mainContactPerson}
+              initialValue={provider.mainContactPerson ?? ""}
+              onChange={(value) => updateField("mainContactPerson", value)}
+              hasError={validationErrors.has("mainContactPerson")}
+            />
+            <Field
+              label="Phone number"
+              value={form.contactPersonPhone}
+              initialValue={
+                provider.contactPersonPhone || provider.businessPhone || ""
+              }
+              onChange={(value) => updateField("contactPersonPhone", value)}
+              hasError={validationErrors.has("contactPersonPhone")}
+            />
+            <Field
+              label="Email address"
+              value={form.businessEmail}
+              initialValue={provider.businessEmail ?? ""}
+              onChange={(value) => updateField("businessEmail", value)}
+              hasError={validationErrors.has("businessEmail")}
+            />
+            <TextArea
+              label="Physical address"
+              value={form.physicalAddress}
+              initialValue={provider.physicalAddress ?? ""}
+              onChange={(value) => updateField("physicalAddress", value)}
+              className="md:col-span-2"
+              hasError={validationErrors.has("physicalAddress")}
+            />
+            <label className="block">
+              <div className="mb-1.5 flex items-center justify-between">
+                <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
+                  ID type
+                </span>
+                {validationErrors.has("contactPersonIdType") && (
+                  <span className="text-xs font-bold text-rose-500">
+                    Required
+                  </span>
+                )}
+              </div>
+              <select
+                value={form.contactPersonIdType}
+                onChange={(e) =>
+                  updateField("contactPersonIdType", e.target.value)
+                }
+                className={cn(
+                  inputClassName,
+                  validationErrors.has("contactPersonIdType")
+                    ? "border-rose-400 focus:border-rose-400 dark:border-rose-500 dark:focus:border-rose-500"
+                    : form.contactPersonIdType &&
+                        form.contactPersonIdType !==
+                          (provider.contactPersonIdType || "")
+                      ? "border-emerald-500 focus:border-emerald-500 dark:border-emerald-400 dark:focus:border-emerald-400"
+                      : "",
+                )}
+              >
+                <option value="">Select</option>
+                <option value="id">National ID</option>
+                <option value="passport">Passport</option>
+              </select>
+            </label>
+            <Field
+              label="ID / Passport number"
+              value={form.contactPersonIdNumber}
+              initialValue={provider.contactPersonIdNumber || ""}
+              hasError={validationErrors.has("contactPersonIdNumber")}
+              onChange={(value) => updateField("contactPersonIdNumber", value)}
+            />
+          </div>
+
+          {/* ID document upload */}
+          <div className="mt-6">
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <div className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
+                  ID Document
+                </div>
+              </div>
+              {validationErrors.has("contact_person_id") && (
                 <span className="text-xs font-bold text-rose-500">
                   Required
                 </span>
               )}
             </div>
-            <select
-              value={form.contactPersonIdType}
-              onChange={(e) =>
-                updateField("contactPersonIdType", e.target.value)
-              }
-              className={cn(
-                inputClassName,
-                form.contactPersonIdType === ""
-                  ? "border-rose-400 focus:border-rose-400 dark:border-rose-500 dark:focus:border-rose-500"
-                  : form.contactPersonIdType !==
-                      (provider.contactPersonIdType || "")
-                    ? "border-emerald-500 focus:border-emerald-500 dark:border-emerald-400 dark:focus:border-emerald-400"
-                    : "",
-              )}
-            >
-              <option value="">Select</option>
-              <option value="id">National ID</option>
-              <option value="passport">Passport</option>
-            </select>
-          </label>
-          <Field
-            label="ID / Passport number"
-            value={form.contactPersonIdNumber}
-            initialValue={provider.contactPersonIdNumber || ""}
-            hasError={validationErrors.has("contactPersonIdNumber")}
-            onChange={(value) => updateField("contactPersonIdNumber", value)}
-          />
-        </div>
 
-        {/* ID document upload */}
-        <div className="mt-6">
-          <div className="mb-4 flex items-center justify-between">
-            <div>
-              <div className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
-                ID Document
+            {documentsByType.contact_person_id ? (
+              <div className="inline-flex max-w-full items-center rounded-full border-2 border-emerald-500 bg-black/[0.04] px-3.5 py-2 text-sm dark:border-emerald-400 dark:bg-white/10">
+                <span className="mr-1.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white shadow-sm dark:bg-[#1c1c1e]">
+                  <FileText className="h-3.5 w-3.5 text-slate-500 dark:text-white/55" />
+                </span>
+                <span className="truncate font-semibold text-slate-950 dark:text-white">
+                  {documentsByType.contact_person_id.fileName}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => deleteDocument("contact_person_id")}
+                  disabled={uploading === "contact_person_id"}
+                  className="ml-2 shrink-0 rounded-full p-0.5 text-slate-400 transition hover:text-slate-700 disabled:pointer-events-none disabled:opacity-40 dark:text-white/40 dark:hover:text-white"
+                  aria-label="Remove document"
+                >
+                  <X className="h-3 w-3" />
+                </button>
               </div>
-            </div>
-            {validationErrors.has("contact_person_id") && (
-              <span className="text-xs font-bold text-rose-500">Required</span>
-            )}
-          </div>
-
-          {documentsByType.contact_person_id ? (
-            <div className="inline-flex max-w-full items-center rounded-full border-2 border-emerald-500 bg-black/[0.04] px-3.5 py-2 text-sm dark:border-emerald-400 dark:bg-white/10">
-              <span className="mr-1.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-white shadow-sm dark:bg-[#1c1c1e]">
-                <FileText className="h-3.5 w-3.5 text-slate-500 dark:text-white/55" />
-              </span>
-              <span className="truncate font-semibold text-slate-950 dark:text-white">
-                {documentsByType.contact_person_id.fileName}
-              </span>
-              <button
-                type="button"
-                onClick={() => deleteDocument("contact_person_id")}
-                disabled={uploading === "contact_person_id"}
-                className="ml-2 shrink-0 rounded-full p-0.5 text-slate-400 transition hover:text-slate-700 disabled:pointer-events-none disabled:opacity-40 dark:text-white/40 dark:hover:text-white"
-                aria-label="Remove document"
+            ) : (
+              <label
+                className={cn(
+                  "flex cursor-pointer flex-col items-center gap-4 rounded-xl border-2 border-dashed px-4 py-8 text-center transition",
+                  validationErrors.has("contact_person_id")
+                    ? "border-rose-400 hover:border-rose-500 hover:bg-rose-50/30 dark:border-rose-500/50 dark:hover:border-rose-500/70 dark:hover:bg-rose-500/[0.03]"
+                    : "border-slate-200 hover:border-slate-400/50 hover:bg-slate-50 dark:border-white/10 dark:hover:border-white/20 dark:hover:bg-white/[0.04]",
+                )}
               >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          ) : (
-            <label className="flex cursor-pointer flex-col items-center gap-4 rounded-xl border-2 border-dashed border-rose-400 px-4 py-8 text-center transition hover:border-rose-500 hover:bg-rose-50/30 dark:border-rose-500/50 dark:hover:border-rose-500/70 dark:hover:bg-rose-500/[0.03]">
-              <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm transition motion-safe:animate-pulse dark:bg-[#1c1c1e]">
-                <FilePlus className="h-5 w-5" />
-              </span>
-              <span className="text-sm font-semibold text-slate-950 dark:text-white">
-                {uploading === "contact_person_id"
-                  ? "Uploading…"
-                  : "Upload document"}
-              </span>
-              <span className="text-xs text-slate-400 dark:text-white/30">
-                PNG, JPG or PDF up to 10 MB
-              </span>
-              <input
-                type="file"
-                className="sr-only"
-                onChange={(e) =>
-                  handleFileChange(e, (file) =>
-                    uploadDocument("contact_person_id", file),
-                  )
-                }
-              />
-            </label>
-          )}
+                <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm transition motion-safe:animate-pulse dark:bg-[#1c1c1e]">
+                  <FilePlus className="h-5 w-5" />
+                </span>
+                <span className="text-sm font-semibold text-slate-950 dark:text-white">
+                  {uploading === "contact_person_id"
+                    ? "Uploading…"
+                    : "Upload document"}
+                </span>
+                <span className="text-xs text-slate-400 dark:text-white/30">
+                  PNG, JPG or PDF up to 10 MB
+                </span>
+                <input
+                  type="file"
+                  className="sr-only"
+                  onChange={(e) =>
+                    handleFileChange(e, (file) =>
+                      uploadDocument("contact_person_id", file),
+                    )
+                  }
+                />
+              </label>
+            )}
 
-          {documentsByType.contact_person_id && (
-            <div className="mt-4 grid gap-3">
-              <div>
-                <div className="mb-2 text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
-                  Document status
+            {documentsByType.contact_person_id && (
+              <div className="mt-4 grid gap-3">
+                <div>
+                  <div className="mb-2 text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
+                    Document status
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      {
+                        value: "uploaded",
+                        label: "Pending review",
+                        active:
+                          "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400",
+                      },
+                      {
+                        value: "approved",
+                        label: "Approved",
+                        active:
+                          "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400",
+                      },
+                      {
+                        value: "rejected",
+                        label: "Rejected",
+                        active:
+                          "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-400",
+                      },
+                    ].map((opt) => (
+                      <button
+                        key={opt.value}
+                        type="button"
+                        onClick={() =>
+                          updateDocument("contact_person_id", {
+                            status: opt.value,
+                          })
+                        }
+                        disabled={isProviderMode}
+                        className={cn(
+                          "rounded-full px-3.5 py-1.5 text-xs font-medium transition disabled:pointer-events-none",
+                          (form.documents.find(
+                            (d) => d.type === "contact_person_id",
+                          )?.status ||
+                            documentsByType.contact_person_id?.status ||
+                            "uploaded") === opt.value
+                            ? opt.active
+                            : "bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-white/[0.06] dark:text-white/40 dark:hover:bg-white/10",
+                        )}
+                      >
+                        {opt.label}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    {
-                      value: "uploaded",
-                      label: "Pending review",
-                      active:
-                        "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400",
-                    },
-                    {
-                      value: "approved",
-                      label: "Approved",
-                      active:
-                        "bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-400",
-                    },
-                    {
-                      value: "rejected",
-                      label: "Rejected",
-                      active:
-                        "bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-400",
-                    },
-                  ].map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() =>
+                {!isProviderMode ? (
+                  <label className="block">
+                    <div className="mb-1.5 flex items-center justify-between">
+                      <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
+                        Review notes
+                      </span>
+                    </div>
+                    <textarea
+                      value={
+                        form.documents.find(
+                          (d) => d.type === "contact_person_id",
+                        )?.notes ??
+                        documentsByType.contact_person_id?.notes ??
+                        ""
+                      }
+                      onChange={(e) =>
                         updateDocument("contact_person_id", {
-                          status: opt.value,
+                          notes: e.target.value,
                         })
                       }
-                      className={cn(
-                        "rounded-full px-3.5 py-1.5 text-xs font-medium transition",
-                        (form.documents.find(
-                          (d) => d.type === "contact_person_id",
-                        )?.status ||
-                          documentsByType.contact_person_id?.status ||
-                          "uploaded") === opt.value
-                          ? opt.active
-                          : "bg-slate-100 text-slate-500 hover:bg-slate-200 dark:bg-white/[0.06] dark:text-white/40 dark:hover:bg-white/10",
-                      )}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
+                      placeholder="Add review notes…"
+                      className={cn(inputClassName, "min-h-20 resize-y py-3")}
+                    />
+                  </label>
+                ) : documentsByType.contact_person_id.notes ? (
+                  <div className="rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/55">
+                    {documentsByType.contact_person_id.notes}
+                  </div>
+                ) : null}
               </div>
+            )}
+          </div>
+          {isProviderMode ? (
+            <ProviderSectionActions
+              changed={isContactDirty}
+              saving={saving}
+              onCancel={cancelChanges}
+              onSave={() => saveCompanySection("Contact Person")}
+            />
+          ) : (
+            <SectionReviewActions
+              section="Contact Person"
+              saving={
+                reviewDecision.saving || reviewingSection === "Contact Person"
+              }
+              enabled={sectionReviewActionEnabled("Contact Person")}
+              onAccept={acceptSection}
+              onReject={rejectSection}
+            />
+          )}
+        </FormPanel>
+      ) : null}
+
+      {showSection("listings") ? (
+        <FormPanel
+          id="listings"
+          title="Listings"
+          attention={!isProviderMode && sectionNeedsReview("Listings")}
+          action={
+            <button
+              type="button"
+              onClick={addListing}
+              disabled={addingListing}
+              className="flex flex-col items-center justify-center py-0 transition hover:bg-slate-300/30 disabled:pointer-events-none disabled:opacity-50 dark:hover:bg-white/[0.04]"
+            >
+              <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm transition motion-safe:animate-pulse dark:bg-[#1c1c1e]">
+                <svg
+                  className="h-4 w-4"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <path d="M5 12h14" />
+                  <path d="M12 5v14" />
+                </svg>
+              </span>
+              {/* No text label, icon only */}
+            </button>
+          }
+        >
+          <ListingsManagerPanel
+            listings={serviceListings}
+            loading={loadingListings}
+            editingListingId={editingListingId}
+            listingEditForm={listingEditForm}
+            deletingListingId={deletingListingId}
+            service={selectedService}
+            serviceProviderId={getServiceProviderDisplayId(provider)}
+            operatingLocations={form.serviceAreas}
+            displayName={getProviderDisplayName(provider, form)}
+            savingListingId={savingListingId}
+            validationAttemptedIds={listingValidationAttemptedIds}
+            providerMode={isProviderMode}
+            onEditListing={updateListingEdit}
+            onCancelListing={
+              isProviderMode
+                ? cancelEditListing
+                : (listing) => reviewListing(listing, "rejected")
+            }
+            onSaveListing={saveListingEdit}
+            onDeleteListing={deleteListing}
+          />
+        </FormPanel>
+      ) : null}
+
+      {showSection("gallery") ? (
+        <FormPanel
+          id="gallery"
+          title="Gallery"
+          attention={!isProviderMode && sectionNeedsReview("Gallery")}
+          action={
+            <SectionToggle
+              checked={gallerySectionActive}
+              ariaLabel="Toggle listing gallery"
+              disabled={!hasGalleryAccess}
+              onChange={setGalleryPanelEnabled}
+            />
+          }
+        >
+          <GalleryManagerPanel
+            active={gallerySectionActive}
+            listings={serviceListings}
+            serviceProviderId={getServiceProviderDisplayId(provider)}
+            selectedListingId={selectedGalleryListingId}
+            selectedListing={selectedGalleryListing}
+            gallery={selectedListingGallery}
+            loading={loadingGallery || loadingListings}
+            uploading={uploading === `gallery:${selectedGalleryListingId}`}
+            reviewingMediaId={reviewingMediaId}
+            onSelectListing={setSelectedGalleryListingId}
+            onUpload={(files) =>
+              uploadListingGalleryImages(selectedGalleryListingId, files)
+            }
+            onReview={reviewGalleryImage}
+            canReview={!isProviderMode}
+          />
+          {isProviderMode ? (
+            <ProviderSectionActions
+              changed={isGalleryDirty}
+              saving={saving || uploading.startsWith("gallery:")}
+              onCancel={() => setGalleryPanelEnabled(savedGalleryEnabled)}
+              onSave={saveGallerySettings}
+            />
+          ) : (
+            <SectionReviewActions
+              section="Gallery"
+              saving={reviewDecision.saving || reviewingSection === "Gallery"}
+              enabled={sectionReviewActionEnabled("Gallery")}
+              onAccept={acceptSection}
+              onReject={rejectSection}
+            />
+          )}
+        </FormPanel>
+      ) : null}
+
+      {showSection("verification") ? (
+        <>
+          <FormPanel
+            id="company-verification"
+            title="Company verification"
+            attention={
+              !isProviderMode && sectionNeedsReview("Company Verification")
+            }
+          >
+            <div className="grid gap-4 md:grid-cols-3">
+              <Field
+                label="Company name as per certificate of incorporation (Pvt) Ltd"
+                value={form.legalCompanyName}
+                initialValue={provider.legalCompanyName || provider.companyName}
+                onChange={(value) => updateField("legalCompanyName", value)}
+                hasError={validationErrors.has("legalCompanyName")}
+              />
+              <Field
+                label="Date incorporated"
+                value={form.incorporationDate}
+                initialValue={formatDateInput(provider.incorporationDate)}
+                type="date"
+                onChange={(value) => updateField("incorporationDate", value)}
+                icon={<CalendarDays className="h-4 w-4 text-slate-400" />}
+                hasError={validationErrors.has("incorporationDate")}
+              />
+              <Field
+                label="Company registration number"
+                value={form.businessRegistrationNumber}
+                initialValue={provider.businessRegistrationNumber ?? ""}
+                onChange={(value) =>
+                  updateField("businessRegistrationNumber", value)
+                }
+                hasError={validationErrors.has("businessRegistrationNumber")}
+              />
+            </div>
+            <div className="mt-4">
+              <DocumentRequirement
+                document={documentsByType.certificate_of_incorporation}
+                definition={REQUIRED_DOCUMENTS[0]}
+                hasError={validationErrors.has("certificate_of_incorporation")}
+                editable={form.documents.find(
+                  (item) => item.type === "certificate_of_incorporation",
+                )}
+                uploading={uploading === "certificate_of_incorporation"}
+                canEditReview={!isProviderMode}
+                showMissingStatus={!isProviderMode}
+                highlightUploaded={isProviderMode}
+                onUpload={(file) =>
+                  uploadDocument("certificate_of_incorporation", file)
+                }
+                onStatusChange={(status) =>
+                  updateDocument("certificate_of_incorporation", { status })
+                }
+                onNotesChange={(notes) =>
+                  updateDocument("certificate_of_incorporation", { notes })
+                }
+              />
+            </div>
+            {isProviderMode ? (
+              <ProviderSectionActions
+                changed={isDirty}
+                saving={saving}
+                onCancel={cancelChanges}
+                onSave={() => saveCompanySection("Company Verification")}
+              />
+            ) : (
+              <SectionReviewActions
+                section="Company Verification"
+                saving={
+                  reviewDecision.saving ||
+                  reviewingSection === "Company Verification"
+                }
+                enabled={sectionReviewActionEnabled("Company Verification")}
+                onAccept={acceptSection}
+                onReject={rejectSection}
+              />
+            )}
+          </FormPanel>
+
+          <FormPanel
+            id="zimra-tax"
+            title="ZIMRA and tax clearance"
+            attention={
+              !isProviderMode && sectionNeedsReview("ZIMRA and Tax Clearance")
+            }
+          >
+            <div className="grid gap-4 md:grid-cols-3">
+              <Field
+                label="ZIMRA BP number"
+                value={form.zimraBpNumber}
+                initialValue={provider.zimraBpNumber || ""}
+                onChange={(value) => updateField("zimraBpNumber", value)}
+                hasError={validationErrors.has("zimraBpNumber")}
+              />
+              <Field
+                label="TIN number"
+                value={form.tinNumber}
+                initialValue={provider.tinNumber || ""}
+                onChange={(value) => updateField("tinNumber", value)}
+                hasError={validationErrors.has("tinNumber")}
+              />
+              <Field
+                label="Tax clearance expiry date"
+                value={form.taxClearanceExpiresAt}
+                initialValue={formatDateInput(provider.taxClearanceExpiresAt)}
+                type="date"
+                onChange={(value) =>
+                  updateField("taxClearanceExpiresAt", value)
+                }
+                icon={<CalendarDays className="h-4 w-4 text-slate-400" />}
+                hasError={validationErrors.has("taxClearanceExpiresAt")}
+              />
+            </div>
+            <div className="mt-4">
+              <DocumentRequirement
+                document={documentsByType.tax_clearance}
+                definition={REQUIRED_DOCUMENTS[2]}
+                hasError={validationErrors.has("tax_clearance")}
+                editable={form.documents.find(
+                  (item) => item.type === "tax_clearance",
+                )}
+                uploading={uploading === "tax_clearance"}
+                canEditReview={!isProviderMode}
+                showMissingStatus={!isProviderMode}
+                highlightUploaded={isProviderMode}
+                onUpload={(file) => uploadDocument("tax_clearance", file)}
+                onStatusChange={(status) =>
+                  updateDocument("tax_clearance", { status })
+                }
+                onNotesChange={(notes) =>
+                  updateDocument("tax_clearance", { notes })
+                }
+              />
+            </div>
+            {isProviderMode ? (
+              <ProviderSectionActions
+                changed={isDirty}
+                saving={saving}
+                onCancel={cancelChanges}
+                onSave={() => saveCompanySection("ZIMRA and Tax Clearance")}
+              />
+            ) : (
+              <SectionReviewActions
+                section="ZIMRA and Tax Clearance"
+                saving={
+                  reviewDecision.saving ||
+                  reviewingSection === "ZIMRA and Tax Clearance"
+                }
+                enabled={sectionReviewActionEnabled("ZIMRA and Tax Clearance")}
+                onAccept={acceptSection}
+                onReject={rejectSection}
+              />
+            )}
+          </FormPanel>
+        </>
+      ) : null}
+
+      {!isProviderMode && showSection("admin-review") ? (
+        <>
+          <FormPanel id="admin-review" title="Admin review">
+            <div className="grid gap-4 md:grid-cols-2">
               <label className="block">
                 <div className="mb-1.5 flex items-center justify-between">
                   <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
-                    Review notes
+                    Review decision
                   </span>
                 </div>
-                <textarea
-                  value={
-                    form.documents.find((d) => d.type === "contact_person_id")
-                      ?.notes ??
-                    documentsByType.contact_person_id?.notes ??
-                    ""
+                <select
+                  value={reviewDecision.status}
+                  onChange={(event) =>
+                    reviewDecision.setStatus(event.target.value as ReviewStatus)
                   }
-                  onChange={(e) =>
-                    updateDocument("contact_person_id", {
-                      notes: e.target.value,
-                    })
-                  }
-                  placeholder="Add review notes…"
-                  className={cn(inputClassName, "min-h-20 resize-y py-3")}
-                />
+                  className={inputClassName}
+                >
+                  <option value="basic_approved">Approve basic</option>
+                  <option value="changes_requested">Request changes</option>
+                  <option value="verified_premium">Approve premium</option>
+                </select>
               </label>
-            </div>
-          )}
-        </div>
-        <div className="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-center">
-          <button
-            type="button"
-            onClick={cancelChanges}
-            disabled={!isContactDirty || saving}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-slate-100 px-5 text-sm font-medium text-slate-700 transition hover:bg-slate-200 disabled:pointer-events-none disabled:opacity-50 dark:bg-white/10 dark:text-white dark:hover:bg-white/15"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={saveProfile}
-            disabled={!isContactDirty || saving}
-            className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-slate-900 px-5 text-sm font-medium text-white transition hover:bg-slate-700 disabled:pointer-events-none disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              viewBox="0 0 20 20"
-              fill="currentColor"
-              className="h-4 w-4"
-            >
-              <path
-                fillRule="evenodd"
-                d="M4.5 2A2.5 2.5 0 0 0 2 4.5v11A2.5 2.5 0 0 0 4.5 18h11a2.5 2.5 0 0 0 2.5-2.5V7.414a1 1 0 0 0-.293-.707l-4.414-4.414A1 1 0 0 0 12.586 2H4.5ZM5.5 3.75H12.5V7H5.5V3.75Z"
-                clipRule="evenodd"
+              <div className="flex items-end">
+                <button
+                  type="button"
+                  onClick={submitAdminReviewDecision}
+                  disabled={reviewDecision.saving}
+                  className={cn(
+                    actionButtonVariants({ variant: "primary", size: "lg" }),
+                  )}
+                >
+                  {reviewDecision.saving
+                    ? "Submitting..."
+                    : "Submit review decision"}
+                </button>
+              </div>
+              <TextArea
+                label="Review notes"
+                value={reviewDecision.notes}
+                onChange={reviewDecision.setNotes}
               />
-            </svg>
-            {saving ? "Saving..." : "Save"}
-          </button>
-        </div>
-      </FormPanel>
-
-      <FormPanel
-        title="Listings"
-        action={
-          <button
-            type="button"
-            onClick={addListing}
-            disabled={addingListing}
-            className="flex flex-col items-center justify-center py-0 transition hover:bg-slate-300/30 disabled:pointer-events-none disabled:opacity-50 dark:hover:bg-white/[0.04]"
-          >
-            <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-slate-400 shadow-sm transition motion-safe:animate-pulse dark:bg-[#1c1c1e]">
-              <svg
-                className="h-4 w-4"
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth="3"
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              >
-                <path d="M5 12h14" />
-                <path d="M12 5v14" />
-              </svg>
-            </span>
-            {/* No text label, icon only */}
-          </button>
-        }
-      >
-        <ListingsManagerPanel
-          listings={serviceListings}
-          loading={loadingListings}
-          editingListingId={editingListingId}
-          listingEditForm={listingEditForm}
-          deletingListingId={deletingListingId}
-          service={selectedService}
-          serviceProviderId={getServiceProviderDisplayId(provider)}
-          operatingLocations={form.serviceAreas}
-          displayName={getProviderDisplayName(provider, form)}
-          savingListingId={savingListingId}
-          validationAttemptedIds={listingValidationAttemptedIds}
-          onEditListing={updateListingEdit}
-          onCancelListing={cancelEditListing}
-          onSaveListing={saveListingEdit}
-          onDeleteListing={deleteListing}
-        />
-      </FormPanel>
-
-      <FormPanel
-        title="Gallery"
-        action={
-          <SectionToggle
-            checked={gallerySectionActive}
-            ariaLabel="Toggle listing gallery"
-            disabled={!hasGalleryAccess}
-            onChange={setGalleryPanelEnabled}
-          />
-        }
-      >
-        <GalleryManagerPanel
-          active={gallerySectionActive}
-          listings={serviceListings}
-          selectedListingId={selectedGalleryListingId}
-          selectedListing={selectedGalleryListing}
-          gallery={selectedListingGallery}
-          loading={loadingGallery || loadingListings}
-          uploading={uploading === `gallery:${selectedGalleryListingId}`}
-          reviewingMediaId={reviewingMediaId}
-          onSelectListing={setSelectedGalleryListingId}
-          onUpload={(files) =>
-            uploadListingGalleryImages(selectedGalleryListingId, files)
-          }
-          onReview={reviewGalleryImage}
-        />
-      </FormPanel>
-
-      <FormPanel title="Company verification">
-        <div className="grid gap-4 md:grid-cols-3">
-          <Field
-            label="Company name as per certificate of incorporation (Pvt) Ltd"
-            value={form.legalCompanyName}
-            initialValue={provider.legalCompanyName || provider.companyName}
-            onChange={(value) => updateField("legalCompanyName", value)}
-            hasError={validationErrors.has("legalCompanyName")}
-          />
-          <Field
-            label="Date incorporated"
-            value={form.incorporationDate}
-            initialValue={formatDateInput(provider.incorporationDate)}
-            type="date"
-            onChange={(value) => updateField("incorporationDate", value)}
-            icon={<CalendarDays className="h-4 w-4 text-slate-400" />}
-          />
-          <Field
-            label="Company registration number"
-            value={form.businessRegistrationNumber}
-            initialValue={provider.businessRegistrationNumber ?? ""}
-            onChange={(value) =>
-              updateField("businessRegistrationNumber", value)
-            }
-            hasError={validationErrors.has("businessRegistrationNumber")}
-          />
-        </div>
-        <div className="mt-4">
-          <DocumentRequirement
-            document={documentsByType.certificate_of_incorporation}
-            definition={REQUIRED_DOCUMENTS[0]}
-            editable={form.documents.find(
-              (item) => item.type === "certificate_of_incorporation",
-            )}
-            uploading={uploading === "certificate_of_incorporation"}
-            onUpload={(file) =>
-              uploadDocument("certificate_of_incorporation", file)
-            }
-            onStatusChange={(status) =>
-              updateDocument("certificate_of_incorporation", { status })
-            }
-            onNotesChange={(notes) =>
-              updateDocument("certificate_of_incorporation", { notes })
-            }
-          />
-        </div>
-      </FormPanel>
-
-      <FormPanel title="ZIMRA and tax clearance">
-        <div className="grid gap-4 md:grid-cols-3">
-          <Field
-            label="ZIMRA BP number"
-            value={form.zimraBpNumber}
-            initialValue={provider.zimraBpNumber || ""}
-            onChange={(value) => updateField("zimraBpNumber", value)}
-            hasError={validationErrors.has("zimraBpNumber")}
-          />
-          <Field
-            label="TIN number"
-            value={form.tinNumber}
-            initialValue={provider.tinNumber || ""}
-            onChange={(value) => updateField("tinNumber", value)}
-            hasError={validationErrors.has("tinNumber")}
-          />
-          <Field
-            label="Tax clearance expiry date"
-            value={form.taxClearanceExpiresAt}
-            initialValue={formatDateInput(provider.taxClearanceExpiresAt)}
-            type="date"
-            onChange={(value) => updateField("taxClearanceExpiresAt", value)}
-            icon={<CalendarDays className="h-4 w-4 text-slate-400" />}
-          />
-        </div>
-        <div className="mt-4">
-          <DocumentRequirement
-            document={documentsByType.tax_clearance}
-            definition={REQUIRED_DOCUMENTS[2]}
-            editable={form.documents.find(
-              (item) => item.type === "tax_clearance",
-            )}
-            uploading={uploading === "tax_clearance"}
-            onUpload={(file) => uploadDocument("tax_clearance", file)}
-            onStatusChange={(status) =>
-              updateDocument("tax_clearance", { status })
-            }
-            onNotesChange={(notes) =>
-              updateDocument("tax_clearance", { notes })
-            }
-          />
-        </div>
-      </FormPanel>
-
-      <FormPanel title="Admin review">
-        <div className="grid gap-4 md:grid-cols-2">
-          <label className="block">
-            <div className="mb-1.5 flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
-                Review decision
-              </span>
+              <TextArea
+                label="Internal summary"
+                value={reviewDecision.internalSummary}
+                onChange={reviewDecision.setInternalSummary}
+              />
             </div>
-            <select
-              value={reviewDecision.status}
-              onChange={(event) =>
-                reviewDecision.setStatus(event.target.value as ReviewStatus)
-              }
-              className={inputClassName}
-            >
-              <option value="basic_approved">Approve basic</option>
-              <option value="changes_requested">Request changes</option>
-              <option value="verified_premium">Approve premium</option>
-            </select>
-          </label>
-          <div className="flex items-end">
+          </FormPanel>
+
+          <div className="flex flex-col-reverse gap-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-[#101010] sm:flex-row sm:items-center sm:justify-end">
             <button
               type="button"
-              onClick={reviewDecision.submitReview}
+              onClick={() => {
+                flagRequirements(missingRequirements);
+                reviewDecision.setStatus("changes_requested");
+                reviewDecision.submitReview(
+                  "changes_requested",
+                  reviewDecision.notes ||
+                    "Changes requested. Please review the rejected sections and resubmit.",
+                  reviewDecision.internalSummary,
+                );
+              }}
+              disabled={reviewDecision.saving}
+              className={cn(
+                "inline-flex min-h-11 items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-5 text-sm font-semibold text-rose-700 transition hover:bg-rose-100 disabled:pointer-events-none disabled:opacity-45 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-300",
+              )}
+            >
+              Reject and request changes
+            </button>
+            <button
+              type="button"
+              onClick={acceptOverall}
               disabled={reviewDecision.saving}
               className={cn(
                 actionButtonVariants({ variant: "primary", size: "lg" }),
               )}
             >
-              {reviewDecision.saving ? "Saving..." : "Save review decision"}
+              {reviewDecision.saving ? "Accepting..." : "Accept overall"}
             </button>
           </div>
-          <TextArea
-            label="Review notes"
-            value={reviewDecision.notes}
-            onChange={reviewDecision.setNotes}
-          />
-          <TextArea
-            label="Internal summary"
-            value={reviewDecision.internalSummary}
-            onChange={reviewDecision.setInternalSummary}
-          />
-        </div>
-      </FormPanel>
-
-      <div className="flex flex-col-reverse gap-3 rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-[#101010] sm:flex-row sm:items-center sm:justify-end">
-        <button
-          type="button"
-          onClick={cancelChanges}
-          disabled={!isDirty || saving}
-          className={cn(
-            actionButtonVariants({ variant: "secondary", size: "lg" }),
-          )}
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          onClick={saveProfile}
-          disabled={!isDirty || saving}
-          className={cn(
-            actionButtonVariants({ variant: "primary", size: "lg" }),
-          )}
-        >
-          <svg
-            xmlns="http://www.w3.org/2000/svg"
-            viewBox="0 0 20 20"
-            fill="currentColor"
-            className="h-4 w-4"
-          >
-            <path
-              fillRule="evenodd"
-              d="M4.5 2A2.5 2.5 0 0 0 2 4.5v11A2.5 2.5 0 0 0 4.5 18h11a2.5 2.5 0 0 0 2.5-2.5V7.414a1 1 0 0 0-.293-.707l-4.414-4.414A1 1 0 0 0 12.586 2H4.5ZM5.5 3.75H12.5V7H5.5V3.75Z"
-              clipRule="evenodd"
-            />
-          </svg>
-          {saving ? "Saving..." : "Save"}
-        </button>
-      </div>
+        </>
+      ) : null}
     </div>
   );
 }
@@ -2371,25 +3177,44 @@ export default function EditableServiceProviderProfile({
 function DocumentRequirement({
   document,
   definition,
+  hasError = false,
   editable,
   uploading,
+  canEditReview = true,
+  showMissingStatus = true,
+  highlightUploaded = false,
   onUpload,
   onStatusChange,
   onNotesChange,
 }: {
   document?: ProviderDocumentRecord;
   definition: (typeof REQUIRED_DOCUMENTS)[number];
+  hasError?: boolean;
   editable?: EditableDocument;
   uploading: boolean;
+  canEditReview?: boolean;
+  showMissingStatus?: boolean;
+  highlightUploaded?: boolean;
   onUpload: (file?: File | null) => void;
   onStatusChange: (status: string) => void;
   onNotesChange: (notes: string) => void;
 }) {
   const Icon = definition.icon;
   const status = documentStatus(document);
+  const showStatusIcon =
+    Boolean(document) || hasError || canEditReview || showMissingStatus;
 
   return (
-    <div className="rounded-xl border border-slate-200 p-4 dark:border-white/10">
+    <div
+      className={cn(
+        "rounded-xl border p-4",
+        hasError
+          ? "border-rose-300 dark:border-rose-500/60"
+          : highlightUploaded && document && status !== "rejected"
+            ? "border-emerald-400 dark:border-emerald-400/70"
+            : "border-slate-200 dark:border-white/10",
+      )}
+    >
       <div className="flex items-start gap-3">
         <div className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-slate-100 dark:bg-white/[0.08]">
           <Icon className="h-4 w-4 text-slate-500 dark:text-white/55" />
@@ -2404,7 +3229,10 @@ function DocumentRequirement({
                 {definition.body}
               </div>
             </div>
-            <DocumentStatusIcon status={status} />
+            {hasError ? (
+              <span className="text-xs font-bold text-rose-500">Required</span>
+            ) : null}
+            {showStatusIcon ? <DocumentStatusIcon status={status} /> : null}
           </div>
 
           <div className="mt-3 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-600 dark:bg-white/[0.04] dark:text-white/55">
@@ -2421,7 +3249,7 @@ function DocumentRequirement({
               <select
                 value={editable?.status || document?.status || "uploaded"}
                 onChange={(event) => onStatusChange(event.target.value)}
-                disabled={!document}
+                disabled={!document || !canEditReview}
                 className={inputClassName}
               >
                 {documentStatusOptions.map((option) => (
@@ -2447,20 +3275,26 @@ function DocumentRequirement({
             </label>
           </div>
 
-          <label className="mt-3 block">
-            <div className="mb-1.5 flex items-center justify-between">
-              <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
-                Review notes
-              </span>
+          {canEditReview ? (
+            <label className="mt-3 block">
+              <div className="mb-1.5 flex items-center justify-between">
+                <span className="text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
+                  Review notes
+                </span>
+              </div>
+              <textarea
+                value={editable?.notes ?? document?.notes ?? ""}
+                onChange={(event) => onNotesChange(event.target.value)}
+                disabled={!document}
+                placeholder="Add review notes…"
+                className={cn(inputClassName, "min-h-20 resize-y py-3")}
+              />
+            </label>
+          ) : document?.notes ? (
+            <div className="mt-3 rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-600 dark:border-white/10 dark:bg-white/[0.04] dark:text-white/55">
+              {document.notes}
             </div>
-            <textarea
-              value={editable?.notes ?? document?.notes ?? ""}
-              onChange={(event) => onNotesChange(event.target.value)}
-              disabled={!document}
-              placeholder="Add review notes…"
-              className={cn(inputClassName, "min-h-20 resize-y py-3")}
-            />
-          </label>
+          ) : null}
         </div>
       </div>
     </div>
@@ -2495,16 +3329,28 @@ function DocumentStatusIcon({ status }: { status: DocumentStatus }) {
 }
 
 function FormPanel({
+  id,
   title,
   action,
+  attention = false,
   children,
 }: {
+  id?: string;
   title: string;
   action?: ReactNode;
+  attention?: boolean;
   children: ReactNode;
 }) {
   return (
-    <section className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-white/10 dark:bg-[#101010]">
+    <section
+      id={id}
+      className={cn(
+        "scroll-mt-6 rounded-2xl border bg-white p-5 dark:bg-[#101010]",
+        attention
+          ? "border-amber-300 shadow-[0_0_0_4px_rgba(245,158,11,0.08)] dark:border-amber-400/40"
+          : "border-slate-200 dark:border-white/10",
+      )}
+    >
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <h3 className="text-xl font-bold tracking-tight text-slate-950 dark:text-white">
           {title}
@@ -2513,6 +3359,394 @@ function FormPanel({
       </div>
       {children}
     </section>
+  );
+}
+
+function SectionReviewActions({
+  section,
+  saving,
+  enabled = true,
+  onAccept,
+  onReject,
+}: {
+  section: RequirementSection;
+  saving: boolean;
+  enabled?: boolean;
+  onAccept: (section: RequirementSection) => void;
+  onReject: (section: RequirementSection) => void;
+}) {
+  return (
+    <div className="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-center">
+      <button
+        type="button"
+        onClick={() => onReject(section)}
+        disabled={saving || !enabled}
+        className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-rose-50 px-5 text-sm font-medium text-rose-700 transition hover:bg-rose-100 disabled:pointer-events-none disabled:opacity-50 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/15"
+      >
+        Reject
+      </button>
+      <button
+        type="button"
+        onClick={() => onAccept(section)}
+        disabled={saving || !enabled}
+        className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-slate-900 px-5 text-sm font-medium text-white transition hover:bg-slate-700 disabled:pointer-events-none disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
+      >
+        Accept
+      </button>
+    </div>
+  );
+}
+
+function ProviderSectionActions({
+  changed,
+  saving,
+  onCancel,
+  onSave,
+}: {
+  changed: boolean;
+  saving: boolean;
+  onCancel: () => void;
+  onSave: () => void;
+}) {
+  return (
+    <div className="mt-4 flex flex-col-reverse gap-3 sm:flex-row sm:items-center sm:justify-center">
+      <button
+        type="button"
+        onClick={onCancel}
+        disabled={saving || !changed}
+        className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-rose-50 px-5 text-sm font-medium text-rose-700 transition hover:bg-rose-100 disabled:pointer-events-none disabled:opacity-50 dark:bg-rose-500/10 dark:text-rose-300 dark:hover:bg-rose-500/15"
+      >
+        Cancel
+      </button>
+      <button
+        type="button"
+        onClick={onSave}
+        disabled={saving || !changed}
+        className="inline-flex h-10 items-center justify-center gap-2 rounded-full bg-slate-900 px-5 text-sm font-medium text-white transition hover:bg-slate-700 disabled:pointer-events-none disabled:opacity-50 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-100"
+      >
+        {saving ? "Saving..." : "Save"}
+      </button>
+    </div>
+  );
+}
+
+function ReadinessSummaryPanel({
+  requirements,
+  pendingReviewSections,
+  premiumUpgradeStatus,
+  hasGalleryAccess,
+  operatingTimeEnabled,
+  serviceProviderActive,
+  activationReady,
+  activationSaving,
+  checkingRequirements,
+  canManageActivation,
+  onToggleActivation,
+  onNavigateSection,
+}: {
+  requirements: MissingRequirement[];
+  pendingReviewSections: string[];
+  premiumUpgradeStatus?: string | null;
+  hasGalleryAccess: boolean;
+  operatingTimeEnabled: boolean;
+  serviceProviderActive: boolean;
+  activationReady: boolean;
+  activationSaving: boolean;
+  checkingRequirements: boolean;
+  canManageActivation: boolean;
+  onToggleActivation: (active: boolean) => void;
+  onNavigateSection: (section: RequirementSection) => void;
+}) {
+  const grouped = REQUIREMENT_SECTION_ORDER.filter(
+    (section) =>
+      section !== "Premium Upgrade" || premiumUpgradeStatus === "pending",
+  ).map((section) => {
+    const items = requirements.filter((item) => item.section === section);
+    const incompleteItems = items.filter(
+      (item) => (item.state ?? "incomplete") === "incomplete",
+    );
+    const pendingItems = items.filter(
+      (item) => item.state === "pending_review",
+    );
+    const availability =
+      (section === "Gallery" && !hasGalleryAccess) ||
+      (section === "Operating Time" && !operatingTimeEnabled)
+        ? "unavailable"
+        : "available";
+    const pending =
+      availability === "available" &&
+      (pendingItems.length > 0 ||
+        pendingReviewSections.includes(section) ||
+        (section === "Premium Upgrade" && premiumUpgradeStatus === "pending"));
+
+    return {
+      section,
+      items,
+      incompleteItems,
+      pendingItems,
+      availability,
+      pending,
+    };
+  });
+  const totalMissing = requirements.filter(
+    (requirement) => (requirement.state ?? "incomplete") === "incomplete",
+  ).length;
+  const totalPending = grouped.filter((group) => group.pending).length;
+  const readinessSections = grouped.filter(
+    (group) =>
+      group.availability === "available" && group.section !== "Premium Upgrade",
+  );
+  const completeSections = readinessSections.filter(
+    (group) => group.incompleteItems.length === 0 && !group.pending,
+  );
+  const readinessPercent = Math.round(
+    readinessSections.length > 0
+      ? (completeSections.length / readinessSections.length) * 100
+      : 100,
+  );
+  const canActivate = activationReady && !checkingRequirements;
+
+  return (
+    <section className="rounded-2xl border border-slate-200 bg-white p-4 dark:border-white/10 dark:bg-[#101010]">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex min-w-0 items-center gap-4">
+          <ReadinessProgressCircle value={readinessPercent} />
+          <div className="min-w-0">
+            <h3 className="text-lg font-bold tracking-tight text-slate-950 dark:text-white">
+              Readiness summary
+            </h3>
+            <div className="mt-1 text-sm text-slate-500 dark:text-white/50">
+              {completeSections.length}/{readinessSections.length} readiness
+              sections complete
+              {totalMissing > 0
+                ? ` - ${totalMissing} ${
+                    totalMissing === 1 ? "field" : "fields"
+                  } missing`
+                : totalPending > 0
+                  ? ` - ${totalPending} ${
+                      totalPending === 1 ? "section" : "sections"
+                    } pending review`
+                  : " - ready for activation"}
+            </div>
+          </div>
+        </div>
+
+        {canManageActivation ? (
+          <div className="flex items-center justify-between gap-4 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 dark:border-white/10 dark:bg-white/[0.04] lg:min-w-[300px]">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
+                Service provider
+              </div>
+              <div className="mt-1 flex items-center gap-2 text-sm font-semibold text-slate-950 dark:text-white">
+                <span
+                  className={cn(
+                    "h-2.5 w-2.5 rounded-full",
+                    serviceProviderActive ? "bg-emerald-500" : "bg-slate-400",
+                  )}
+                />
+                {serviceProviderActive ? "Active" : "Inactive"}
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <div>
+                <div className="text-right text-xs font-medium leading-5 text-slate-500 dark:text-white/45">
+                  {checkingRequirements
+                    ? "Checking"
+                    : canActivate
+                      ? "Ready"
+                      : serviceProviderActive
+                        ? "Can deactivate"
+                        : "Locked"}
+                </div>
+              </div>
+              <ActivationToggle
+                checked={serviceProviderActive}
+                disabled={
+                  activationSaving || (!canActivate && !serviceProviderActive)
+                }
+                onChange={onToggleActivation}
+              />
+            </div>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="mt-4 overflow-hidden rounded-xl border border-slate-200 dark:border-white/10">
+        {grouped.map(
+          ({
+            section,
+            items,
+            incompleteItems,
+            pendingItems,
+            availability,
+            pending,
+          }) => {
+            const isUnavailable = availability === "unavailable";
+            const isIncomplete = incompleteItems.length > 0;
+
+            return (
+              <button
+                type="button"
+                key={section}
+                onClick={() => onNavigateSection(section)}
+                className={cn(
+                  "block w-full border-b border-slate-100 px-3 py-2.5 text-left transition last:border-b-0 hover:bg-slate-50 dark:border-white/[0.06] dark:hover:bg-white/[0.03]",
+                  isUnavailable
+                    ? "bg-slate-50/70 dark:bg-white/[0.02]"
+                    : isIncomplete
+                      ? "bg-rose-50/45 dark:bg-rose-400/[0.04]"
+                      : pending
+                        ? "bg-amber-50/45 dark:bg-amber-400/[0.04]"
+                        : "bg-white dark:bg-transparent",
+                )}
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex min-w-[180px] flex-1 items-center gap-2">
+                    <SectionReadinessIcon
+                      missing={incompleteItems.length}
+                      pending={pending}
+                      inactive={isUnavailable}
+                    />
+                    <div className="truncate text-sm font-semibold text-slate-950 dark:text-white">
+                      {section}
+                    </div>
+                  </div>
+                  <span
+                    className={cn(
+                      "rounded-full px-2.5 py-1 text-xs font-semibold",
+                      isUnavailable
+                        ? "bg-slate-200 text-slate-600 dark:bg-white/10 dark:text-white/45"
+                        : isIncomplete
+                          ? "bg-rose-100 text-rose-700 dark:bg-rose-400/10 dark:text-rose-300"
+                          : pending
+                            ? "bg-amber-100 text-amber-700 dark:bg-amber-400/10 dark:text-amber-300"
+                            : "bg-emerald-100 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300",
+                    )}
+                  >
+                    {isUnavailable
+                      ? "Unavailable"
+                      : isIncomplete
+                        ? "Incomplete"
+                        : pending
+                          ? "Pending review"
+                          : "Complete"}
+                  </span>
+                </div>
+
+                {items.length > 0 ? (
+                  <div className="mt-2 flex flex-wrap gap-1.5 pl-7">
+                    {items.map((item) => (
+                      <span
+                        key={item.key}
+                        title={item.detail}
+                        className={cn(
+                          "rounded-full border bg-white px-2.5 py-1 text-xs font-medium dark:bg-[#0b0b0b]",
+                          item.state === "pending_review"
+                            ? "border-amber-200 text-amber-700 dark:border-amber-300/25 dark:text-amber-300"
+                            : "border-rose-200 text-rose-700 dark:border-rose-300/25 dark:text-rose-300",
+                        )}
+                      >
+                        {item.label}
+                      </span>
+                    ))}
+                  </div>
+                ) : null}
+                {section === "Premium Upgrade" &&
+                premiumUpgradeStatus === "pending" &&
+                pendingItems.length === 0 ? (
+                  <div className="mt-2 pl-7 text-xs font-medium text-amber-700 dark:text-amber-300">
+                    Requested upgrade awaiting Off2Zim approval
+                  </div>
+                ) : null}
+              </button>
+            );
+          },
+        )}
+      </div>
+    </section>
+  );
+}
+
+function ReadinessProgressCircle({ value }: { value: number }) {
+  const clamped = Math.max(0, Math.min(100, value));
+  const color =
+    clamped === 100 ? "#10b981" : clamped >= 60 ? "#f59e0b" : "#ef4444";
+
+  return (
+    <div
+      className="grid h-20 w-20 shrink-0 place-items-center rounded-full"
+      style={{
+        background: `conic-gradient(${color} ${clamped * 3.6}deg, rgba(148,163,184,0.2) 0deg)`,
+      }}
+      aria-label={`${clamped}% ready`}
+    >
+      <div className="grid h-[58px] w-[58px] place-items-center rounded-full bg-white text-center shadow-inner dark:bg-[#101010]">
+        <div className="text-lg font-black leading-none text-slate-950 dark:text-white">
+          {clamped}%
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function SectionReadinessIcon({
+  missing,
+  pending = false,
+  inactive = false,
+}: {
+  missing: number;
+  pending?: boolean;
+  inactive?: boolean;
+}) {
+  if (inactive) {
+    return <span className="h-2.5 w-2.5 rounded-full bg-slate-300" />;
+  }
+
+  if (missing > 0) {
+    return <AlertTriangle className="h-5 w-5 text-amber-500" />;
+  }
+
+  if (pending) {
+    return <IonHourglassOutline className="h-5 w-5 text-amber-500" />;
+  }
+
+  return <CheckCircle2 className="h-5 w-5 text-emerald-500" />;
+}
+
+function ActivationToggle({
+  checked,
+  disabled,
+  onChange,
+}: {
+  checked: boolean;
+  disabled: boolean;
+  onChange: (checked: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      disabled={disabled}
+      onClick={() => onChange(!checked)}
+      className={cn(
+        "relative inline-flex h-9 w-16 items-center rounded-full transition",
+        checked ? "bg-emerald-500" : "bg-slate-300 dark:bg-white/15",
+        disabled && "cursor-not-allowed opacity-45",
+      )}
+    >
+      <span
+        className={cn(
+          "absolute top-1 flex h-7 w-7 items-center justify-center rounded-full bg-white text-slate-500 shadow-sm transition",
+          checked ? "left-8 text-emerald-600" : "left-1",
+        )}
+      >
+        <Power className="h-3.5 w-3.5" />
+      </span>
+      <span className="sr-only">
+        {checked ? "Deactivate provider" : "Activate provider"}
+      </span>
+    </button>
   );
 }
 
@@ -2598,6 +3832,7 @@ function ListingsManagerPanel({
   displayName,
   savingListingId,
   validationAttemptedIds,
+  providerMode = false,
   onEditListing,
   onCancelListing,
   onSaveListing,
@@ -2614,12 +3849,13 @@ function ListingsManagerPanel({
   displayName: string;
   savingListingId: string;
   validationAttemptedIds: Set<string>;
+  providerMode?: boolean;
   onEditListing: (
     listing: AdminListingRecord,
     patch: Partial<ListingEditForm>,
   ) => void;
-  onCancelListing: () => void;
-  onSaveListing: () => void;
+  onCancelListing: (listing?: AdminListingRecord) => void;
+  onSaveListing: (listing?: AdminListingRecord) => void;
   onDeleteListing: (listing: AdminListingRecord) => void;
 }) {
   const config = LISTING_SERVICE_CONFIG[service];
@@ -2712,13 +3948,15 @@ function ListingsManagerPanel({
               operatingLocations,
             );
             const statusValue = values.status || listing.status;
+            const displayStatus = getListingStatusDisplayValue(statusValue);
+            const listingNeedsReview =
+              !providerMode && displayStatus === "pending";
             const isStayListing = service === "stays";
             const isEventListing = service === "events";
             const isActivityListing = service === "things_to_do";
             const useFiveColumnListingGrid =
               isStayListing || isEventListing || isActivityListing;
-            const isActive =
-              statusValue === "active" || statusValue === "approved";
+            const isActive = displayStatus === "approved";
             const canToggleArchive = canToggleListingArchive(statusValue);
             const isDirty =
               editing && listingEditFormChanged(values, initialValues);
@@ -2761,7 +3999,12 @@ function ListingsManagerPanel({
             return (
               <div
                 key={listing.id}
-                className="relative rounded-xl border border-slate-200 bg-white p-3 transition dark:border-white/10 dark:bg-[#0b0b0b]"
+                className={cn(
+                  "relative rounded-xl border bg-white p-3 transition dark:bg-[#0b0b0b]",
+                  listingNeedsReview
+                    ? "border-amber-300 shadow-[0_0_0_4px_rgba(245,158,11,0.08)] dark:border-amber-400/40"
+                    : "border-slate-200 dark:border-white/10",
+                )}
               >
                 <button
                   type="button"
@@ -2821,10 +4064,7 @@ function ListingsManagerPanel({
                       <ListingFieldLabel>Listing Status</ListingFieldLabel>
                       <div className="flex items-center gap-3">
                         <div className="w-full sm:w-[220px]">
-                          <StatusPill
-                            value={getListingStatusDisplayValue(statusValue)}
-                            size="field"
-                          />
+                          <StatusPill value={displayStatus} size="field" />
                         </div>
                         <ListingActivationToggle
                           checked={isActive}
@@ -3203,19 +4443,31 @@ function ListingsManagerPanel({
                 <div className="mt-3 flex flex-col-reverse items-stretch justify-center gap-2 sm:flex-row sm:items-center">
                   <button
                     type="button"
-                    onClick={onCancelListing}
-                    disabled={!editing || savingListingId !== ""}
-                    className="inline-flex min-h-10 items-center justify-center rounded-full border border-slate-200 px-4 text-sm font-semibold text-slate-600 transition hover:border-slate-300 hover:text-slate-950 disabled:pointer-events-none disabled:opacity-45 dark:border-white/10 dark:text-white/60 dark:hover:text-white"
+                    onClick={() => onCancelListing(listing)}
+                    disabled={
+                      savingListingId !== "" ||
+                      (!providerMode && !listingNeedsReview)
+                    }
+                    className="inline-flex min-h-10 items-center justify-center rounded-full border border-rose-200 bg-rose-50 px-4 text-sm font-semibold text-rose-700 transition hover:border-rose-300 hover:bg-rose-100 disabled:pointer-events-none disabled:opacity-45 dark:border-rose-400/20 dark:bg-rose-400/10 dark:text-rose-300"
                   >
-                    Cancel
+                    {providerMode ? "Cancel" : "Reject"}
                   </button>
                   <button
                     type="button"
-                    onClick={onSaveListing}
-                    disabled={!isDirty || savingListingId !== ""}
+                    onClick={() => onSaveListing(listing)}
+                    disabled={
+                      savingListingId !== "" ||
+                      (!providerMode && !listingNeedsReview)
+                    }
                     className="inline-flex min-h-10 items-center justify-center rounded-full bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:pointer-events-none disabled:opacity-45 dark:bg-white dark:text-slate-950 dark:hover:bg-white/90"
                   >
-                    {savingListingId === listing.id ? "Saving..." : "Save"}
+                    {savingListingId === listing.id
+                      ? providerMode
+                        ? "Saving..."
+                        : "Accepting..."
+                      : providerMode
+                        ? "Save"
+                        : "Accept"}
                   </button>
                 </div>
               </div>
@@ -4229,24 +5481,28 @@ function LegacyListingsManagerPanel({
 function GalleryManagerPanel({
   active,
   listings,
+  serviceProviderId,
   selectedListingId,
   selectedListing,
   gallery,
   loading,
   uploading,
   reviewingMediaId,
+  canReview = true,
   onSelectListing,
   onUpload,
   onReview,
 }: {
   active: boolean;
   listings: AdminListingRecord[];
+  serviceProviderId: string;
   selectedListingId: string;
   selectedListing: AdminListingRecord | null;
   gallery: ProviderMediaRecord[];
   loading: boolean;
   uploading: boolean;
   reviewingMediaId: string;
+  canReview?: boolean;
   onSelectListing: (listingId: string) => void;
   onUpload: (files: File[]) => void;
   onReview: (
@@ -4293,10 +5549,12 @@ function GalleryManagerPanel({
           >
             {listings.length === 0 ? (
               <option value="">No listings available</option>
-            ) : null}
+            ) : (
+              <option value="">Select listing</option>
+            )}
             {listings.map((listing) => (
               <option key={listing.id} value={listing.id}>
-                {listing.title}
+                {getListingDisplayId(serviceProviderId, listing, listings)}
               </option>
             ))}
           </select>
@@ -4317,16 +5575,26 @@ function GalleryManagerPanel({
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
                 <div className="truncate text-sm font-semibold text-slate-950 dark:text-white">
-                  {selectedListing.title}
+                  {getListingDisplayId(
+                    serviceProviderId,
+                    selectedListing,
+                    listings,
+                  )}
                 </div>
                 <StatusPill value={selectedListing.status} />
                 <StatusPill value={selectedListing.visibility} />
               </div>
-              <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-500 dark:text-white/45">
-                <span>{selectedListing.category}</span>
-                <span>{selectedListing.location}</span>
-                <span>{formatListingPrice(selectedListing)}</span>
-              </div>
+              <label className="mt-3 block max-w-sm">
+                <span className="mb-1.5 block text-xs font-medium uppercase tracking-[0.12em] text-slate-500 dark:text-white/40">
+                  Listing location
+                </span>
+                <input
+                  type="text"
+                  value={selectedListing.location || "Not set"}
+                  readOnly
+                  className={inputClassName}
+                />
+              </label>
             </div>
             <div className="grid grid-cols-4 gap-2 text-center text-xs sm:min-w-[360px]">
               <ReviewCount label="Images" value={stats.total} />
@@ -4390,6 +5658,7 @@ function GalleryManagerPanel({
               images={pendingImages}
               status="pending_review"
               reviewingMediaId={reviewingMediaId}
+              canReview={canReview}
               onReview={onReview}
             />
             <GalleryReviewGroup
@@ -4399,6 +5668,7 @@ function GalleryManagerPanel({
               images={approvedImages}
               status="approved"
               reviewingMediaId={reviewingMediaId}
+              canReview={canReview}
               onReview={onReview}
             />
             <GalleryReviewGroup
@@ -4408,6 +5678,7 @@ function GalleryManagerPanel({
               images={rejectedImages}
               status="rejected"
               reviewingMediaId={reviewingMediaId}
+              canReview={canReview}
               onReview={onReview}
             />
           </div>
@@ -4424,6 +5695,7 @@ function GalleryReviewGroup({
   images,
   status,
   reviewingMediaId,
+  canReview = true,
   onReview,
 }: {
   title: string;
@@ -4432,6 +5704,7 @@ function GalleryReviewGroup({
   images: ProviderMediaRecord[];
   status: "pending_review" | "approved" | "rejected";
   reviewingMediaId: string;
+  canReview?: boolean;
   onReview: (
     image: ProviderMediaRecord,
     status: "approved" | "rejected" | "pending_review",
@@ -4476,6 +5749,7 @@ function GalleryReviewGroup({
               image={image}
               index={index}
               reviewingMediaId={reviewingMediaId}
+              canReview={canReview}
               onReview={onReview}
             />
           ))}
@@ -4489,11 +5763,13 @@ function GalleryImageReviewCard({
   image,
   index,
   reviewingMediaId,
+  canReview = true,
   onReview,
 }: {
   image: ProviderMediaRecord;
   index: number;
   reviewingMediaId: string;
+  canReview?: boolean;
   onReview: (
     image: ProviderMediaRecord,
     status: "approved" | "rejected" | "pending_review",
@@ -4541,46 +5817,48 @@ function GalleryImageReviewCard({
           ) : null}
         </div>
 
-        <div className="flex flex-wrap gap-2">
-          {image.status !== "approved" ? (
-            <button
-              type="button"
-              onClick={() => onReview(image, "approved")}
-              disabled={approving || rejecting || returning}
-              className={cn(
-                actionButtonVariants({ variant: "secondary", size: "sm" }),
-                "h-8 border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-400/20 dark:text-emerald-300 dark:hover:bg-emerald-400/10",
-              )}
-            >
-              {approving ? "Approving..." : "Approve"}
-            </button>
-          ) : null}
-          {image.status !== "rejected" ? (
-            <button
-              type="button"
-              onClick={() => onReview(image, "rejected")}
-              disabled={approving || rejecting || returning}
-              className={cn(
-                actionButtonVariants({ variant: "secondary", size: "sm" }),
-                "h-8 border-rose-200 text-rose-700 hover:bg-rose-50 dark:border-rose-400/20 dark:text-rose-300 dark:hover:bg-rose-400/10",
-              )}
-            >
-              {rejecting ? "Rejecting..." : "Reject"}
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={() => onReview(image, "pending_review")}
-              disabled={approving || rejecting || returning}
-              className={cn(
-                actionButtonVariants({ variant: "secondary", size: "sm" }),
-                "h-8",
-              )}
-            >
-              {returning ? "Moving..." : "Review again"}
-            </button>
-          )}
-        </div>
+        {canReview ? (
+          <div className="flex flex-wrap gap-2">
+            {image.status !== "approved" ? (
+              <button
+                type="button"
+                onClick={() => onReview(image, "approved")}
+                disabled={approving || rejecting || returning}
+                className={cn(
+                  actionButtonVariants({ variant: "secondary", size: "sm" }),
+                  "h-8 border-emerald-200 text-emerald-700 hover:bg-emerald-50 dark:border-emerald-400/20 dark:text-emerald-300 dark:hover:bg-emerald-400/10",
+                )}
+              >
+                {approving ? "Approving..." : "Approve"}
+              </button>
+            ) : null}
+            {image.status !== "rejected" ? (
+              <button
+                type="button"
+                onClick={() => onReview(image, "rejected")}
+                disabled={approving || rejecting || returning}
+                className={cn(
+                  actionButtonVariants({ variant: "secondary", size: "sm" }),
+                  "h-8 border-rose-200 text-rose-700 hover:bg-rose-50 dark:border-rose-400/20 dark:text-rose-300 dark:hover:bg-rose-400/10",
+                )}
+              >
+                {rejecting ? "Rejecting..." : "Reject"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onReview(image, "pending_review")}
+                disabled={approving || rejecting || returning}
+                className={cn(
+                  actionButtonVariants({ variant: "secondary", size: "sm" }),
+                  "h-8",
+                )}
+              >
+                {returning ? "Moving..." : "Review again"}
+              </button>
+            )}
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -4612,13 +5890,27 @@ function GalleryStatusIcon({
 function SubscriptionTierPanel({
   provider,
   saving,
+  canApprovePending = false,
   onTogglePremium,
 }: {
   provider: ProviderCompanyRecord;
   saving: boolean;
+  canApprovePending?: boolean;
   onTogglePremium: (enabled: boolean) => void;
 }) {
-  const isPremium = provider.providerTier === "premium";
+  const isPremium =
+    provider.providerTier === "premium" &&
+    ["active", "trialing"].includes(provider.tierStatus);
+  const tierChangePending = provider.premiumUpgradeStatus === "pending";
+  const requestedTier = provider.tierChangeRequestedTier;
+  const upgradePending = tierChangePending && requestedTier === "premium";
+  const downgradePending = tierChangePending && requestedTier === "basic";
+  const canSelectPremium = tierChangePending
+    ? canApprovePending || isPremium
+    : !isPremium;
+  const canSelectBasic = tierChangePending
+    ? canApprovePending || !isPremium
+    : isPremium;
 
   return (
     <div className="mt-6">
@@ -4629,41 +5921,49 @@ function SubscriptionTierPanel({
         {/* Basic card */}
         <div
           role="button"
-          tabIndex={saving || !isPremium ? -1 : 0}
+          tabIndex={saving || !canSelectBasic ? -1 : 0}
           aria-pressed={!isPremium}
-          onClick={() => !saving && isPremium && onTogglePremium(false)}
+          onClick={() => !saving && canSelectBasic && onTogglePremium(false)}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
-              if (!saving && isPremium) onTogglePremium(false);
+              if (!saving && canSelectBasic) {
+                onTogglePremium(false);
+              }
             }
           }}
           className={cn(
             "overflow-hidden rounded-xl border transition-all duration-200",
-            !isPremium
-              ? "border-blue-300/60 shadow-md dark:border-blue-400/25"
-              : "cursor-pointer border-slate-200 opacity-50 hover:opacity-75 dark:border-white/10",
+            downgradePending
+              ? "border-amber-300/70 shadow-sm dark:border-amber-400/30"
+              : !isPremium
+                ? "border-blue-300/60 shadow-md dark:border-blue-400/25"
+                : "cursor-pointer border-slate-200 opacity-50 hover:opacity-75 dark:border-white/10",
             saving && "pointer-events-none",
           )}
         >
           <div
             className={cn(
               "flex items-center justify-between px-4 py-3 transition-colors duration-200",
-              !isPremium
-                ? "bg-blue-500/[0.05] dark:bg-blue-400/[0.06]"
-                : "bg-slate-50 dark:bg-white/[0.02]",
+              downgradePending
+                ? "bg-amber-500/[0.06] dark:bg-amber-400/[0.08]"
+                : !isPremium
+                  ? "bg-blue-500/[0.05] dark:bg-blue-400/[0.06]"
+                  : "bg-slate-50 dark:bg-white/[0.02]",
             )}
           >
             <div className="flex items-center gap-2">
               <div
                 className={cn(
                   "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all duration-200",
-                  !isPremium
-                    ? "border-blue-500 bg-blue-500 dark:border-blue-400 dark:bg-blue-400"
-                    : "border-slate-300 dark:border-white/20",
+                  downgradePending
+                    ? "border-amber-400 bg-amber-400"
+                    : !isPremium
+                      ? "border-blue-500 bg-blue-500 dark:border-blue-400 dark:bg-blue-400"
+                      : "border-slate-300 dark:border-white/20",
                 )}
               >
-                {!isPremium && (
+                {(!isPremium || downgradePending) && (
                   <svg
                     viewBox="0 0 10 8"
                     className="h-2.5 w-2.5 fill-none"
@@ -4683,9 +5983,16 @@ function SubscriptionTierPanel({
                 Basic
               </span>
             </div>
-            {!isPremium && (
-              <span className="rounded-full bg-blue-500/10 px-2 py-0.5 text-[10px] font-semibold text-blue-600 dark:bg-blue-400/10 dark:text-blue-400">
-                Current
+            {(!isPremium || downgradePending) && (
+              <span
+                className={cn(
+                  "rounded-full px-2 py-0.5 text-[10px] font-semibold",
+                  downgradePending
+                    ? "bg-amber-100 text-amber-700 dark:bg-amber-400/10 dark:text-amber-300"
+                    : "bg-blue-500/10 text-blue-600 dark:bg-blue-400/10 dark:text-blue-400",
+                )}
+              >
+                {downgradePending ? "Requested" : "Current"}
               </span>
             )}
           </div>
@@ -4732,20 +6039,27 @@ function SubscriptionTierPanel({
         {/* Premium card */}
         <div
           role="button"
-          tabIndex={saving || isPremium ? -1 : 0}
-          aria-pressed={isPremium}
-          onClick={() => !saving && !isPremium && onTogglePremium(true)}
+          tabIndex={saving || !canSelectPremium ? -1 : 0}
+          aria-pressed={isPremium || upgradePending}
+          onClick={() => !saving && canSelectPremium && onTogglePremium(true)}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
-              if (!saving && !isPremium) onTogglePremium(true);
+              if (!saving && canSelectPremium) {
+                onTogglePremium(true);
+              }
             }
           }}
           className={cn(
             "overflow-hidden rounded-xl border transition-all duration-200",
             isPremium
               ? "border-yellow-400/50 shadow-md dark:border-yellow-500/25"
-              : "cursor-pointer border-slate-200 opacity-50 hover:opacity-75 dark:border-white/10",
+              : upgradePending
+                ? "border-amber-300/70 shadow-sm dark:border-amber-400/30"
+                : "cursor-pointer border-slate-200 opacity-50 hover:opacity-75 dark:border-white/10",
+            canSelectPremium &&
+              upgradePending &&
+              "cursor-pointer hover:opacity-90",
             saving && "pointer-events-none",
           )}
         >
@@ -4754,7 +6068,9 @@ function SubscriptionTierPanel({
               "flex items-center justify-between px-4 py-3 transition-colors duration-200",
               isPremium
                 ? "bg-[#d4af37]/[0.06] dark:bg-[#d4af37]/[0.07]"
-                : "bg-slate-50 dark:bg-white/[0.02]",
+                : upgradePending
+                  ? "bg-amber-500/[0.06] dark:bg-amber-400/[0.08]"
+                  : "bg-slate-50 dark:bg-white/[0.02]",
             )}
           >
             <div className="flex items-center gap-2">
@@ -4763,10 +6079,12 @@ function SubscriptionTierPanel({
                   "flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-all duration-200",
                   isPremium
                     ? "border-[#b8960c] bg-[#d4af37]"
-                    : "border-slate-300 dark:border-white/20",
+                    : upgradePending
+                      ? "border-amber-400 bg-amber-400"
+                      : "border-slate-300 dark:border-white/20",
                 )}
               >
-                {isPremium && (
+                {(isPremium || upgradePending) && (
                   <svg
                     viewBox="0 0 10 8"
                     className="h-2.5 w-2.5 fill-none"
@@ -4786,11 +6104,15 @@ function SubscriptionTierPanel({
                 Premium
               </span>
             </div>
-            {isPremium && (
+            {isPremium ? (
               <span className="rounded-full bg-[#d4af37]/15 px-2 py-0.5 text-[10px] font-semibold text-[#9a7a0a] dark:bg-[#d4af37]/10 dark:text-[#d4af37]">
                 Current
               </span>
-            )}
+            ) : upgradePending ? (
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-400/10 dark:text-amber-300">
+                Requested
+              </span>
+            ) : null}
           </div>
           <ul className="divide-y divide-slate-100 dark:divide-white/[0.04]">
             {TIER_FEATURES.map((feature) => (
@@ -4868,32 +6190,6 @@ function LocationPinIcon() {
   return <LocationIconBubble compact />;
 }
 
-function LocationIconBubble({ compact = false }: { compact?: boolean }) {
-  return (
-    <span
-      className={cn(
-        "flex shrink-0 items-center justify-center rounded-full bg-white shadow-sm dark:bg-[#1c1c1e]",
-        compact ? "h-5 w-5" : "mr-1.5 h-6 w-6",
-      )}
-    >
-      <MobileLocationGlyph className={compact ? "h-3 w-3" : "h-3.5 w-3.5"} />
-    </span>
-  );
-}
-
-function MobileLocationGlyph({ className }: { className?: string }) {
-  return (
-    <svg
-      aria-hidden="true"
-      viewBox="0 0 512 512"
-      className={className}
-      fill="#ff3b30"
-    >
-      <path d="M256 32C167.67 32 96 103.67 96 192c0 120 160 288 160 288s160-168 160-288C416 103.67 344.33 32 256 32Zm0 224a64 64 0 1 1 64-64 64.07 64.07 0 0 1-64 64Z" />
-    </svg>
-  );
-}
-
 function Field({
   label,
   value,
@@ -4913,13 +6209,12 @@ function Field({
   initialValue?: string;
   hasError?: boolean;
 }) {
-  const borderOverride =
-    initialValue !== undefined
-      ? value.trim() === ""
-        ? "border-rose-400 focus:border-rose-400 dark:border-rose-500 dark:focus:border-rose-500"
-        : value !== initialValue
-          ? "border-emerald-500 focus:border-emerald-500 dark:border-emerald-400 dark:focus:border-emerald-400"
-          : ""
+  const borderOverride = hasError
+    ? "border-rose-400 focus:border-rose-400 dark:border-rose-500 dark:focus:border-rose-500"
+    : initialValue !== undefined
+      ? value.trim() !== "" && value !== initialValue
+        ? "border-emerald-500 focus:border-emerald-500 dark:border-emerald-400 dark:focus:border-emerald-400"
+        : ""
       : "";
 
   return (
@@ -4965,13 +6260,12 @@ function TextArea({
   initialValue?: string;
   hasError?: boolean;
 }) {
-  const borderOverride =
-    initialValue !== undefined
-      ? value.trim() === ""
-        ? "border-rose-400 focus:border-rose-400 dark:border-rose-500 dark:focus:border-rose-500"
-        : value !== initialValue
-          ? "border-emerald-500 focus:border-emerald-500 dark:border-emerald-400 dark:focus:border-emerald-400"
-          : ""
+  const borderOverride = hasError
+    ? "border-rose-400 focus:border-rose-400 dark:border-rose-500 dark:focus:border-rose-500"
+    : initialValue !== undefined
+      ? value.trim() !== "" && value !== initialValue
+        ? "border-emerald-500 focus:border-emerald-500 dark:border-emerald-400 dark:focus:border-emerald-400"
+        : ""
       : "";
 
   return (
@@ -5091,20 +6385,6 @@ function StatusPill({
     >
       {normalized}
     </span>
-  );
-}
-
-function LocationPill({ location }: { location: string }) {
-  return (
-    <div
-      aria-label={`Location: ${location}`}
-      className="inline-flex max-w-full items-center rounded-full bg-black/[0.04] px-3.5 py-2 text-sm text-slate-950 dark:bg-white/10 dark:text-white"
-    >
-      <LocationIconBubble />
-      <span className="truncate font-semibold text-slate-950 dark:text-white">
-        {location}
-      </span>
-    </div>
   );
 }
 
@@ -5684,10 +6964,10 @@ function getInitials(value: string) {
 
 function toForm(provider: ProviderCompanyRecord): ProviderFormState {
   const operatingTime = parseOperatingHours(provider.operatingHours);
-  const selectedServices =
+  const selectedServices: ServiceProviderCategoryId[] =
     provider.serviceCategories.length > 0
       ? [provider.serviceCategories[0]]
-      : (["things_to_do"] as ServiceProviderCategoryId[]);
+      : [];
 
   return {
     companyName: provider.companyName,
@@ -5751,9 +7031,10 @@ function formToPayload(form: ProviderFormState) {
     businessDescription: form.businessDescription || null,
     establishedYear: form.establishedYear ? Number(form.establishedYear) : null,
     numberOfEmployees: form.numberOfEmployees || null,
-    operatingHours: form.operatingTimeEnabled
-      ? formatOperatingHours(form.operatingSchedule)
-      : "closed",
+    operatingHours: formatOperatingHours(
+      form.operatingSchedule,
+      form.operatingTimeEnabled,
+    ),
     socialMediaLinks: {},
     servicesOffered: serviceLabels,
     serviceAreas: form.serviceAreas,
@@ -5761,6 +7042,42 @@ function formToPayload(form: ProviderFormState) {
     tinNumber: form.tinNumber || null,
     taxClearanceExpiresAt: form.taxClearanceExpiresAt || null,
     documents: form.documents,
+  };
+}
+
+function formToProviderPayload(form: ProviderFormState) {
+  const serviceLabels = form.selectedServices.map(
+    (service) => serviceProviderCategoryLabels[service],
+  );
+
+  return {
+    companyName: form.tradingName || form.companyName,
+    tradingName: form.tradingName || null,
+    legalCompanyName: form.legalCompanyName || null,
+    incorporationDate: form.incorporationDate || null,
+    businessRegistrationNumber: form.businessRegistrationNumber,
+    mainContactPerson: form.mainContactPerson,
+    contactPersonPhone: form.contactPersonPhone || null,
+    contactPersonIdType: form.contactPersonIdType || null,
+    contactPersonIdNumber: form.contactPersonIdNumber || null,
+    businessPhone: form.businessPhone,
+    businessEmail: form.businessEmail,
+    physicalAddress: form.physicalAddress,
+    headquartersCity: form.headquartersCity || null,
+    businessCategory: serviceLabels.join(", ") || null,
+    businessDescription: form.businessDescription || null,
+    establishedYear: form.establishedYear ? Number(form.establishedYear) : null,
+    numberOfEmployees: form.numberOfEmployees || null,
+    operatingHours: formatOperatingHours(
+      form.operatingSchedule,
+      form.operatingTimeEnabled,
+    ),
+    socialMediaLinks: {},
+    servicesOffered: serviceLabels,
+    serviceAreas: form.serviceAreas,
+    zimraBpNumber: form.zimraBpNumber || null,
+    tinNumber: form.tinNumber || null,
+    taxClearanceExpiresAt: form.taxClearanceExpiresAt || null,
   };
 }
 
@@ -5784,10 +7101,7 @@ function parseOperatingHours(value?: string | null) {
 
   const parsedSchedule = parseJsonOperatingHours(value);
   if (parsedSchedule) {
-    return {
-      enabled: Object.values(parsedSchedule).some((day) => day.enabled),
-      schedule: parsedSchedule,
-    };
+    return parsedSchedule;
   }
 
   const parsed = createDefaultOperatingSchedule([], "08:00", "17:00");
@@ -5825,6 +7139,7 @@ function parseOperatingHours(value?: string | null) {
 function parseJsonOperatingHours(value: string) {
   try {
     const parsed = JSON.parse(value) as {
+      enabled?: boolean;
       schedule?: Partial<Record<OperatingDayId, Partial<OperatingDaySchedule>>>;
     };
     const source = (parsed.schedule ?? parsed) as Partial<
@@ -5844,7 +7159,13 @@ function parseJsonOperatingHours(value: string) {
       };
     }
 
-    return schedule;
+    return {
+      enabled:
+        typeof parsed.enabled === "boolean"
+          ? parsed.enabled
+          : Object.values(schedule).some((day) => day.enabled),
+      schedule,
+    };
   } catch {
     return null;
   }
@@ -5876,24 +7197,9 @@ function normalizeDayId(value: string): OperatingDayId | null {
 
 function formatOperatingHours(
   schedule: Record<OperatingDayId, OperatingDaySchedule>,
+  enabled = true,
 ) {
-  const groups = new Map<string, string[]>();
-
-  for (const day of DAY_OPTIONS) {
-    const entry = schedule[day.id];
-    if (!entry?.enabled) continue;
-
-    const opensAt = entry.opensAt || "08:00";
-    const closesAt = entry.closesAt || "17:00";
-    const key = `${opensAt} - ${closesAt}`;
-    groups.set(key, [...(groups.get(key) ?? []), day.label]);
-  }
-
-  if (groups.size === 0) return "";
-
-  return Array.from(groups.entries())
-    .map(([time, days]) => `${days.join(", ")} ${time}`)
-    .join("; ");
+  return JSON.stringify({ enabled, schedule });
 }
 
 function mapDocumentsByType(documents: ProviderDocumentRecord[]) {
@@ -5909,6 +7215,460 @@ function mapDocumentsByType(documents: ProviderDocumentRecord[]) {
   );
 }
 
+function reviewSectionForDocumentType(type: string): RequirementSection {
+  if (type === "contact_person_id") return "Contact Person";
+  if (type === "certificate_of_incorporation") {
+    return "Company Verification";
+  }
+  return "ZIMRA and Tax Clearance";
+}
+
+function requirementSectionTargetId(section: RequirementSection) {
+  if (section === "Operating Time") return "operating-time";
+  if (section === "Contact Person") return "contact-person";
+  if (section === "Listings") return "listings";
+  if (section === "Gallery") return "gallery";
+  if (section === "Company Verification") return "company-verification";
+  if (section === "ZIMRA and Tax Clearance") return "zimra-tax";
+  return "profile";
+}
+
+function requirementSectionDetailSection(
+  section: RequirementSection,
+): ProviderDetailSection {
+  if (section === "Operating Time") return "operating-time";
+  if (section === "Contact Person") return "contact-person";
+  if (section === "Listings") return "listings";
+  if (section === "Gallery") return "gallery";
+  if (
+    section === "Company Verification" ||
+    section === "ZIMRA and Tax Clearance"
+  ) {
+    return "verification";
+  }
+  return "profile";
+}
+
+function getReadinessAttentionSections({
+  requirements,
+  pendingReviewSections,
+  premiumUpgradeStatus,
+  hasGalleryAccess,
+  operatingTimeEnabled,
+}: {
+  requirements: MissingRequirement[];
+  pendingReviewSections: string[];
+  premiumUpgradeStatus?: string | null;
+  hasGalleryAccess: boolean;
+  operatingTimeEnabled: boolean;
+}) {
+  const attentionSections = REQUIREMENT_SECTION_ORDER.filter((section) => {
+    const unavailable =
+      (section === "Gallery" && !hasGalleryAccess) ||
+      (section === "Operating Time" && !operatingTimeEnabled) ||
+      (section === "Premium Upgrade" &&
+        !["pending", "approved"].includes(premiumUpgradeStatus ?? "none"));
+    if (unavailable) return false;
+
+    const hasIncompleteRequirement = requirements.some(
+      (requirement) =>
+        requirement.section === section &&
+        (requirement.state ?? "incomplete") === "incomplete",
+    );
+    const pending =
+      requirements.some(
+        (requirement) =>
+          requirement.section === section &&
+          requirement.state === "pending_review",
+      ) ||
+      pendingReviewSections.includes(section) ||
+      (section === "Premium Upgrade" && premiumUpgradeStatus === "pending");
+
+    return hasIncompleteRequirement || pending;
+  }).map(requirementSectionDetailSection);
+
+  return Array.from(new Set(attentionSections));
+}
+
+function getMissingRequirements({
+  provider,
+  form,
+  documentsByType,
+  listings,
+  gallery,
+  hasGalleryAccess,
+}: {
+  provider: ProviderCompanyRecord;
+  form: ProviderFormState;
+  documentsByType: Record<string, ProviderDocumentRecord>;
+  listings: AdminListingRecord[];
+  gallery: ProviderMediaRecord[];
+  hasGalleryAccess: boolean;
+}) {
+  const requirements: MissingRequirement[] = [];
+  const add = (
+    section: RequirementSection,
+    key: string,
+    label: string,
+    detail: string,
+    options: Pick<MissingRequirement, "state" | "blocksActivation"> = {},
+  ) => requirements.push({ section, key, label, detail, ...options });
+
+  if (!provider.profileImageUrl) {
+    add(
+      "Profile",
+      "profileImageUrl",
+      "Profile picture",
+      "Upload a profile picture.",
+    );
+  }
+  if (!form.tradingName.trim()) {
+    add(
+      "Profile",
+      "tradingName",
+      "Display name",
+      "Add the public display name.",
+    );
+  }
+  if (!form.businessPhone.trim()) {
+    add(
+      "Profile",
+      "businessPhone",
+      "Business phone",
+      "Add a business phone number.",
+    );
+  }
+  if (!form.businessEmail.trim()) {
+    add(
+      "Profile",
+      "businessEmail",
+      "Business email",
+      "Add a business email address.",
+    );
+  }
+  if (!form.businessDescription.trim()) {
+    add(
+      "Profile",
+      "businessDescription",
+      "About us",
+      "Add the service provider profile description.",
+    );
+  }
+  if (form.serviceAreas.length === 0) {
+    add(
+      "Profile",
+      "serviceAreas",
+      "Operating locations",
+      "Select at least one operating location.",
+    );
+  }
+  if (form.selectedServices.length === 0) {
+    add(
+      "Profile",
+      "selectedServices",
+      "Service",
+      "Select the service category.",
+    );
+  }
+
+  const enabledDays = DAY_OPTIONS.filter(
+    (day) => form.operatingSchedule[day.id]?.enabled,
+  );
+  const incompleteDay = enabledDays.find((day) => {
+    const schedule = form.operatingSchedule[day.id];
+    return !schedule?.opensAt || !schedule?.closesAt;
+  });
+  if (form.operatingTimeEnabled && enabledDays.length === 0) {
+    add(
+      "Operating Time",
+      "operatingHours",
+      "Operating days",
+      "Select at least one operating day.",
+    );
+  } else if (form.operatingTimeEnabled && incompleteDay) {
+    add(
+      "Operating Time",
+      "operatingHours",
+      `${incompleteDay.fullLabel} hours`,
+      "Add opening and closing times.",
+    );
+  }
+
+  if (!form.mainContactPerson.trim()) {
+    add(
+      "Contact Person",
+      "mainContactPerson",
+      "Contact person",
+      "Add the main contact person.",
+    );
+  }
+  if (!form.contactPersonPhone.trim()) {
+    add(
+      "Contact Person",
+      "contactPersonPhone",
+      "Contact number",
+      "Add the contact person's phone number.",
+    );
+  }
+  if (!form.businessEmail.trim()) {
+    add(
+      "Contact Person",
+      "businessEmail",
+      "Contact email",
+      "Add the contact person's email address.",
+    );
+  }
+  if (!form.physicalAddress.trim()) {
+    add(
+      "Contact Person",
+      "physicalAddress",
+      "Physical address",
+      "Add the physical address.",
+    );
+  }
+  if (!form.contactPersonIdType.trim()) {
+    add(
+      "Contact Person",
+      "contactPersonIdType",
+      "ID type",
+      "Select ID or passport.",
+    );
+  }
+  if (!form.contactPersonIdNumber.trim()) {
+    add(
+      "Contact Person",
+      "contactPersonIdNumber",
+      "ID / passport number",
+      "Add the ID or passport number.",
+    );
+  }
+  addDocumentRequirement(
+    requirements,
+    documentsByType.contact_person_id,
+    "Contact Person",
+    "contact_person_id",
+    "ID document",
+  );
+
+  const selectedService = form.selectedServices[0];
+  const relevantListings = selectedService
+    ? listings.filter((listing) =>
+        listingMatchesService(listing, selectedService),
+      )
+    : listings;
+  const publishableListings = relevantListings.filter((listing) =>
+    ["active", "approved"].includes(
+      getListingStatusDisplayValue(listing.status),
+    ),
+  );
+  if (relevantListings.length === 0) {
+    add("Listings", "listings", "Listing", "Create at least one listing.");
+  }
+  relevantListings.forEach((listing) => {
+    const listingForm = toListingEditForm(
+      listing,
+      getProviderDisplayName(provider, form),
+      form.serviceAreas,
+    );
+    const listingErrors = getListingValidationErrors(
+      listingForm,
+      selectedService || "things_to_do",
+      form.serviceAreas,
+    );
+    const displayId = getListingDisplayId(
+      getServiceProviderDisplayId(provider),
+      listing,
+      listings,
+    );
+    const displayStatus = getListingStatusDisplayValue(listing.status);
+    if (
+      listingErrors.size > 0 ||
+      ["draft", "rejected", "archived"].includes(displayStatus)
+    ) {
+      add(
+        "Listings",
+        `listing:${listing.id}`,
+        `${displayId} incomplete`,
+        "Complete and approve this listing before publishing.",
+      );
+    } else if (!["active", "approved"].includes(displayStatus)) {
+      add(
+        "Listings",
+        `listing:${listing.id}`,
+        `${displayId} pending review`,
+        "This listing is complete and awaiting Off2Zim approval.",
+        { state: "pending_review" },
+      );
+    }
+  });
+
+  if (hasGalleryAccess) {
+    if (publishableListings.length === 0) {
+      add(
+        "Gallery",
+        "gallery",
+        "Gallery",
+        "Approve a listing before adding gallery images.",
+      );
+    } else {
+      publishableListings.forEach((listing) => {
+        const hasApprovedImage = gallery.some(
+          (image) =>
+            image.listingId === listing.id && image.status === "approved",
+        );
+        if (!hasApprovedImage) {
+          const hasPendingImage = gallery.some(
+            (image) =>
+              image.listingId === listing.id &&
+              image.status === "pending_review",
+          );
+          add(
+            "Gallery",
+            `gallery:${listing.id}`,
+            `${listing.title} gallery`,
+            hasPendingImage
+              ? "Gallery images are awaiting Off2Zim approval."
+              : "Upload at least one gallery image for this listing.",
+            hasPendingImage ? { state: "pending_review" } : undefined,
+          );
+        }
+      });
+    }
+  }
+
+  if (!form.legalCompanyName.trim()) {
+    add(
+      "Company Verification",
+      "legalCompanyName",
+      "Registered company name",
+      "Add the name from the certificate of incorporation.",
+    );
+  }
+  if (!form.incorporationDate.trim()) {
+    add(
+      "Company Verification",
+      "incorporationDate",
+      "Date incorporated",
+      "Add the date of incorporation.",
+    );
+  }
+  if (!form.businessRegistrationNumber.trim()) {
+    add(
+      "Company Verification",
+      "businessRegistrationNumber",
+      "Company registration number",
+      "Add the company registration number.",
+    );
+  }
+  addDocumentRequirement(
+    requirements,
+    documentsByType.certificate_of_incorporation,
+    "Company Verification",
+    "certificate_of_incorporation",
+    "Certificate of incorporation",
+  );
+
+  if (!form.zimraBpNumber.trim()) {
+    add(
+      "ZIMRA and Tax Clearance",
+      "zimraBpNumber",
+      "ZIMRA BP number",
+      "Add the ZIMRA BP number.",
+    );
+  }
+  if (!form.tinNumber.trim()) {
+    add(
+      "ZIMRA and Tax Clearance",
+      "tinNumber",
+      "TIN number",
+      "Add the TIN number.",
+    );
+  }
+  if (!form.taxClearanceExpiresAt.trim()) {
+    add(
+      "ZIMRA and Tax Clearance",
+      "taxClearanceExpiresAt",
+      "Tax clearance expiry",
+      "Add the tax clearance expiry date.",
+    );
+  } else if (isPastDate(form.taxClearanceExpiresAt)) {
+    add(
+      "ZIMRA and Tax Clearance",
+      "taxClearanceExpiresAt",
+      "Tax clearance expired",
+      "Upload a current tax clearance and update the expiry date.",
+    );
+  }
+  addDocumentRequirement(
+    requirements,
+    documentsByType.tax_clearance,
+    "ZIMRA and Tax Clearance",
+    "tax_clearance",
+    "Tax clearance document",
+  );
+
+  if (provider.premiumUpgradeStatus === "pending") {
+    add(
+      "Premium Upgrade",
+      "premiumUpgrade",
+      "Subscription tier change",
+      `Requested ${
+        provider.tierChangeRequestedTier || "subscription"
+      } tier change is awaiting Off2Zim approval.`,
+      { state: "pending_review", blocksActivation: false },
+    );
+  }
+
+  return dedupeRequirements(requirements);
+}
+
+function addDocumentRequirement(
+  requirements: MissingRequirement[],
+  document: ProviderDocumentRecord | undefined,
+  section: RequirementSection,
+  key: string,
+  label: string,
+) {
+  const status = documentStatus(document);
+  if (status === "approved") return;
+  requirements.push({
+    section,
+    key,
+    label,
+    state: status === "pending" ? "pending_review" : "incomplete",
+    detail:
+      status === "missing"
+        ? "Upload the required document."
+        : status === "pending"
+          ? "Document is uploaded but still awaiting admin approval."
+          : "Document was rejected and needs to be replaced or reviewed.",
+  });
+}
+
+function dedupeRequirements(requirements: MissingRequirement[]) {
+  const seen = new Set<string>();
+  return requirements.filter((requirement) => {
+    if (seen.has(requirement.key)) return false;
+    seen.add(requirement.key);
+    return true;
+  });
+}
+
+function isPastDate(value: string) {
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return false;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  return date < today;
+}
+
+function isProviderActivated(provider: ProviderCompanyRecord) {
+  return (
+    provider.onboardingStatus === "basic_approved" &&
+    ["active", "trialing"].includes(provider.tierStatus)
+  );
+}
+
 function documentStatus(document?: ProviderDocumentRecord): DocumentStatus {
   if (!document) return "missing";
   if (document.status === "approved") return "approved";
@@ -5919,6 +7679,81 @@ function documentStatus(document?: ProviderDocumentRecord): DocumentStatus {
     return "rejected";
   }
   return "pending";
+}
+
+function isDocumentAwaitingReview(document?: ProviderDocumentRecord) {
+  return Boolean(
+    document &&
+      ["uploaded", "pending", "pending_review"].includes(document.status),
+  );
+}
+
+function getProviderSaveErrors({
+  section,
+  provider,
+  form,
+  documentsByType,
+}: {
+  section: RequirementSection;
+  provider: ProviderCompanyRecord;
+  form: ProviderFormState;
+  documentsByType: Record<string, ProviderDocumentRecord>;
+}) {
+  const errors = new Set<string>();
+  const requireField = (key: keyof ProviderFormState, value: string) => {
+    if (!value.trim()) errors.add(key);
+  };
+
+  if (section === "Profile") {
+    if (!provider.profileImageUrl) errors.add("profileImageUrl");
+    requireField("tradingName", form.tradingName);
+    requireField("businessPhone", form.businessPhone);
+    requireField("businessEmail", form.businessEmail);
+    requireField("businessDescription", form.businessDescription);
+    if (form.serviceAreas.length === 0) errors.add("serviceAreas");
+    if (form.selectedServices.length === 0) errors.add("selectedServices");
+  }
+
+  if (section === "Operating Time" && form.operatingTimeEnabled) {
+    const enabledDays = DAY_OPTIONS.filter(
+      (day) => form.operatingSchedule[day.id]?.enabled,
+    );
+    const missingHours = enabledDays.some((day) => {
+      const schedule = form.operatingSchedule[day.id];
+      return !schedule?.opensAt || !schedule?.closesAt;
+    });
+    if (enabledDays.length === 0 || missingHours) {
+      errors.add("operatingHours");
+    }
+  }
+
+  if (section === "Contact Person") {
+    requireField("mainContactPerson", form.mainContactPerson);
+    requireField("contactPersonPhone", form.contactPersonPhone);
+    requireField("businessEmail", form.businessEmail);
+    requireField("physicalAddress", form.physicalAddress);
+    requireField("contactPersonIdType", form.contactPersonIdType);
+    requireField("contactPersonIdNumber", form.contactPersonIdNumber);
+    if (!documentsByType.contact_person_id) errors.add("contact_person_id");
+  }
+
+  if (section === "Company Verification") {
+    requireField("legalCompanyName", form.legalCompanyName);
+    requireField("incorporationDate", form.incorporationDate);
+    requireField("businessRegistrationNumber", form.businessRegistrationNumber);
+    if (!documentsByType.certificate_of_incorporation) {
+      errors.add("certificate_of_incorporation");
+    }
+  }
+
+  if (section === "ZIMRA and Tax Clearance") {
+    requireField("zimraBpNumber", form.zimraBpNumber);
+    requireField("tinNumber", form.tinNumber);
+    requireField("taxClearanceExpiresAt", form.taxClearanceExpiresAt);
+    if (!documentsByType.tax_clearance) errors.add("tax_clearance");
+  }
+
+  return errors;
 }
 
 function getGalleryReviewStats(images: ProviderMediaRecord[]) {
@@ -6152,6 +7987,104 @@ function toListingEditForm(
   };
 }
 
+function providerListingToAdminListing(
+  listing: ProviderListingRecord,
+  provider: ProviderCompanyRecord,
+): AdminListingRecord {
+  return {
+    ...listing,
+    bookingCalendar: [],
+    availabilityCount: listing.availability.length,
+    bookingsCount: listing.bookingsCount ?? 0,
+    disputesCount: 0,
+    provider: {
+      id: provider.id,
+      companyName: provider.companyName,
+      verificationTier: provider.verificationTier,
+      onboardingStatus: provider.onboardingStatus,
+    },
+  };
+}
+
+function listingFormToProviderPayload(
+  form: ListingEditForm,
+  service: ServiceProviderCategoryId,
+  listing: AdminListingRecord,
+) {
+  const destination = curatedZimbabweDestinations.find(
+    (item) => item.name === form.location,
+  );
+  const capacity =
+    service === "events"
+      ? parsePositiveInt(form.totalTickets)
+      : service === "things_to_do"
+        ? parsePositiveInt(form.maxParticipants)
+        : parsePositiveInt(form.capacity);
+  const metadata = {
+    ...listing.metadata,
+    serviceCategory: service,
+    included: form.included,
+    notAllowed: form.notAllowed,
+    ...(service === "stays" ? { stayDetails: toStayDetailsPayload(form) } : {}),
+    ...(service === "events"
+      ? { eventDetails: toEventDetailsPayload(form) }
+      : {}),
+    ...(service === "things_to_do"
+      ? { activityDetails: toActivityDetailsPayload(form) }
+      : {}),
+    ...(destination
+      ? {
+          destinationId: destination.id,
+          destinationName: destination.name,
+          destinationLocation: destination.location,
+        }
+      : {}),
+  };
+
+  return {
+    title: form.title.trim() || listing.title,
+    category: serviceProviderCategoryLabels[service],
+    listingType: form.listingType.trim(),
+    shortDescription: form.shortDescription.trim(),
+    description: form.shortDescription.trim() || listing.description,
+    location: destination?.name || form.location.trim(),
+    pricingModel: form.pricingModel.trim(),
+    basePrice: parseMoneyValue(form.basePrice),
+    currency: "USD",
+    bookingMode: form.bookingMode || "request",
+    instantBooking: form.instantBooking,
+    status: form.status === "approved" ? "active" : form.status,
+    visibility: form.visibility || "private",
+    capacity,
+    amenities: form.included,
+    policies: {
+      ...listing.policies,
+      notAllowed: form.notAllowed,
+    },
+    metadata,
+    availability:
+      service === "stays" && form.totalUnits
+        ? [
+            {
+              startDate: new Date().toISOString(),
+              endDate: new Date(
+                new Date().setMonth(new Date().getMonth() + 12),
+              ).toISOString(),
+              unitsAvailable: parsePositiveInt(form.totalUnits),
+              status: "available",
+              notes: "Availability submitted from provider dashboard.",
+            },
+          ]
+        : listing.availability.map((slot) => ({
+            startDate: slot.startDate,
+            endDate: slot.endDate,
+            unitsAvailable: slot.unitsAvailable ?? null,
+            status: slot.status,
+            notes: slot.notes ?? null,
+          })),
+  };
+}
+
 function getListingTypeOptions(service: ServiceProviderCategoryId) {
   switch (service) {
     case "stays":
@@ -6281,6 +8214,15 @@ function getListingDisplayId(
   listing: AdminListingRecord,
   listings: AdminListingRecord[],
 ) {
+  const storedDisplayId =
+    typeof listing.metadata?.listingDisplayId === "string"
+      ? listing.metadata.listingDisplayId
+      : typeof listing.metadata?.displayListingId === "string"
+        ? listing.metadata.displayListingId
+        : "";
+
+  if (storedDisplayId) return storedDisplayId;
+
   const providerListings = listings.filter(
     (item) => item.companyId === listing.companyId,
   );
@@ -6420,6 +8362,11 @@ function getMetadataArray(metadata: Record<string, unknown>, key: string) {
 function parsePositiveInt(value: string) {
   const parsed = parseInt(value, 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+}
+
+function parseMoneyValue(value: string) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
 }
 
 function getStayCalendarMonthCells(
@@ -6990,4 +8937,8 @@ function formatShortDate(value?: string | null) {
     month: "short",
     day: "numeric",
   }).format(date);
+}
+
+function appendReviewNote(current: string, addition: string) {
+  return [current.trim(), addition.trim()].filter(Boolean).join("\n\n");
 }

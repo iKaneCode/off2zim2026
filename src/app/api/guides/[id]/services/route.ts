@@ -9,11 +9,12 @@ export const dynamic = "force-dynamic";
 // GET — public list of services for a guide
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const profile = await prisma.guideProfile.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       select: { id: true, isActive: true },
     });
 
@@ -22,7 +23,7 @@ export async function GET(
     }
 
     const services = await prisma.guideService.findMany({
-      where: { guideId: params.id, isActive: true },
+      where: { guideId: resolvedParams.id, isActive: true },
       orderBy: { createdAt: "asc" },
     });
 
@@ -45,13 +46,14 @@ const createServiceSchema = z.object({
 // POST — guide creates a new service offering (requires guide role)
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const { user } = await requireSessionUser();
 
     const profile = await prisma.guideProfile.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       select: { id: true, userId: true },
     });
 
@@ -69,7 +71,10 @@ export async function POST(
       },
     });
 
-    return NextResponse.json({ service: serializeService(service) }, { status: 201 });
+    return NextResponse.json(
+      { service: serializeService(service) },
+      { status: 201 },
+    );
   } catch (error) {
     if (error instanceof z.ZodError) {
       return apiError(error.issues[0]?.message ?? "Invalid service data.", 422);

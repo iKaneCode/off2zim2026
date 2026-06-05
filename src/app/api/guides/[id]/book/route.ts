@@ -13,13 +13,14 @@ const bookSchema = z.object({
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const { user } = await requireSessionUser();
 
     const profile = await prisma.guideProfile.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       select: { id: true, userId: true, isActive: true },
     });
 
@@ -40,25 +41,30 @@ export async function POST(
       return apiError("Service not found or no longer available.", 404);
     }
 
-    const { commissionAmount, netAmount } = calculateCommission(service.price, "guide_booking");
+    const { commissionAmount, netAmount } = calculateCommission(
+      service.price,
+      "guide_booking",
+    );
 
     const booking = await prisma.$transaction(async (tx) => {
-    const created = await tx.guideBooking.create({
-      data: {
-        serviceId: service.id,
-        explorerId: user.id,
-        scheduledAt: new Date(payload.scheduledAt),
-        status: "pending",
-        totalAmount: service.price,
-        commissionAmount,
-        netAmount,
-        currency: service.currency,
-        notes: payload.notes,
-      },
-      include: {
-        service: { select: { title: true, serviceType: true, durationMin: true } },
-      },
-    });
+      const created = await tx.guideBooking.create({
+        data: {
+          serviceId: service.id,
+          explorerId: user.id,
+          scheduledAt: new Date(payload.scheduledAt),
+          status: "pending",
+          totalAmount: service.price,
+          commissionAmount,
+          netAmount,
+          currency: service.currency,
+          notes: payload.notes,
+        },
+        include: {
+          service: {
+            select: { title: true, serviceType: true, durationMin: true },
+          },
+        },
+      });
 
       // Record platform commission
       await recordCommission(tx, {
@@ -71,23 +77,26 @@ export async function POST(
       return created;
     });
 
-    return NextResponse.json({
-      booking: {
-        id: booking.id,
-        serviceId: booking.serviceId,
-        serviceTitle: booking.service.title,
-        serviceType: booking.service.serviceType,
-        durationMin: booking.service.durationMin,
-        scheduledAt: booking.scheduledAt.toISOString(),
-        status: booking.status,
-        totalAmount: booking.totalAmount,
-        commissionAmount: booking.commissionAmount,
-        netAmount: booking.netAmount,
-        currency: booking.currency,
-        notes: booking.notes,
-        createdAt: booking.createdAt.toISOString(),
+    return NextResponse.json(
+      {
+        booking: {
+          id: booking.id,
+          serviceId: booking.serviceId,
+          serviceTitle: booking.service.title,
+          serviceType: booking.service.serviceType,
+          durationMin: booking.service.durationMin,
+          scheduledAt: booking.scheduledAt.toISOString(),
+          status: booking.status,
+          totalAmount: booking.totalAmount,
+          commissionAmount: booking.commissionAmount,
+          netAmount: booking.netAmount,
+          currency: booking.currency,
+          notes: booking.notes,
+          createdAt: booking.createdAt.toISOString(),
+        },
       },
-    }, { status: 201 });
+      { status: 201 },
+    );
   } catch (error) {
     if (error instanceof z.ZodError) {
       return apiError(error.issues[0]?.message ?? "Invalid booking data.", 422);

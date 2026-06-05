@@ -27,17 +27,25 @@ function safeJsonParse<T>(value: string | null | undefined, fallback: T): T {
 
 export async function GET(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const resolvedParams = await params;
   try {
-    const destinations = (await getMobileDestinations()) as ExplorerDestinationSummary[];
-    const destination = getDestinationById(destinations, params.id);
+    const destinations =
+      (await getMobileDestinations()) as ExplorerDestinationSummary[];
+    const destination = getDestinationById(destinations, resolvedParams.id);
 
     if (!destination) {
       return apiError("Destination not found.", 404);
     }
 
-    const [allStaysResult, listingsResult, restaurantsResult, guidesResult, forumQuestionsResult] = await Promise.allSettled([
+    const [
+      allStaysResult,
+      listingsResult,
+      restaurantsResult,
+      guidesResult,
+      forumQuestionsResult,
+    ] = await Promise.allSettled([
       getMobileStays(),
       prisma.providerListing.findMany({
         where: {
@@ -45,10 +53,19 @@ export async function GET(
           status: { in: ["active", "approved"] },
           OR: [
             { metadata: { contains: `"destinationId":"${destination.id}"` } },
-            { metadata: { contains: `"destinationName":"${destination.name}"` } },
+            {
+              metadata: { contains: `"destinationName":"${destination.name}"` },
+            },
             { location: { contains: destination.name, mode: "insensitive" } },
             ...(destination.location
-              ? [{ location: { contains: destination.location, mode: "insensitive" as const } }]
+              ? [
+                  {
+                    location: {
+                      contains: destination.location,
+                      mode: "insensitive" as const,
+                    },
+                  },
+                ]
               : []),
           ],
         },
@@ -127,7 +144,10 @@ export async function GET(
     const forumQuestions = settledValue(forumQuestionsResult, []);
 
     const stays = allStays.filter((stay) =>
-      isMatchingDestination(stay.destinations?.name ?? stay.location, destination)
+      isMatchingDestination(
+        stay.destinations?.name ?? stay.location,
+        destination,
+      ),
     );
 
     const publicListings =
@@ -135,9 +155,11 @@ export async function GET(
         ? listings.map(serializePublicListing)
         : getDemoPublicListings().filter((listing) =>
             isMatchingDestination(
-              listing.destinationId || listing.destinationName || listing.location,
-              destination
-            )
+              listing.destinationId ||
+                listing.destinationName ||
+                listing.location,
+              destination,
+            ),
           );
     const listingsByGroup = publicListings.reduce(
       (groups, listing) => {
@@ -151,7 +173,10 @@ export async function GET(
         dining: [],
         activities: [],
         events: [],
-      } as Record<ReturnType<typeof inferServiceGroup>["id"], typeof publicListings>
+      } as Record<
+        ReturnType<typeof inferServiceGroup>["id"],
+        typeof publicListings
+      >,
     );
 
     const activityListings = listingsByGroup.activities;
@@ -173,7 +198,10 @@ export async function GET(
     const guideItems = guides.map((guide) => ({
       id: guide.id,
       name:
-        [guide.user.firstName, guide.user.lastName].filter(Boolean).join(" ").trim() ||
+        [guide.user.firstName, guide.user.lastName]
+          .filter(Boolean)
+          .join(" ")
+          .trim() ||
         guide.user.name ||
         "Guide",
       bio: guide.bio,
@@ -195,7 +223,10 @@ export async function GET(
       author: {
         id: question.author.id,
         name:
-          [question.author.firstName, question.author.lastName].filter(Boolean).join(" ").trim() ||
+          [question.author.firstName, question.author.lastName]
+            .filter(Boolean)
+            .join(" ")
+            .trim() ||
           question.author.name ||
           "Explorer",
         avatarUrl: question.author.image,

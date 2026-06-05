@@ -14,8 +14,9 @@ const reviewSchema = z.object({
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { companyId: string } },
+  { params }: { params: Promise<{ companyId: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const { user } = await requireSessionUser();
     if (user.role !== "admin") {
@@ -25,7 +26,7 @@ export async function POST(
     const payload = reviewSchema.parse(await request.json());
 
     const company = await prisma.providerCompany.findUnique({
-      where: { id: params.companyId },
+      where: { id: resolvedParams.companyId },
       select: { id: true },
     });
 

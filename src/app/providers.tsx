@@ -8,6 +8,7 @@ import { FavoritesProvider } from "@/contexts/FavoritesContext";
 import { PaymentProvider } from "@/contexts/PaymentContext";
 import { TripPlannerProvider } from "@/contexts/TripPlannerContext";
 import { useState } from "react";
+import { PageViewTracker } from "@/components/analytics/PageViewTracker";
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const [queryClient] = useState(
@@ -19,7 +20,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
             retry: 2,
           },
         },
-      })
+      }),
   );
 
   return (
@@ -34,6 +35,7 @@ export function Providers({ children }: { children: React.ReactNode }) {
           <FavoritesProvider>
             <PaymentProvider>
               <TripPlannerProvider>
+                <PageViewTracker />
                 {children}
                 <Toaster
                   position="top-right"

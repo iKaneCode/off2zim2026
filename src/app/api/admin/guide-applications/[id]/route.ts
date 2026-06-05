@@ -12,25 +12,35 @@ const reviewSchema = z.object({
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const { user } = await requireSessionUser();
     if (user.role !== "admin") {
-      return apiError("Only administrators can review guide applications.", 403);
+      return apiError(
+        "Only administrators can review guide applications.",
+        403,
+      );
     }
 
     const payload = reviewSchema.parse(await request.json());
 
     const application = await prisma.guideApplication.findUnique({
-      where: { id: params.id },
-      select: { id: true, userId: true, bio: true, expertise: true, destinations: true },
+      where: { id: resolvedParams.id },
+      select: {
+        id: true,
+        userId: true,
+        bio: true,
+        expertise: true,
+        destinations: true,
+      },
     });
 
     if (!application) return apiError("Application not found.", 404);
 
     const updated = await prisma.guideApplication.update({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       data: {
         status: payload.status,
         reviewNotes: payload.reviewNotes ?? null,
@@ -39,10 +49,23 @@ export async function PATCH(
       },
       include: {
         applicant: {
-          select: { id: true, firstName: true, lastName: true, name: true, email: true, image: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            name: true,
+            email: true,
+            image: true,
+          },
         },
         reviewedBy: {
-          select: { id: true, firstName: true, lastName: true, name: true, email: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            name: true,
+            email: true,
+          },
         },
       },
     });
@@ -80,9 +103,12 @@ export async function PATCH(
         adminUserId: user.id,
         action: "guide_application_reviewed",
         targetType: "guide_application",
-        targetId: params.id,
+        targetId: resolvedParams.id,
         summary: `Guide application ${payload.status}`,
-        metadata: JSON.stringify({ status: payload.status, reviewNotes: payload.reviewNotes }),
+        metadata: JSON.stringify({
+          status: payload.status,
+          reviewNotes: payload.reviewNotes,
+        }),
       },
     });
 

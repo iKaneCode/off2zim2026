@@ -18,6 +18,7 @@ import type {
   AdminBookingRecord,
   AdminListingRecord,
   DisputeRecord,
+  ProviderPayoutSettings,
 } from "@/types/platform";
 import {
   getListingDestinationMetadata,
@@ -236,6 +237,12 @@ export function serializeCompany(
     providerTier: normalizeProviderTier(company.providerTier),
     tierStatus: company.tierStatus,
     tierFeatures: getProviderTierFeatures(company),
+    galleryEnabled: profileMeta.galleryEnabled,
+    premiumUpgradeStatus: profileMeta.premiumUpgradeStatus ?? null,
+    premiumUpgradeRequestedAt: profileMeta.premiumUpgradeRequestedAt,
+    tierChangeRequestedTier: profileMeta.tierChangeRequestedTier ?? null,
+    pendingReviewSections: profileMeta.pendingReviewSections ?? [],
+    payoutSettings: profileMeta.payoutSettings as ProviderPayoutSettings | null,
     serviceCategories,
     reviewSubmittedAt: company.reviewSubmittedAt?.toISOString() ?? null,
     basicApprovedAt: company.basicApprovedAt?.toISOString() ?? null,

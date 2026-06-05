@@ -3,7 +3,12 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { apiError } from "@/lib/http";
 import { requireSessionUser } from "@/lib/auth";
+import { createAuditLog } from "@/lib/audit-log";
 import { serializeListing } from "@/lib/platform";
+import {
+  getNextListingDisplayIdentity,
+  withListingDisplayMetadata,
+} from "@/lib/provider-listing-display-id";
 import {
   buildDestinationMetadata,
   getListingDestinationMetadata,
@@ -25,7 +30,14 @@ const listingSchema = z.object({
   instantBooking: z.boolean().default(false),
   bookingMode: z.string().default("request"),
   status: z
-    .enum(["draft", "pending_review", "active", "paused", "archived"])
+    .enum([
+      "draft",
+      "pending_review",
+      "active",
+      "paused",
+      "archived",
+      "rejected",
+    ])
     .default("draft"),
   visibility: z.enum(["private", "public"]).default("private"),
   capacity: z.coerce.number().int().optional().nullable(),
@@ -43,13 +55,13 @@ const listingSchema = z.object({
         unitsAvailable: z.coerce.number().int().min(0).optional().nullable(),
         status: z.string().default("available"),
         notes: z.string().optional().nullable(),
-      })
+      }),
     )
     .default([]),
 });
 
 function validateAvailabilitySlots(
-  availability: Array<{ startDate: string; endDate: string }>
+  availability: Array<{ startDate: string; endDate: string }>,
 ) {
   for (const slot of availability) {
     const start = new Date(slot.startDate);
@@ -78,6 +90,7 @@ function slugify(value: string) {
 async function findCompany(userId: string) {
   return prisma.providerCompany.findUnique({
     where: { ownerUserId: userId },
+    select: { id: true, serviceProviderId: true, onboardingStatus: true },
   });
 }
 
@@ -124,24 +137,39 @@ export async function POST(request: NextRequest) {
       return apiError("Provider company profile not found.", 404);
     }
 
+    if (company.onboardingStatus !== "basic_approved") {
+      return apiError(
+        "Your company profile must be approved before creating listings.",
+        403,
+      );
+    }
+
     const payload = listingSchema.parse(await request.json());
     const availabilityError = validateAvailabilitySlots(payload.availability);
 
     if (availabilityError) {
       return apiError(availabilityError, 422);
     }
-    const submittedDestination = getListingDestinationMetadata(payload.metadata);
-    const destination = resolveListingDestination(submittedDestination.destinationId);
+    const submittedDestination = getListingDestinationMetadata(
+      payload.metadata,
+    );
+    const destination = resolveListingDestination(
+      submittedDestination.destinationId,
+    );
     const requiresDestination = listingRequiresDestination(payload.category);
+    const isPublishing =
+      ["active", "approved"].includes(payload.status) ||
+      payload.visibility === "public";
 
-    if (requiresDestination && !destination) {
+    if (isPublishing && requiresDestination && !destination) {
       return apiError(
         "Choose the destination this listing belongs to before saving.",
-        422
+        422,
       );
     }
 
     const destinationMetadata = buildDestinationMetadata(destination);
+    const listingIdentity = await getNextListingDisplayIdentity(company);
     const slugBase = slugify(payload.title) || "listing";
 
     let slug = slugBase;
@@ -179,10 +207,16 @@ export async function POST(request: NextRequest) {
         tags: JSON.stringify(payload.tags),
         amenities: JSON.stringify(payload.amenities),
         policies: JSON.stringify(payload.policies),
-        metadata: JSON.stringify({
-          ...payload.metadata,
-          ...destinationMetadata,
-        }),
+        metadata: JSON.stringify(
+          withListingDisplayMetadata(
+            {
+              ...payload.metadata,
+              ...destinationMetadata,
+            },
+            listingIdentity.displayId,
+            listingIdentity.sequence,
+          ),
+        ),
         availability: {
           create: payload.availability.map((slot) => ({
             startDate: new Date(slot.startDate),
@@ -199,10 +233,36 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    return NextResponse.json({ listing: serializeListing(listing) }, { status: 201 });
+    await createAuditLog({
+      actorUserId: user.id,
+      action: "provider_listing_created",
+      targetType: "provider_listing",
+      targetId: listing.id,
+      companyId: company.id,
+      summary: `${user.email} created listing ${listing.title}`,
+      metadata: {
+        title: listing.title,
+        targetDisplayId: listingIdentity.displayId,
+        listingDisplayId: listingIdentity.displayId,
+        listingSequence: listingIdentity.sequence,
+        serviceProviderId: listingIdentity.serviceProviderId,
+        internalListingId: listing.id,
+        category: listing.category,
+        status: listing.status,
+        visibility: listing.visibility,
+      },
+    });
+
+    return NextResponse.json(
+      { listing: serializeListing(listing) },
+      { status: 201 },
+    );
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return apiError(error.issues[0]?.message || "Invalid listing payload", 422);
+      return apiError(
+        error.issues[0]?.message || "Invalid listing payload",
+        422,
+      );
     }
 
     console.error("Provider listing create error:", error);

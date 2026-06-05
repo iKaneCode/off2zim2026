@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiError } from "@/lib/http";
 import { requireSessionUser } from "@/lib/auth";
+import { createAuditLog } from "@/lib/audit-log";
 import { prisma } from "@/lib/prisma";
 import { serializeCompany } from "@/lib/platform";
 import { saveUploadedFile } from "@/lib/uploads";
@@ -36,12 +37,10 @@ function companyInclude() {
 
 export async function POST(
   request: NextRequest,
-  {
-    params,
-  }: { params: Promise<{ companyId: string }> | { companyId: string } },
+  { params }: { params: Promise<{ companyId: string }> },
 ) {
   try {
-    const { companyId } = await Promise.resolve(params);
+    const { companyId } = await params;
     const { user } = await requireSessionUser();
     if (user.role !== "admin") {
       return apiError(
@@ -64,7 +63,7 @@ export async function POST(
 
     const company = await prisma.providerCompany.findUnique({
       where: { id: companyId },
-      select: { id: true },
+      select: { id: true, companyName: true },
     });
 
     if (!company) {
@@ -87,28 +86,42 @@ export async function POST(
       },
     });
 
-    if (existingDocument) {
-      await prisma.providerDocument.update({
-        where: { id: existingDocument.id },
-        data: {
-          fileName: uploaded.fileName,
-          fileUrl: uploaded.fileUrl,
-          status: "uploaded",
-          notes: null,
-          reviewedAt: null,
-        },
-      });
-    } else {
-      await prisma.providerDocument.create({
-        data: {
-          companyId,
-          type: documentType,
-          fileName: uploaded.fileName,
-          fileUrl: uploaded.fileUrl,
-          status: "uploaded",
-        },
-      });
-    }
+    const savedDocument = existingDocument
+      ? await prisma.providerDocument.update({
+          where: { id: existingDocument.id },
+          data: {
+            fileName: uploaded.fileName,
+            fileUrl: uploaded.fileUrl,
+            status: "uploaded",
+            notes: null,
+            reviewedAt: null,
+          },
+        })
+      : await prisma.providerDocument.create({
+          data: {
+            companyId,
+            type: documentType,
+            fileName: uploaded.fileName,
+            fileUrl: uploaded.fileUrl,
+            status: "uploaded",
+          },
+        });
+
+    await createAuditLog({
+      actorUserId: user.id,
+      action: existingDocument
+        ? "provider_document_updated"
+        : "provider_document_uploaded",
+      targetType: "provider_document",
+      targetId: savedDocument.id,
+      companyId,
+      summary: `${user.email} ${existingDocument ? "updated" : "uploaded"} ${documentType} for ${company.companyName}`,
+      metadata: {
+        documentType,
+        fileName: uploaded.fileName,
+        fileUrl: uploaded.fileUrl,
+      },
+    });
 
     const updatedCompany = await prisma.providerCompany.findUnique({
       where: { id: companyId },
@@ -128,12 +141,10 @@ export async function POST(
 
 export async function DELETE(
   request: NextRequest,
-  {
-    params,
-  }: { params: Promise<{ companyId: string }> | { companyId: string } },
+  { params }: { params: Promise<{ companyId: string }> },
 ) {
   try {
-    const { companyId } = await Promise.resolve(params);
+    const { companyId } = await params;
     const { user } = await requireSessionUser();
     if (user.role !== "admin") {
       return apiError(
@@ -159,6 +170,19 @@ export async function DELETE(
     }
 
     await prisma.providerDocument.delete({ where: { id: document.id } });
+
+    await createAuditLog({
+      actorUserId: user.id,
+      action: "provider_document_deleted",
+      targetType: "provider_document",
+      targetId: document.id,
+      companyId,
+      summary: `${user.email} deleted ${document.type} from a service provider profile`,
+      metadata: {
+        documentType: document.type,
+        fileName: document.fileName,
+      },
+    });
 
     const updatedCompany = await prisma.providerCompany.findUnique({
       where: { id: companyId },

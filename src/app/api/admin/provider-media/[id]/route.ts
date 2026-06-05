@@ -3,6 +3,7 @@ import { z } from "zod";
 import { requireSessionUser } from "@/lib/auth";
 import { apiError } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
+import { resolveListingDisplayId } from "@/lib/provider-listing-display-id";
 import { normalizeReviewStatus, safeJsonParse } from "@/lib/provider-platform";
 
 export const dynamic = "force-dynamic";
@@ -57,8 +58,9 @@ function serializeMedia(media: {
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const { user } = await requireSessionUser();
     if (user.role !== "admin") {
@@ -71,7 +73,7 @@ export async function PATCH(
     }
 
     const current = await prisma.providerMedia.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       select: { id: true, companyId: true, status: true },
     });
 
@@ -97,6 +99,7 @@ export async function PATCH(
         listing: { select: { id: true, title: true, slug: true } },
       },
     });
+    const listingDisplayId = await resolveListingDisplayId(media.listingId);
 
     await prisma.adminAuditLog.create({
       data: {
@@ -108,6 +111,10 @@ export async function PATCH(
         summary: `Provider media marked ${payload.status}`,
         metadata: JSON.stringify({
           previousStatus: current.status,
+          targetDisplayId: listingDisplayId || null,
+          listingDisplayId: listingDisplayId || null,
+          listingId: media.listingId,
+          internalListingId: media.listingId,
           nextStatus: payload.status,
           rejectionReason: payload.rejectionReason || null,
         }),

@@ -8,14 +8,15 @@ export const dynamic = "force-dynamic";
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const { user } = await requireSessionUser();
 
     const booking = await prisma.booking.findFirst({
       where: {
-        confirmationNumber: params.id,
+        confirmationNumber: resolvedParams.id,
         userId: user.id,
       },
       include: {

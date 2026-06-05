@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { getUserBySessionToken } from "@/lib/auth";
+import { getSessionTokenFromHeaders, getUserBySessionToken } from "@/lib/auth";
 import { apiError } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
 import { toJsonRecord } from "@/lib/provider-platform";
+import { GENERAL_LIMIT, rateLimit, rateLimitResponse } from "@/lib/rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -27,15 +28,6 @@ const eventSchema = z.object({
   metadata: z.record(z.unknown()).default({}),
 });
 
-function getBearerToken(request: NextRequest) {
-  const authorization = request.headers.get("authorization");
-  if (!authorization?.startsWith("Bearer ")) {
-    return null;
-  }
-
-  return authorization.replace("Bearer ", "").trim();
-}
-
 function decodeHeader(value: string | null) {
   if (!value) {
     return null;
@@ -49,9 +41,16 @@ function decodeHeader(value: string | null) {
 }
 
 export async function POST(request: NextRequest) {
+  const rl = await rateLimit(request, "analytics-events", GENERAL_LIMIT);
+  if (!rl.success) return rateLimitResponse(rl);
+
   try {
     const payload = eventSchema.parse(await request.json());
-    const token = getBearerToken(request);
+    if (JSON.stringify(payload.metadata).length > 16_000) {
+      return apiError("Analytics metadata is too large.", 422);
+    }
+
+    const token = await getSessionTokenFromHeaders();
     const user = token ? await getUserBySessionToken(token) : null;
 
     const country =

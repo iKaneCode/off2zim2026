@@ -1,9 +1,15 @@
 import crypto from "crypto";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getProviderTierFeatures } from "@/lib/provider-platform";
+import {
+  readProviderProfileMeta,
+  stripProviderProfileMeta,
+} from "@/lib/provider-profile-meta";
 
 const SESSION_DURATION_MS = 1000 * 60 * 60 * 24 * 30;
+export const SESSION_COOKIE_NAME = "off2zim_session";
 
 type UserWithCompany = Awaited<ReturnType<typeof getUserBySessionToken>>;
 
@@ -61,6 +67,36 @@ export async function deleteSession(sessionToken: string) {
   });
 }
 
+export function setSessionCookie(
+  response: NextResponse,
+  sessionToken: string,
+  expires: Date,
+) {
+  response.cookies.set({
+    name: SESSION_COOKIE_NAME,
+    value: sessionToken,
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    expires,
+  });
+  return response;
+}
+
+export function clearSessionCookie(response: NextResponse) {
+  response.cookies.set({
+    name: SESSION_COOKIE_NAME,
+    value: "",
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path: "/",
+    expires: new Date(0),
+  });
+  return response;
+}
+
 export async function getUserBySessionToken(sessionToken: string) {
   const session = await prisma.session.findUnique({
     where: { sessionToken },
@@ -106,11 +142,12 @@ export async function getSessionTokenFromHeaders() {
   const headerStore = await headers();
   const authorization = headerStore.get("authorization");
 
-  if (!authorization?.startsWith("Bearer ")) {
-    return null;
+  if (authorization?.startsWith("Bearer ")) {
+    return authorization.replace("Bearer ", "").trim();
   }
 
-  return authorization.replace("Bearer ", "").trim();
+  const cookieStore = await cookies();
+  return cookieStore.get(SESSION_COOKIE_NAME)?.value || null;
 }
 
 export async function requireSessionUser() {
@@ -140,6 +177,11 @@ export function serializeUser(user: NonNullable<UserWithCompany>) {
     [user.firstName, user.lastName].filter(Boolean).join(" ").trim() ||
     user.name ||
     user.email;
+  const providerSocialMediaLinks = safeJsonParse<Record<string, string>>(
+    company?.socialMediaLinks,
+    {},
+  );
+  const providerProfileMeta = readProviderProfileMeta(providerSocialMediaLinks);
 
   return {
     id: user.id,
@@ -191,8 +233,16 @@ export function serializeUser(user: NonNullable<UserWithCompany>) {
       explorerType: user.explorerType ?? undefined,
       companyName: company?.companyName,
       tradingName: company?.tradingName,
+      legalCompanyName: providerProfileMeta.legalCompanyName ?? undefined,
+      incorporationDate: providerProfileMeta.incorporationDate ?? undefined,
+      profileImageUrl: providerProfileMeta.profileImageUrl ?? undefined,
+      coverImageUrl: providerProfileMeta.coverImageUrl ?? undefined,
       businessRegistrationNumber: company?.businessRegistrationNumber,
       mainContactPerson: company?.mainContactPerson,
+      contactPersonPhone: providerProfileMeta.contactPersonPhone ?? undefined,
+      contactPersonIdType: providerProfileMeta.contactPersonIdType ?? undefined,
+      contactPersonIdNumber:
+        providerProfileMeta.contactPersonIdNumber ?? undefined,
       businessPhone: company?.businessPhone,
       businessEmail: company?.businessEmail,
       physicalAddress: company?.physicalAddress,
@@ -200,10 +250,7 @@ export function serializeUser(user: NonNullable<UserWithCompany>) {
       providerTier: company?.providerTier,
       tierStatus: company?.tierStatus,
       tierFeatures: company ? getProviderTierFeatures(company) : [],
-      socialMediaLinks: safeJsonParse<Record<string, string>>(
-        company?.socialMediaLinks,
-        {},
-      ),
+      socialMediaLinks: stripProviderProfileMeta(providerSocialMediaLinks),
       servicesOffered: safeJsonParse<string[]>(company?.servicesOffered, []),
       serviceAreas: safeJsonParse<string[]>(company?.serviceAreas, []),
       businessDescription: company?.businessDescription,
@@ -211,6 +258,10 @@ export function serializeUser(user: NonNullable<UserWithCompany>) {
       numberOfEmployees: company?.numberOfEmployees,
       businessCategory: company?.businessCategory,
       operatingHours: company?.operatingHours,
+      zimraBpNumber: providerProfileMeta.zimraBpNumber ?? undefined,
+      tinNumber: providerProfileMeta.tinNumber ?? undefined,
+      taxClearanceExpiresAt:
+        providerProfileMeta.taxClearanceExpiresAt ?? undefined,
       businessDocuments:
         company?.documents.map((document) => ({
           type: document.type,

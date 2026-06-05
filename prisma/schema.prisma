@@ -39,6 +39,16 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
+model RateLimitBucket {
+  key       String   @id
+  count     Int
+  resetAt   DateTime
+  updatedAt DateTime @updatedAt
+
+  @@index([resetAt])
+  @@map("rate_limit_buckets")
+}
+
 model User {
   id                     String    @id @default(cuid())
   firstName              String?
@@ -91,6 +101,15 @@ model User {
   pushTokens                    PushToken[]
   notificationDeliveries        NotificationDelivery[]
   analyticsEvents               AnalyticsEvent[]
+  supportConversations          SupportConversation[]        @relation("SupportConversationParticipant")
+  createdSupportConversations   SupportConversation[]        @relation("SupportConversationCreator")
+  supportMessages               SupportMessage[]             @relation("SupportMessageSender")
+  providerCompanyMemberships    ProviderCompanyMember[]      @relation("ProviderCompanyMemberUser")
+  providerMembershipInvites     ProviderCompanyMember[]      @relation("ProviderCompanyMemberInviter")
+  providerInvitationsCreated    ProviderCompanyInvitation[]  @relation("ProviderCompanyInvitationCreator")
+  providerInvitationsAccepted   ProviderCompanyInvitation[]  @relation("ProviderCompanyInvitationAcceptor")
+  requestedTierChanges          ProviderTierChangeRequest[]  @relation("ProviderTierChangeRequester")
+  reviewedTierChanges           ProviderTierChangeRequest[]  @relation("ProviderTierChangeReviewer")
 
   @@map("users")
 }
@@ -365,7 +384,7 @@ model Review {
 }
 
 model ProviderCompany {
-  serviceProviderId           String?   @unique
+  serviceProviderId          String?   @unique
   id                         String    @id @default(cuid())
   ownerUserId                String
   companyName                String
@@ -411,6 +430,10 @@ model ProviderCompany {
   locations             ProviderLocation[]
   calendarBlocks        CalendarBlock[]
   notificationCampaigns NotificationCampaign[]
+  supportConversations  SupportConversation[]
+  members               ProviderCompanyMember[]
+  invitations           ProviderCompanyInvitation[]
+  tierChangeRequests    ProviderTierChangeRequest[]
 
   @@unique([ownerUserId])
   @@index([onboardingStatus])
@@ -526,6 +549,75 @@ model ProviderPlan {
   @@index([companyId, status])
   @@index([tier, status])
   @@map("provider_plans")
+}
+
+model ProviderTierChangeRequest {
+  id            String    @id @default(cuid())
+  companyId     String
+  requestedById String
+  reviewedById  String?
+  fromTier      String
+  toTier        String
+  status        String    @default("pending")
+  reason        String?
+  reviewNotes   String?
+  requestedAt   DateTime  @default(now())
+  reviewedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  company     ProviderCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  requestedBy User            @relation("ProviderTierChangeRequester", fields: [requestedById], references: [id])
+  reviewedBy  User?           @relation("ProviderTierChangeReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+
+  @@index([companyId, status, requestedAt])
+  @@index([requestedById, requestedAt])
+  @@index([reviewedById, reviewedAt])
+  @@map("provider_tier_change_requests")
+}
+
+model ProviderCompanyMember {
+  id          String    @id @default(cuid())
+  companyId   String
+  userId      String
+  invitedById String?
+  role        String    @default("member")
+  status      String    @default("active")
+  joinedAt    DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  company   ProviderCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  user      User            @relation("ProviderCompanyMemberUser", fields: [userId], references: [id], onDelete: Cascade)
+  invitedBy User?           @relation("ProviderCompanyMemberInviter", fields: [invitedById], references: [id], onDelete: SetNull)
+
+  @@unique([companyId, userId])
+  @@index([userId, status])
+  @@index([companyId, role, status])
+  @@map("provider_company_members")
+}
+
+model ProviderCompanyInvitation {
+  id           String    @id @default(cuid())
+  companyId    String
+  invitedById  String
+  acceptedById String?
+  email        String
+  role         String    @default("member")
+  tokenHash    String    @unique
+  status       String    @default("pending")
+  expiresAt    DateTime
+  acceptedAt   DateTime?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+
+  company    ProviderCompany @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  invitedBy  User            @relation("ProviderCompanyInvitationCreator", fields: [invitedById], references: [id])
+  acceptedBy User?           @relation("ProviderCompanyInvitationAcceptor", fields: [acceptedById], references: [id], onDelete: SetNull)
+
+  @@index([companyId, status, expiresAt])
+  @@index([email, status])
+  @@map("provider_company_invitations")
 }
 
 model ProviderMedia {
@@ -1189,4 +1281,46 @@ model AnalyticsEvent {
   @@index([country, createdAt])
   @@index([userId, createdAt])
   @@map("analytics_events")
+}
+
+model SupportConversation {
+  id                String   @id @default(cuid())
+  participantUserId String
+  companyId         String?
+  createdById       String
+  subject           String   @default("Off2Zim support")
+  status            String   @default("open")
+  lastMessageAt     DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  participant User             @relation("SupportConversationParticipant", fields: [participantUserId], references: [id], onDelete: Cascade)
+  company     ProviderCompany? @relation(fields: [companyId], references: [id], onDelete: SetNull)
+  createdBy   User             @relation("SupportConversationCreator", fields: [createdById], references: [id])
+  messages    SupportMessage[]
+
+  @@index([participantUserId, lastMessageAt])
+  @@index([companyId, lastMessageAt])
+  @@index([status, lastMessageAt])
+  @@map("support_conversations")
+}
+
+model SupportMessage {
+  id             String    @id @default(cuid())
+  conversationId String
+  senderUserId   String
+  body           String
+  attachments    String    @default("[]")
+  deliveredAt    DateTime?
+  readAt         DateTime?
+  createdAt      DateTime  @default(now())
+
+  conversation SupportConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender       User                @relation("SupportMessageSender", fields: [senderUserId], references: [id])
+
+  @@index([conversationId, createdAt])
+  @@index([senderUserId, createdAt])
+  @@index([deliveredAt])
+  @@index([readAt])
+  @@map("support_messages")
 }

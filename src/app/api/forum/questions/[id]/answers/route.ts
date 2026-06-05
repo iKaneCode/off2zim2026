@@ -10,13 +10,14 @@ const answerSchema = z.object({
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const { user } = await requireSessionUser();
 
     const question = await prisma.forumQuestion.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       select: { id: true, isRemoved: true },
     });
 
@@ -29,14 +30,21 @@ export async function POST(
 
     const answer = await prisma.forumAnswer.create({
       data: {
-        questionId: params.id,
+        questionId: resolvedParams.id,
         authorId: user.id,
         body: payload.body,
         isGuideAnswer: isGuide,
       },
       include: {
         author: {
-          select: { id: true, firstName: true, lastName: true, name: true, image: true, role: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            name: true,
+            image: true,
+            role: true,
+          },
         },
         _count: { select: { upvotes: true } },
       },
@@ -48,25 +56,31 @@ export async function POST(
       recalculateExplorerScore(user.id).catch(() => {});
     }
 
-    return NextResponse.json({
-      answer: {
-        id: answer.id,
-        questionId: answer.questionId,
-        body: answer.body,
-        isGuideAnswer: answer.isGuideAnswer,
-        upvoteCount: 0,
-        createdAt: answer.createdAt.toISOString(),
-        author: {
-          id: answer.author.id,
-          name:
-            [answer.author.firstName, answer.author.lastName].filter(Boolean).join(" ").trim() ||
-            answer.author.name ||
-            "Explorer",
-          avatarUrl: answer.author.image,
-          isGuide: answer.author.role === "guide",
+    return NextResponse.json(
+      {
+        answer: {
+          id: answer.id,
+          questionId: answer.questionId,
+          body: answer.body,
+          isGuideAnswer: answer.isGuideAnswer,
+          upvoteCount: 0,
+          createdAt: answer.createdAt.toISOString(),
+          author: {
+            id: answer.author.id,
+            name:
+              [answer.author.firstName, answer.author.lastName]
+                .filter(Boolean)
+                .join(" ")
+                .trim() ||
+              answer.author.name ||
+              "Explorer",
+            avatarUrl: answer.author.image,
+            isGuide: answer.author.role === "guide",
+          },
         },
       },
-    }, { status: 201 });
+      { status: 201 },
+    );
   } catch (error) {
     if (error instanceof z.ZodError) {
       return apiError(error.issues[0]?.message ?? "Invalid answer.", 422);

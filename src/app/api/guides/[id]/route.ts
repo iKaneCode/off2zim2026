@@ -7,14 +7,21 @@ export const dynamic = "force-dynamic";
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const profile = await prisma.guideProfile.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       include: {
         user: {
-          select: { id: true, firstName: true, lastName: true, name: true, image: true },
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            name: true,
+            image: true,
+          },
         },
         services: {
           where: { isActive: true },

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { apiError } from "@/lib/http";
 import { requireSessionUser } from "@/lib/auth";
+import { createAuditLog } from "@/lib/audit-log";
 import { prisma } from "@/lib/prisma";
 import { serializeCompany } from "@/lib/platform";
 import {
@@ -12,6 +13,7 @@ import {
   mergeProviderProfileMeta,
   readProviderProfileMeta,
 } from "@/lib/provider-profile-meta";
+import { getServiceProviderDisplayId } from "@/lib/service-provider-id";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +65,38 @@ function parseSocialLinks(value: string | null | undefined) {
   }
 }
 
+function normalizeOperatingHoursForAudit(value: string | null | undefined) {
+  const normalized = value?.trim() || "";
+  return normalized || null;
+}
+
+function isOperatingTimeEnabled(value: string | null | undefined) {
+  const normalized = normalizeOperatingHoursForAudit(value);
+  if (!normalized || normalized.toLowerCase() === "closed") return false;
+
+  try {
+    const parsed = JSON.parse(normalized) as { enabled?: unknown };
+    if (typeof parsed.enabled === "boolean") return parsed.enabled;
+  } catch {
+    // Legacy human-readable operating hours are active when present.
+  }
+
+  return true;
+}
+
+function getOperatingTimeAuditAction(
+  previous: string | null | undefined,
+  next: string | null | undefined,
+) {
+  const previousEnabled = isOperatingTimeEnabled(previous);
+  const nextEnabled = isOperatingTimeEnabled(next);
+
+  if (!previousEnabled && nextEnabled) return "provider_operating_time_enabled";
+  if (previousEnabled && !nextEnabled)
+    return "provider_operating_time_disabled";
+  return "provider_operating_time_updated";
+}
+
 function companyInclude() {
   return {
     documents: true,
@@ -91,12 +125,10 @@ function companyInclude() {
 
 export async function GET(
   _request: NextRequest,
-  {
-    params,
-  }: { params: Promise<{ companyId: string }> | { companyId: string } },
+  { params }: { params: Promise<{ companyId: string }> },
 ) {
   try {
-    const { companyId } = await Promise.resolve(params);
+    const { companyId } = await params;
     const { user } = await requireSessionUser();
     if (user.role !== "admin") {
       return apiError("Only administrators can view service providers.", 403);
@@ -125,18 +157,21 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  {
-    params,
-  }: { params: Promise<{ companyId: string }> | { companyId: string } },
+  { params }: { params: Promise<{ companyId: string }> },
 ) {
   try {
-    const { companyId } = await Promise.resolve(params);
+    const { companyId } = await params;
     const { user } = await requireSessionUser();
     if (user.role !== "admin") {
       return apiError("Only administrators can update service providers.", 403);
     }
 
-    const payload = companyUpdateSchema.parse(await request.json());
+    const rawPayload = await request.json();
+    const submittedFields =
+      rawPayload && typeof rawPayload === "object" && !Array.isArray(rawPayload)
+        ? Object.keys(rawPayload as Record<string, unknown>)
+        : [];
+    const payload = companyUpdateSchema.parse(rawPayload);
     const existing = await prisma.providerCompany.findFirst({
       where: getProviderCompanyIdentifierWhere(companyId),
       include: companyInclude(),
@@ -209,6 +244,50 @@ export async function PATCH(
           }),
         ),
     );
+    const serviceProviderId = getServiceProviderDisplayId(existingWithId);
+
+    if (
+      payload.operatingHours !== undefined &&
+      normalizeOperatingHoursForAudit(existingWithId.operatingHours) !==
+        normalizeOperatingHoursForAudit(payload.operatingHours)
+    ) {
+      await createAuditLog({
+        actorUserId: user.id,
+        action: getOperatingTimeAuditAction(
+          existingWithId.operatingHours,
+          payload.operatingHours,
+        ),
+        targetType: "provider_company",
+        targetId: existingWithId.id,
+        companyId: existingWithId.id,
+        summary: `${user.email} changed operating time for ${serviceProviderId}`,
+        metadata: {
+          targetDisplayId: serviceProviderId,
+          serviceProviderId,
+          previousOperatingHours:
+            normalizeOperatingHoursForAudit(existingWithId.operatingHours) ??
+            "not set",
+          nextOperatingHours:
+            normalizeOperatingHoursForAudit(payload.operatingHours) ??
+            "not set",
+        },
+      });
+    }
+
+    await createAuditLog({
+      actorUserId: user.id,
+      action: "provider_profile_updated",
+      targetType: "provider_company",
+      targetId: existingWithId.id,
+      companyId: existingWithId.id,
+      summary: `${user.email} updated service provider profile`,
+      metadata: {
+        targetDisplayId: serviceProviderId,
+        serviceProviderId,
+        updatedFields: submittedFields,
+        documentsUpdated: submittedFields.includes("documents"),
+      },
+    });
 
     const company = await prisma.providerCompany.findUnique({
       where: { id: existing.id },

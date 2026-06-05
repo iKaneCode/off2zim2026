@@ -6,13 +6,14 @@ import { prisma } from "@/lib/prisma";
 // POST — toggle upvote on an answer
 export async function POST(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const { user } = await requireSessionUser();
 
     const answer = await prisma.forumAnswer.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       select: { id: true, authorId: true, isRemoved: true },
     });
 
@@ -24,17 +25,21 @@ export async function POST(
     }
 
     const existing = await prisma.forumUpvote.findUnique({
-      where: { answerId_userId: { answerId: params.id, userId: user.id } },
+      where: {
+        answerId_userId: { answerId: resolvedParams.id, userId: user.id },
+      },
     });
 
     if (existing) {
       // Remove upvote
       await prisma.$transaction([
         prisma.forumUpvote.delete({
-          where: { answerId_userId: { answerId: params.id, userId: user.id } },
+          where: {
+            answerId_userId: { answerId: resolvedParams.id, userId: user.id },
+          },
         }),
         prisma.forumAnswer.update({
-          where: { id: params.id },
+          where: { id: resolvedParams.id },
           data: { upvoteCount: { decrement: 1 } },
         }),
       ]);
@@ -44,10 +49,10 @@ export async function POST(
     // Add upvote
     await prisma.$transaction([
       prisma.forumUpvote.create({
-        data: { answerId: params.id, userId: user.id },
+        data: { answerId: resolvedParams.id, userId: user.id },
       }),
       prisma.forumAnswer.update({
-        where: { id: params.id },
+        where: { id: resolvedParams.id },
         data: { upvoteCount: { increment: 1 } },
       }),
     ]);

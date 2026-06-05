@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { requireSessionUser } from "@/lib/auth";
+import { createAuditLog } from "@/lib/audit-log";
 import { apiError } from "@/lib/http";
 import { prisma } from "@/lib/prisma";
+import { resolveListingDisplayId } from "@/lib/provider-listing-display-id";
 import {
   assertProviderFeature,
   safeJsonParse,
@@ -75,7 +77,13 @@ function serializeMedia(media: {
 async function findProviderCompany(userId: string) {
   return prisma.providerCompany.findUnique({
     where: { ownerUserId: userId },
-    select: { id: true, providerTier: true, tierStatus: true },
+    select: {
+      id: true,
+      serviceProviderId: true,
+      onboardingStatus: true,
+      providerTier: true,
+      tierStatus: true,
+    },
   });
 }
 
@@ -129,6 +137,13 @@ export async function POST(request: NextRequest) {
       return apiError("Provider company profile not found.", 404);
     }
 
+    if (company.onboardingStatus !== "basic_approved") {
+      return apiError(
+        "Your company profile must be approved before uploading gallery media.",
+        403,
+      );
+    }
+
     assertProviderFeature(company, "profile_content");
     const payload = mediaSchema.parse(await request.json());
 
@@ -149,6 +164,7 @@ export async function POST(request: NextRequest) {
       return apiError("Listing not found for this provider.", 404);
     }
 
+    const listingDisplayId = await resolveListingDisplayId(listing.id);
     const media = await prisma.providerMedia.create({
       data: {
         companyId: company.id,
@@ -165,10 +181,32 @@ export async function POST(request: NextRequest) {
         sortOrder: payload.sortOrder,
         visibility: payload.visibility,
         status: "pending_review",
-        metadata: toJsonRecord(payload.metadata),
+        metadata: toJsonRecord({
+          ...payload.metadata,
+          listingDisplayId,
+        }),
       },
       include: {
         listing: { select: { id: true, title: true, slug: true } },
+      },
+    });
+
+    await createAuditLog({
+      actorUserId: user.id,
+      action: "provider_media_uploaded",
+      targetType: "provider_media",
+      targetId: media.id,
+      companyId: company.id,
+      summary: `${user.email} uploaded ${media.mediaType} media for review`,
+      metadata: {
+        listingId: media.listingId,
+        targetDisplayId: listingDisplayId,
+        listingDisplayId,
+        internalListingId: media.listingId,
+        listingTitle: media.listing?.title ?? null,
+        mediaType: media.mediaType,
+        title: media.title,
+        status: media.status,
       },
     });
 

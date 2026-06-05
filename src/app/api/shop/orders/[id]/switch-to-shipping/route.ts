@@ -17,8 +17,9 @@ const switchSchema = z.object({
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const { user } = await requireSessionUser();
     const payload = switchSchema.parse(await request.json());
@@ -26,7 +27,7 @@ export async function PATCH(
     // Verify the order belongs to the requesting user and is still in a switchable state
     const order = await prisma.shoppingOrder.findFirst({
       where: {
-        id: params.id,
+        id: resolvedParams.id,
         userId: user.id,
         status: { in: ["confirmed", "pending"] },
       },
@@ -41,7 +42,7 @@ export async function PATCH(
     const orderItem = await prisma.shoppingOrderItem.findFirst({
       where: {
         id: payload.orderItemId,
-        orderId: params.id,
+        orderId: resolvedParams.id,
         deliveryMethod: "pickup",
         status: { notIn: ["collected", "cancelled"] },
       },
@@ -59,7 +60,10 @@ export async function PATCH(
     });
 
     if (!orderItem) {
-      return apiError("Order item not found or is not eligible for delivery switch.", 404);
+      return apiError(
+        "Order item not found or is not eligible for delivery switch.",
+        404,
+      );
     }
 
     if (!orderItem.product.offersShipping) {
@@ -83,19 +87,21 @@ export async function PATCH(
 
       // Recalculate the order shipping total
       const allItems = await tx.shoppingOrderItem.findMany({
-        where: { orderId: params.id, status: { not: "cancelled" } },
+        where: { orderId: resolvedParams.id, status: { not: "cancelled" } },
         select: { shippingFee: true, unitPrice: true, quantity: true },
       });
 
       const shippingTotal = parseFloat(
-        allItems.reduce((sum, i) => sum + i.shippingFee, 0).toFixed(2)
+        allItems.reduce((sum, i) => sum + i.shippingFee, 0).toFixed(2),
       );
       const subtotal = parseFloat(
-        allItems.reduce((sum, i) => sum + i.unitPrice * i.quantity, 0).toFixed(2)
+        allItems
+          .reduce((sum, i) => sum + i.unitPrice * i.quantity, 0)
+          .toFixed(2),
       );
 
       await tx.shoppingOrder.update({
-        where: { id: params.id },
+        where: { id: resolvedParams.id },
         data: {
           shippingTotal,
           totalAmount: subtotal + shippingTotal,

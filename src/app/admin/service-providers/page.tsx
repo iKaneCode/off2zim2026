@@ -7,9 +7,10 @@ import AdminCard from "@/components/admin/AdminCard";
 import AdminEmptyState from "@/components/admin/AdminEmptyState";
 import AdminShell from "@/components/admin/AdminShell";
 import AdminStatGrid from "@/components/admin/AdminStatGrid";
-import StatusBadge from "@/components/admin/StatusBadge";
+import LocationPill from "@/components/ui/LocationPill";
 import FilterChips from "@/components/ui/FilterChips";
 import { apiFetch } from "@/lib/client-api";
+import { useSoftRefresh } from "@/hooks/useSoftRefresh";
 import {
   SERVICE_PROVIDER_FILTERS,
   type ServiceProviderCategoryId,
@@ -20,16 +21,12 @@ import { cn } from "@/lib/utils";
 import type { ProviderCompanyRecord } from "@/types/platform";
 import {
   categoriesFor,
-  formatProviderStatus,
-  providerTone,
   serviceProviderCategoryLabels,
 } from "@/components/admin/ServiceProviderProfile";
 import {
   BadgeCheck,
   Building2,
-  CheckCircle2,
   FileText,
-  MapPin,
   Search,
   ShieldCheck,
 } from "lucide-react";
@@ -51,27 +48,31 @@ function AdminProvidersContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const loadProviders = async () => {
-      try {
-        const payload = await apiFetch<{ providers: ProviderCompanyRecord[] }>(
-          "/api/admin/providers",
-        );
-        setProviders(payload.providers);
-        setError("");
-      } catch (err) {
+  const loadProviders = async (quiet = false) => {
+    if (!quiet) setLoading(true);
+    try {
+      const payload = await apiFetch<{ providers: ProviderCompanyRecord[] }>(
+        "/api/admin/providers",
+      );
+      setProviders(payload.providers);
+      setError("");
+    } catch (err) {
+      if (!quiet) {
         setError(
           err instanceof Error
             ? err.message
             : "Unable to load service providers.",
         );
-      } finally {
-        setLoading(false);
       }
-    };
+    } finally {
+      if (!quiet) setLoading(false);
+    }
+  };
 
-    loadProviders();
+  useEffect(() => {
+    void loadProviders();
   }, []);
+  useSoftRefresh(() => loadProviders(true));
 
   const filterOptions = useMemo(
     () =>
@@ -80,7 +81,7 @@ function AdminProvidersContent() {
           filter.id === "all"
             ? providers.length
             : providers.filter((provider) =>
-                categoriesFor(provider).includes(
+                selectedCategoriesFor(provider).includes(
                   filter.id as ServiceProviderCategoryId,
                 ),
               ).length;
@@ -96,7 +97,7 @@ function AdminProvidersContent() {
     return providers.filter((provider) => {
       const matchesFilter =
         selectedFilter === "all" ||
-        categoriesFor(provider).includes(selectedFilter);
+        selectedCategoriesFor(provider).includes(selectedFilter);
       if (!matchesFilter) {
         return false;
       }
@@ -117,7 +118,7 @@ function AdminProvidersContent() {
         provider.headquartersCity,
         ...provider.servicesOffered,
         ...provider.serviceAreas,
-        ...categoriesFor(provider).map(
+        ...selectedCategoriesFor(provider).map(
           (category) => serviceProviderCategoryLabels[category],
         ),
       ]
@@ -237,21 +238,27 @@ function ServiceProviderListCard({
 }: {
   provider: ProviderCompanyRecord;
 }) {
-  const href = getSurfaceHref(
+  const baseHref = getSurfaceHref(
     "admin",
     `/admin/service-providers/${
       serviceProviderIdToRouteSegment(provider.serviceProviderId) || provider.id
     }`,
   );
   const reviewSummary = getReviewSummary(provider);
+  const reviewReasons = getReviewNeededReasons(provider);
+  const selectedCategories = selectedCategoriesFor(provider);
+  const href = reviewReasons[0]
+    ? `${baseHref}#${reviewReasons[0].targetId}`
+    : baseHref;
 
   return (
     <Link
       href={href}
       className={cn(
-        "group block w-full rounded-xl border border-slate-200 px-4 py-4 transition",
-        "hover:border-slate-300 hover:bg-slate-900/[0.03]",
-        "dark:border-white/10 dark:hover:border-white/20 dark:hover:bg-white/[0.05]",
+        "group block w-full rounded-xl border px-4 py-4 transition",
+        reviewReasons.length > 0
+          ? "border-amber-300 bg-amber-50/40 hover:border-amber-400 dark:border-amber-400/35 dark:bg-amber-400/5 dark:hover:border-amber-400/55"
+          : "border-slate-200 hover:border-slate-300 hover:bg-slate-900/[0.03] dark:border-white/10 dark:hover:border-white/20 dark:hover:bg-white/[0.05]",
       )}
     >
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
@@ -259,25 +266,26 @@ function ServiceProviderListCard({
           <div className="flex items-start justify-between gap-3 md:justify-start">
             <div className="min-w-0">
               <div className="truncate text-base font-semibold text-slate-950 group-hover:text-slate-600 dark:text-white dark:group-hover:text-white/70">
-                {provider.companyName}
+                {provider.tradingName || provider.companyName}
               </div>
-              <div className="mt-1 flex min-w-0 items-center gap-1.5 text-sm text-slate-500 dark:text-white/45">
-                <MapPin className="h-3.5 w-3.5 shrink-0 text-slate-400 dark:text-white/40" />
-                <span className="truncate">
-                  {getOperatingLocation(provider)}
-                </span>
+              <div className="mt-1">
+                <LocationPill location={getOperatingLocation(provider)} />
               </div>
             </div>
-            <ApprovalIndicator provider={provider} />
+            {reviewReasons.length > 0 ? (
+              <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-700 dark:bg-amber-400/10 dark:text-amber-300">
+                Review needed
+              </span>
+            ) : null}
           </div>
 
           <div className="mt-3 flex flex-wrap gap-1.5">
-            {categoriesFor(provider).length === 0 ? (
+            {selectedCategories.length === 0 ? (
               <span className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-500 dark:bg-white/[0.06] dark:text-white/45">
                 Uncategorised
               </span>
             ) : (
-              categoriesFor(provider).map((category) => (
+              selectedCategories.map((category) => (
                 <span
                   key={category}
                   className="rounded-full bg-slate-100 px-2 py-1 text-xs text-slate-600 dark:bg-white/[0.08] dark:text-white/60"
@@ -286,6 +294,14 @@ function ServiceProviderListCard({
                 </span>
               ))
             )}
+            {reviewReasons.map((reason) => (
+              <span
+                key={`${reason.label}-${reason.targetId}`}
+                className="rounded-full border border-amber-200 px-2 py-1 text-xs text-amber-700 dark:border-amber-400/20 dark:text-amber-300"
+              >
+                {reason.label}
+              </span>
+            ))}
           </div>
         </div>
 
@@ -308,57 +324,112 @@ function ServiceProviderListCard({
   );
 }
 
-function ApprovalIndicator({ provider }: { provider: ProviderCompanyRecord }) {
-  const status = provider.onboardingStatus as string;
-  const isPremiumApproved =
-    provider.verificationTier === "verified_premium" ||
-    status === "verified_premium";
-  const isBasicApproved = status === "basic_approved";
+function getOperatingLocation(provider: ProviderCompanyRecord) {
+  return provider.headquartersCity?.trim() || "Location pending";
+}
 
-  if (isPremiumApproved || isBasicApproved) {
-    const label = isPremiumApproved ? "Premium approved" : "Basic approved";
+function selectedCategoriesFor(provider: ProviderCompanyRecord) {
+  const explicit = provider.servicesOffered
+    .map((service) => service.trim().toLowerCase())
+    .filter(Boolean);
+  const matched = explicit
+    .map((service) => {
+      if (
+        (
+          Object.keys(
+            serviceProviderCategoryLabels,
+          ) as ServiceProviderCategoryId[]
+        ).includes(service as ServiceProviderCategoryId)
+      ) {
+        return service as ServiceProviderCategoryId;
+      }
 
-    return (
-      <span
-        title={label}
-        aria-label={label}
-        className={cn(
-          "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border",
-          isPremiumApproved
-            ? "border-amber-200 bg-amber-50 text-amber-500 dark:border-amber-300/30 dark:bg-amber-400/10 dark:text-amber-300"
-            : "border-sky-200 bg-sky-50 text-sky-600 dark:border-sky-300/30 dark:bg-sky-400/10 dark:text-sky-300",
-        )}
-      >
-        <CheckCircle2 className="h-5 w-5" />
-      </span>
-    );
+      return (
+        Object.entries(serviceProviderCategoryLabels) as Array<
+          [ServiceProviderCategoryId, string]
+        >
+      ).find(([, label]) => label.toLowerCase() === service)?.[0];
+    })
+    .filter((value): value is ServiceProviderCategoryId => Boolean(value));
+
+  if (matched.length > 0) {
+    return [matched[0]];
   }
 
-  return (
-    <StatusBadge tone={providerTone(provider.onboardingStatus)}>
-      {formatProviderStatus(provider.onboardingStatus)}
-    </StatusBadge>
+  const categories = categoriesFor(provider);
+  return categories.length > 0 ? [categories[0]] : [];
+}
+
+function getReviewNeededReasons(provider: ProviderCompanyRecord) {
+  const reasons: Array<{ label: string; targetId: string }> = [];
+  const pendingSections = new Set(provider.pendingReviewSections ?? []);
+  pendingSections.forEach((section) => {
+    reasons.push({
+      label: `${section} review`,
+      targetId: getSectionTargetId(section),
+    });
+  });
+  if (provider.onboardingStatus === "changes_requested") {
+    reasons.push({ label: "Changes requested", targetId: "readiness" });
+  }
+  if (provider.premiumUpgradeStatus === "pending") {
+    reasons.push({ label: "Premium request", targetId: "profile" });
+  }
+  if ((provider.listingStats?.pending ?? 0) > 0) {
+    reasons.push({
+      label: `${provider.listingStats?.pending} listing review`,
+      targetId: "listings",
+    });
+  }
+  provider.documents.forEach((document) => {
+    if (!["uploaded", "pending", "pending_review"].includes(document.status)) {
+      return;
+    }
+
+    const section =
+      document.type === "tax_clearance"
+        ? "ZIMRA and Tax Clearance"
+        : document.type === "certificate_of_incorporation"
+          ? "Company Verification"
+          : "Contact Person";
+    if (pendingSections.has(section)) {
+      return;
+    }
+
+    reasons.push({
+      label:
+        document.type === "tax_clearance"
+          ? "Tax clearance review"
+          : document.type === "certificate_of_incorporation"
+            ? "Company document review"
+            : "Contact ID review",
+      targetId:
+        document.type === "tax_clearance"
+          ? "zimra-tax"
+          : document.type === "certificate_of_incorporation"
+            ? "company-verification"
+            : "contact-person",
+    });
+  });
+
+  return reasons.filter(
+    (reason, index, all) =>
+      all.findIndex(
+        (candidate) =>
+          candidate.label === reason.label &&
+          candidate.targetId === reason.targetId,
+      ) === index,
   );
 }
 
-function getOperatingLocation(provider: ProviderCompanyRecord) {
-  const serviceAreas = provider.serviceAreas
-    .map((area) => area.trim())
-    .filter(Boolean);
-
-  if (serviceAreas.length > 0) {
-    const visibleAreas = serviceAreas.slice(0, 2).join(", ");
-    const remainingCount = serviceAreas.length - 2;
-    return remainingCount > 0
-      ? `${visibleAreas} +${remainingCount} more`
-      : visibleAreas;
-  }
-
-  return (
-    provider.headquartersCity?.trim() ||
-    provider.physicalAddress?.trim() ||
-    "Location pending"
-  );
+function getSectionTargetId(section: string) {
+  if (section === "Operating Time") return "operating-time";
+  if (section === "Contact Person") return "contact-person";
+  if (section === "Listings") return "listings";
+  if (section === "Gallery") return "gallery";
+  if (section === "Company Verification") return "company-verification";
+  if (section === "ZIMRA and Tax Clearance") return "zimra-tax";
+  return "profile";
 }
 
 function getReviewSummary(provider: ProviderCompanyRecord) {

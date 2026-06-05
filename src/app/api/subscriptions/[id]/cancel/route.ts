@@ -5,8 +5,9 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(
   _request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const { user } = await requireSessionUser();
     if (user.role !== "provider") return apiError("Providers only.", 403);
@@ -18,7 +19,7 @@ export async function POST(
     if (!company) return apiError("Provider company not found.", 404);
 
     const sub = await prisma.subscription.findFirst({
-      where: { id: params.id, companyId: company.id, status: "active" },
+      where: { id: resolvedParams.id, companyId: company.id, status: "active" },
     });
 
     if (!sub) return apiError("Active subscription not found.", 404);

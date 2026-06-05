@@ -10,8 +10,10 @@ import AdminShell from "@/components/admin/AdminShell";
 import EditableServiceProviderProfile from "@/components/admin/EditableServiceProviderProfile";
 import { formatProviderStatus } from "@/components/admin/ServiceProviderProfile";
 import { apiFetch } from "@/lib/client-api";
+import { useSoftRefresh } from "@/hooks/useSoftRefresh";
 import { getSurfaceHref } from "@/lib/app-surface";
 import { cn } from "@/lib/utils";
+import { scrollToDetailSection } from "@/lib/detail-scroll";
 import type { ProviderCompanyRecord } from "@/types/platform";
 import { ChevronLeft, XCircle } from "lucide-react";
 
@@ -36,34 +38,55 @@ function AdminProviderDetailContent() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const loadProvider = async () => {
-      if (!providerIdentifier) {
-        return;
-      }
+  const loadProvider = async (quiet = false) => {
+    if (!providerIdentifier) {
+      return;
+    }
 
-      try {
-        const payload = await apiFetch<{ provider: ProviderCompanyRecord }>(
-          `/api/admin/providers/${encodeURIComponent(providerIdentifier)}`,
-        );
-        setProvider(payload.provider);
-        setError("");
-      } catch (err) {
+    if (!quiet) setLoading(true);
+    try {
+      const payload = await apiFetch<{ provider: ProviderCompanyRecord }>(
+        `/api/admin/providers/${encodeURIComponent(providerIdentifier)}`,
+      );
+      setProvider(payload.provider);
+      setError("");
+    } catch (err) {
+      if (!quiet) {
         setError(
           err instanceof Error
             ? err.message
             : "Unable to load the service provider.",
         );
-      } finally {
-        setLoading(false);
       }
-    };
+    } finally {
+      if (!quiet) setLoading(false);
+    }
+  };
 
-    loadProvider();
+  useEffect(() => {
+    void loadProvider();
   }, [providerIdentifier]);
+  useSoftRefresh(() => loadProvider(true), {
+    enabled: Boolean(providerIdentifier) && !saving,
+  });
 
-  const submitReview = async () => {
-    if (!provider || !notes.trim()) {
+  useEffect(() => {
+    if (!provider || !window.location.hash) return;
+
+    const targetId = window.location.hash.slice(1);
+    const frame = window.requestAnimationFrame(() => {
+      scrollToDetailSection(targetId);
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [provider]);
+
+  const submitReview = async (
+    statusOverride = status,
+    notesOverride = notes,
+    internalSummaryOverride = internalSummary,
+  ) => {
+    if (!provider || !notesOverride.trim()) {
       setError("Add review notes before saving.");
       return;
     }
@@ -75,14 +98,17 @@ function AdminProviderDetailContent() {
         {
           method: "POST",
           body: JSON.stringify({
-            status,
-            notes,
-            internalSummary,
+            status: statusOverride,
+            notes: notesOverride,
+            internalSummary: internalSummaryOverride,
           }),
         },
       );
 
       setProvider(payload.company);
+      setStatus(statusOverride);
+      setNotes(notesOverride);
+      setInternalSummary(internalSummaryOverride);
       setError("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to save review.");
@@ -219,15 +245,30 @@ function ProviderHeaderStatus({
 }: {
   provider: ProviderCompanyRecord;
 }) {
-  const needsAttention =
-    ["changes_requested", "draft", "submitted"].includes(
-      provider.onboardingStatus,
-    ) ||
-    provider.documents.some((document) =>
-      ["rejected", "changes_requested"].includes(document.status),
-    ) ||
-    !["active", "trialing"].includes(provider.tierStatus);
-  const label = needsAttention ? "Attention Required" : "Online";
+  const requiredDocumentsApproved = [
+    "certificate_of_incorporation",
+    "contact_person_id",
+    "tax_clearance",
+  ].every((type) =>
+    provider.documents.some(
+      (document) => document.type === type && document.status === "approved",
+    ),
+  );
+  const hasRequiredProfile =
+    Boolean(provider.tradingName || provider.companyName) &&
+    Boolean(provider.businessPhone) &&
+    Boolean(provider.businessEmail) &&
+    Boolean(provider.businessDescription) &&
+    provider.serviceAreas.length > 0 &&
+    provider.serviceCategories.length > 0;
+  const hasListings = (provider.listingStats?.active ?? 0) > 0;
+  const isOnline =
+    provider.onboardingStatus === "basic_approved" &&
+    ["active", "trialing"].includes(provider.tierStatus) &&
+    requiredDocumentsApproved &&
+    hasRequiredProfile &&
+    hasListings;
+  const label = isOnline ? "Online" : "Attention Required";
 
   return (
     <div className="inline-flex items-center gap-2 text-sm font-medium">
@@ -235,23 +276,23 @@ function ProviderHeaderStatus({
         <span
           className={cn(
             "absolute inline-flex h-full w-full animate-ping rounded-full opacity-40",
-            needsAttention ? "bg-rose-500" : "bg-emerald-500",
+            isOnline ? "bg-emerald-500" : "bg-rose-500",
           )}
         />
         <span
           className={cn(
             "relative inline-flex h-2.5 w-2.5 rounded-full",
-            needsAttention
-              ? "bg-rose-500 shadow-[0_0_0_4px_rgba(244,63,94,0.12)]"
-              : "bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.14)]",
+            isOnline
+              ? "bg-emerald-500 shadow-[0_0_0_4px_rgba(16,185,129,0.14)]"
+              : "bg-rose-500 shadow-[0_0_0_4px_rgba(244,63,94,0.12)]",
           )}
         />
       </span>
       <span
         className={
-          needsAttention
-            ? "text-rose-700 dark:text-rose-300"
-            : "text-emerald-700 dark:text-emerald-300"
+          isOnline
+            ? "text-emerald-700 dark:text-emerald-300"
+            : "text-rose-700 dark:text-rose-300"
         }
       >
         {label}

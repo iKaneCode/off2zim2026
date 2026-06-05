@@ -6,11 +6,12 @@ import { serializePublicListing } from "@/lib/platform";
 export const dynamic = "force-dynamic";
 export async function GET(
   request: Request,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const listing = await prisma.providerListing.findUnique({
-      where: { slug: params.slug },
+      where: { slug: resolvedParams.slug },
       include: {
         availability: true,
         bookings: true,

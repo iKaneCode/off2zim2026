@@ -5,7 +5,9 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, KeyRound, Mail } from "lucide-react";
 import { type AppSurface, getSurfaceHref } from "@/lib/app-surface";
+import { getPostAuthRoute } from "@/lib/auth-routing";
 import { useAuth } from "@/contexts/AuthContext";
+import type { User } from "@/types/auth";
 
 interface LoginFormProps {
   onClose?: () => void;
@@ -20,6 +22,55 @@ interface LoginFormProps {
   showSocialButtons?: boolean;
   compactHeader?: boolean;
   surface?: AppSurface;
+}
+
+function getPathnameFromHref(href: string) {
+  try {
+    const origin =
+      typeof window !== "undefined"
+        ? window.location.origin
+        : "http://localhost";
+    return new URL(href, origin).pathname;
+  } catch {
+    return href.startsWith("/") ? href : `/${href}`;
+  }
+}
+
+function isRedirectAllowedForRole(user: Pick<User, "role">, href: string) {
+  const pathname = getPathnameFromHref(href);
+
+  if (user.role === "admin") {
+    return (
+      pathname === "/admin" ||
+      pathname.startsWith("/admin/") ||
+      pathname === "/admin-app/admin" ||
+      pathname.startsWith("/admin-app/admin/")
+    );
+  }
+
+  if (user.role === "provider") {
+    return (
+      pathname === "/provider-dashboard" ||
+      pathname.startsWith("/provider-dashboard/") ||
+      pathname === "/sp/provider-dashboard" ||
+      pathname.startsWith("/sp/provider-dashboard/")
+    );
+  }
+
+  return (
+    !pathname.startsWith("/admin") &&
+    !pathname.startsWith("/admin-app/admin") &&
+    !pathname.startsWith("/provider-dashboard") &&
+    !pathname.startsWith("/sp/provider-dashboard")
+  );
+}
+
+function getLoginDestination(user: User, redirectTo?: string) {
+  if (redirectTo && isRedirectAllowedForRole(user, redirectTo)) {
+    return redirectTo;
+  }
+
+  return getPostAuthRoute(user);
 }
 
 const LoginForm = ({
@@ -47,7 +98,9 @@ const LoginForm = ({
     ? getSurfaceHref(surface, signupHref)
     : signupHref;
   const baseHelpHref =
-    helpHref === "/contact" || helpHref.startsWith("mailto:") || !helpHref.startsWith("/")
+    helpHref === "/contact" ||
+    helpHref.startsWith("mailto:") ||
+    !helpHref.startsWith("/")
       ? helpHref
       : getSurfaceHref(surface, helpHref);
   const signupDestination = redirectTo
@@ -63,12 +116,14 @@ const LoginForm = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await login({ email: formData.email, password: formData.password });
+      const nextUser = await login({
+        email: formData.email,
+        password: formData.password,
+      });
+      const destination = getLoginDestination(nextUser, redirectTo);
       onClose?.();
-      if (redirectTo) {
-        router.push(redirectTo);
-        router.refresh();
-      }
+      router.push(destination);
+      router.refresh();
     } catch {
       return;
     }

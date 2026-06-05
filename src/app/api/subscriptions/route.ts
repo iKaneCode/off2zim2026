@@ -3,6 +3,10 @@ import { z } from "zod";
 import { apiError } from "@/lib/http";
 import { requireSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import {
+  mergeProviderProfileMeta,
+  readProviderProfileMeta,
+} from "@/lib/provider-profile-meta";
 
 export const dynamic = "force-dynamic";
 
@@ -24,6 +28,16 @@ const subscribeSchema = z.object({
   paymentReference: z.string().optional(),
 });
 
+function safeJsonParse<T>(value: string | null | undefined, fallback: T): T {
+  if (!value) return fallback;
+
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return fallback;
+  }
+}
+
 async function findCompany(userId: string) {
   return prisma.providerCompany.findUnique({
     where: { ownerUserId: userId },
@@ -34,6 +48,7 @@ async function findCompany(userId: string) {
       onboardingStatus: true,
       providerTier: true,
       tierStatus: true,
+      socialMediaLinks: true,
     },
   });
 }
@@ -157,29 +172,21 @@ export async function POST(request: NextRequest) {
 
       // Update company flags based on plan type
       if (payload.planType === "premium_provider") {
+        const existingLinks = safeJsonParse<Record<string, string>>(
+          company.socialMediaLinks,
+          {},
+        );
+        const existingMeta = readProviderProfileMeta(existingLinks);
         await tx.providerCompany.update({
           where: { id: company.id },
           data: {
-            providerTier: "premium",
-            tierStatus: "active",
-          },
-        });
-
-        await tx.providerPlan.create({
-          data: {
-            companyId: company.id,
-            tier: "premium",
-            status: "active",
-            billingCycle: payload.billingCycle,
-            externalRef: payload.paymentReference ?? null,
-            startsAt: now,
-            endsAt: periodEnd,
-            features: JSON.stringify({
-              galleryManagement: true,
-              pushCampaigns: true,
-              advancedAnalytics: true,
-              premiumAndroidApp: true,
-            }),
+            socialMediaLinks: JSON.stringify(
+              mergeProviderProfileMeta(existingLinks, {
+                ...existingMeta,
+                premiumUpgradeStatus: "pending",
+                premiumUpgradeRequestedAt: now.toISOString(),
+              }),
+            ),
           },
         });
       } else if (payload.planType === "verified_badge") {

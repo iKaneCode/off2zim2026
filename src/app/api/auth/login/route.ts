@@ -1,12 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { createAuditLog } from "@/lib/audit-log";
 import { apiError } from "@/lib/http";
 import { rateLimit, rateLimitResponse, AUTH_LIMIT } from "@/lib/rate-limit";
 import {
   createSession,
   getUserBySessionToken,
   hashPassword,
+  setSessionCookie,
   serializeUser,
   verifyPassword,
 } from "@/lib/auth";
@@ -18,7 +20,52 @@ const loginSchema = z.object({
   password: z.string().min(1),
 });
 
+function getAuthAuditRequestMetadata(request: NextRequest) {
+  const forwardedFor = request.headers.get("x-forwarded-for");
+
+  return {
+    ipAddress:
+      forwardedFor?.split(",")[0]?.trim() ||
+      request.headers.get("x-real-ip") ||
+      null,
+    userAgent: request.headers.get("user-agent") || null,
+  };
+}
+
+async function logSuccessfulLogin(
+  request: NextRequest,
+  user: NonNullable<Awaited<ReturnType<typeof getUserBySessionToken>>>,
+) {
+  if (user.role !== "admin" && user.role !== "provider") {
+    return;
+  }
+
+  const company = user.ownedCompanies[0];
+  const roleLabel = user.role === "admin" ? "Admin" : "Service provider";
+
+  await createAuditLog({
+    actorUserId: user.id,
+    action: user.role === "admin" ? "admin_logged_in" : "provider_logged_in",
+    targetType: "user",
+    targetId: user.id,
+    companyId: company?.id ?? null,
+    summary: `${roleLabel} ${user.email} logged in`,
+    metadata: {
+      targetDisplayId: user.email,
+      email: user.email,
+      role: user.role,
+      serviceProviderId: company?.serviceProviderId ?? null,
+      companyId: company?.id ?? null,
+      ...getAuthAuditRequestMetadata(request),
+    },
+  });
+}
+
 async function ensureDemoAccounts() {
+  if (process.env.NODE_ENV === "production") {
+    return;
+  }
+
   const count = await prisma.user.count();
   if (count > 0) {
     return;
@@ -104,7 +151,9 @@ async function ensureDemoAccounts() {
                 verificationTier: "basic",
                 socialMediaLinks: JSON.stringify({ instagram: "@vfadventure" }),
                 serviceAreas: JSON.stringify(["Victoria Falls", "Hwange"]),
-                servicesOffered: JSON.stringify(demoUser.company.servicesOffered),
+                servicesOffered: JSON.stringify(
+                  demoUser.company.servicesOffered,
+                ),
                 reviewSubmittedAt: new Date(),
                 basicApprovedAt: new Date(),
                 listings: {
@@ -116,7 +165,8 @@ async function ensureDemoAccounts() {
                       listingType: "experience",
                       description:
                         "Scenic helicopter flights over Victoria Falls with professional briefing and premium safety standards.",
-                      shortDescription: "A signature aerial experience over the falls.",
+                      shortDescription:
+                        "A signature aerial experience over the falls.",
                       location: "Victoria Falls",
                       pricingModel: "per_person",
                       basePrice: 180,
@@ -144,7 +194,7 @@ async function ensureDemoAccounts() {
 }
 
 export async function POST(request: NextRequest) {
-  const rl = rateLimit(request, "login", AUTH_LIMIT);
+  const rl = await rateLimit(request, "login", AUTH_LIMIT);
   if (!rl.success) return rateLimitResponse(rl);
 
   try {
@@ -155,7 +205,10 @@ export async function POST(request: NextRequest) {
       where: { email: payload.email },
     });
 
-    if (!user?.passwordHash || !verifyPassword(payload.password, user.passwordHash)) {
+    if (
+      !user?.passwordHash ||
+      !verifyPassword(payload.password, user.passwordHash)
+    ) {
       return apiError("Incorrect email or password.", 401);
     }
 
@@ -166,10 +219,16 @@ export async function POST(request: NextRequest) {
       return apiError("Unable to create a session right now.", 500);
     }
 
-    return NextResponse.json({
-      token: session.sessionToken,
-      user: serializeUser(hydratedUser),
-    });
+    await logSuccessfulLogin(request, hydratedUser);
+
+    return setSessionCookie(
+      NextResponse.json({
+        token: session.sessionToken,
+        user: serializeUser(hydratedUser),
+      }),
+      session.sessionToken,
+      session.expires,
+    );
   } catch (error) {
     if (error instanceof z.ZodError) {
       return apiError(error.issues[0]?.message || "Invalid login data", 422);

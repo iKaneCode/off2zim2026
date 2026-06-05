@@ -84,7 +84,7 @@ const EMPTY_PROVIDER_DOCUMENTS: Array<{
 
 function persistAuth(payload: AuthPayload) {
   localStorage.setItem("off2zim_user", JSON.stringify(payload.user));
-  localStorage.setItem("off2zim_token", payload.token);
+  localStorage.removeItem("off2zim_token");
 }
 
 function persistUser(user: User) {
@@ -103,8 +103,15 @@ function mapProfileToProviderPayload(profile: UserProfile) {
   return {
     companyName: profile.companyName || "",
     tradingName: profile.tradingName || "",
+    legalCompanyName: profile.legalCompanyName || "",
+    incorporationDate: profile.incorporationDate || "",
+    profileImageUrl: profile.profileImageUrl || "",
+    coverImageUrl: profile.coverImageUrl || "",
     businessRegistrationNumber: profile.businessRegistrationNumber || "",
     mainContactPerson: profile.mainContactPerson || "",
+    contactPersonPhone: profile.contactPersonPhone || "",
+    contactPersonIdType: profile.contactPersonIdType || "",
+    contactPersonIdNumber: profile.contactPersonIdNumber || "",
     businessPhone: profile.businessPhone || "",
     businessEmail: profile.businessEmail || "",
     physicalAddress: profile.physicalAddress || "",
@@ -120,6 +127,10 @@ function mapProfileToProviderPayload(profile: UserProfile) {
     socialMediaLinks: profile.socialMediaLinks || {},
     servicesOffered: profile.servicesOffered || [],
     serviceAreas: profile.serviceAreas || [],
+    zimraBpNumber: profile.zimraBpNumber || "",
+    tinNumber: profile.tinNumber || "",
+    taxClearanceExpiresAt: profile.taxClearanceExpiresAt || "",
+    providerTier: profile.providerTier || "basic",
     documents: businessDocuments
       .filter((document) => document.file || document.type || document.fileUrl)
       .map((document) => ({
@@ -150,13 +161,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const hydrateSession = async () => {
-      const token = localStorage.getItem("off2zim_token");
       const storedUser = localStorage.getItem("off2zim_user");
-
-      if (!token) {
-        dispatch({ type: "SET_LOADING", payload: false });
-        return;
-      }
 
       if (storedUser) {
         try {
@@ -214,6 +219,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       persistAuth(payload);
       dispatch({ type: "LOGIN_SUCCESS", payload: payload.user });
+      return payload.user;
     } catch (error) {
       const message =
         error instanceof Error
@@ -238,36 +244,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         role: data.role,
         explorerType:
           data.role === "explorer" ? data.explorerType || "foreign" : undefined,
-        companyName:
-          data.role === "provider"
-            ? data.companyName || data.tradingName || "Off2Zim Business"
-            : undefined,
-        tradingName:
-          data.role === "provider"
-            ? data.tradingName || data.companyName || "Off2Zim Business"
-            : undefined,
-        businessRegistrationNumber:
-          data.role === "provider"
-            ? data.businessRegistrationNumber || "PENDING"
-            : undefined,
-        mainContactPerson:
-          data.role === "provider"
-            ? `${data.firstName} ${data.lastName}`.trim() || "Business User"
-            : undefined,
-        businessPhone:
-          data.role === "provider"
-            ? data.businessPhone || data.phone || "+263000000000"
-            : undefined,
-        businessEmail:
-          data.role === "provider"
-            ? data.businessEmail || data.email
-            : undefined,
-        physicalAddress:
-          data.role === "provider"
-            ? data.physicalAddress || "Pending address"
-            : undefined,
-        providerTier:
-          data.role === "provider" ? data.providerTier || "basic" : undefined,
+        ...(data.role === "provider"
+          ? {
+              providerTier: data.providerTier,
+            }
+          : {}),
       };
 
       const payload = await apiFetch<AuthPayload>("/api/auth/register", {

@@ -23,7 +23,7 @@ const bodySchema = z.object({
 
 export async function POST(request: NextRequest) {
   // ── Rate limit ────────────────────────────────────────────────────────────
-  const limit = rateLimit(request, "paynow", PAYMENT_LIMIT);
+  const limit = await rateLimit(request, "paynow", PAYMENT_LIMIT);
   if (!limit.success) return rateLimitResponse(limit);
 
   // ── Auth ──────────────────────────────────────────────────────────────────

@@ -76,8 +76,9 @@ function serializeCampaign(campaign: {
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const { user } = await requireSessionUser();
     if (user.role !== "admin") {
@@ -104,7 +105,7 @@ export async function PATCH(
     }
 
     const current = await prisma.notificationCampaign.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       select: { id: true, companyId: true, status: true },
     });
 

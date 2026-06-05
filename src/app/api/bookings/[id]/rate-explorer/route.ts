@@ -15,14 +15,16 @@ const rateSchema = z.object({
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
-  const rl = rateLimit(request, "rate-explorer", RATING_LIMIT);
+  const resolvedParams = await params;
+  const rl = await rateLimit(request, "rate-explorer", RATING_LIMIT);
   if (!rl.success) return rateLimitResponse(rl);
 
   try {
     const { user } = await requireSessionUser();
-    if (user.role !== "provider") return apiError("Only providers can rate explorers.", 403);
+    if (user.role !== "provider")
+      return apiError("Only providers can rate explorers.", 403);
 
     const payload = rateSchema.parse(await request.json());
 
@@ -34,7 +36,7 @@ export async function POST(
     if (!company) return apiError("Provider company not found.", 404);
 
     const booking = await prisma.booking.findFirst({
-      where: { id: params.id, providerId: company.id },
+      where: { id: resolvedParams.id, providerId: company.id },
       select: {
         id: true,
         userId: true,
@@ -62,18 +64,20 @@ export async function POST(
       : new Date(now.getTime() + BLIND_REVEAL_DAYS * 24 * 60 * 60 * 1000);
 
     await prisma.booking.update({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       data: {
         providerRating: payload.rating,
         providerRatingNote: payload.note ?? null,
         isProviderRated: true,
-        ratingsRevealedAt: bothRated ? now : booking.ratingsRevealedAt ?? revealAt,
+        ratingsRevealedAt: bothRated
+          ? now
+          : (booking.ratingsRevealedAt ?? revealAt),
       },
     });
 
     // Fire-and-forget: provider rating feeds directly into Explorer Score
     void recalculateExplorerScore(booking.userId).catch((err) =>
-      console.error("Explorer score recalc after provider rating failed:", err)
+      console.error("Explorer score recalc after provider rating failed:", err),
     );
 
     return NextResponse.json({

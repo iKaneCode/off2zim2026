@@ -13,8 +13,9 @@ const processSchema = z.object({
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const { user } = await requireSessionUser();
     if (user.role !== "admin") return apiError("Admins only.", 403);
@@ -22,7 +23,7 @@ export async function PATCH(
     const payload = processSchema.parse(await request.json());
 
     const payout = await prisma.payout.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       select: { id: true, status: true },
     });
 
@@ -32,14 +33,15 @@ export async function PATCH(
     }
 
     const updated = await prisma.payout.update({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       data: {
         status: payload.status,
         reference: payload.reference ?? null,
         notes: payload.notes ?? null,
-        processedAt: payload.status === "completed" || payload.status === "failed"
-          ? new Date()
-          : null,
+        processedAt:
+          payload.status === "completed" || payload.status === "failed"
+            ? new Date()
+            : null,
       },
       include: {
         company: {
@@ -58,7 +60,8 @@ export async function PATCH(
       if (ownerEmail) {
         void sendPayoutProcessed({
           to: ownerEmail,
-          providerName: updated.company.tradingName || updated.company.companyName,
+          providerName:
+            updated.company.tradingName || updated.company.companyName,
           amount: updated.amount,
           currency: updated.currency,
           status: payload.status,

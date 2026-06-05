@@ -18,7 +18,7 @@ export function getStoredToken() {
 
 export function getAuthHeaders(
   initHeaders?: HeadersInit,
-  includeJsonContentType = false
+  includeJsonContentType = false,
 ) {
   const headers = new Headers(initHeaders);
   const token = getStoredToken();
@@ -36,15 +36,19 @@ export function getAuthHeaders(
 
 export async function apiFetch<T>(
   input: RequestInfo | URL,
-  init: RequestInit = {}
+  init: RequestInit = {},
 ): Promise<T> {
   const token = getStoredToken();
+  const hadBrowserSession =
+    typeof window !== "undefined" &&
+    Boolean(token || localStorage.getItem("off2zim_user"));
   const isFormData =
     typeof FormData !== "undefined" && init.body instanceof FormData;
   const headers = getAuthHeaders(init.headers, !!init.body && !isFormData);
 
   const response = await fetch(input, {
     ...init,
+    credentials: "include",
     headers,
   });
 
@@ -55,7 +59,7 @@ export async function apiFetch<T>(
 
     if (
       response.status === 401 &&
-      token &&
+      hadBrowserSession &&
       typeof window !== "undefined"
     ) {
       window.dispatchEvent(
@@ -63,7 +67,7 @@ export async function apiFetch<T>(
           detail: {
             path: `${window.location.pathname}${window.location.search}`,
           },
-        })
+        }),
       );
     }
 

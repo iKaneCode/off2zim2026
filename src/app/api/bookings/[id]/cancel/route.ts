@@ -21,8 +21,9 @@ const cancelSchema = z.object({
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const { user } = await requireSessionUser();
 
@@ -35,7 +36,7 @@ export async function POST(
     }
 
     const booking = await prisma.booking.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       select: {
         id: true,
         userId: true,
@@ -66,7 +67,7 @@ export async function POST(
     if (!(CANCELLABLE_STATUSES as readonly string[]).includes(booking.status)) {
       return apiError(
         `This booking cannot be cancelled (status: ${booking.status}).`,
-        409
+        409,
       );
     }
 

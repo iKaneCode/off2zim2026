@@ -29,10 +29,14 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       ok: true,
       email: user.email,
+      role: user.role,
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return apiError(error.issues[0]?.message || "Invalid verification token", 422);
+      return apiError(
+        error.issues[0]?.message || "Invalid verification token",
+        422,
+      );
     }
 
     console.error("Verify-email confirm route error:", error);

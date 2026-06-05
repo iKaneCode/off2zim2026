@@ -7,14 +7,15 @@ export const dynamic = "force-dynamic";
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const { user } = await requireSessionUser();
 
     // Fetch the booking — accessible by either the explorer or the provider
     const booking = await prisma.booking.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       select: {
         id: true,
         userId: true,
@@ -72,8 +73,8 @@ export async function GET(
       status: booking.status,
       revealed,
       revealAt: booking.ratingsRevealedAt?.toISOString() ?? null,
-      explorerRated,   // explorer → provider rating
-      providerRated,   // provider → explorer rating
+      explorerRated, // explorer → provider rating
+      providerRated, // provider → explorer rating
     });
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {

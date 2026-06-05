@@ -18,8 +18,8 @@ export default function AdminPageHeader({
   actions,
 }: AdminPageHeaderProps) {
   return (
-    <header className="border-b border-slate-200 bg-slate-100/95 px-6 py-5 backdrop-blur dark:border-white/10 dark:bg-[#050505]/95">
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+    <header className="shrink-0 border-b border-slate-200 bg-slate-100/95 px-6 py-5 backdrop-blur dark:border-white/10 dark:bg-[#050505]/95">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="flex max-w-3xl items-start gap-3">
           {titleLeading}
           <div className="min-w-0">

@@ -1,0 +1,6 @@
+-- Historical hosted-staging baseline marker.
+--
+-- The Supabase staging database already had this migration recorded before the
+-- repository migration history was normalized. It is intentionally a no-op so
+-- fresh databases continue through the current checked-in migrations, while the
+-- hosted staging database can keep a complete migration-history chain.

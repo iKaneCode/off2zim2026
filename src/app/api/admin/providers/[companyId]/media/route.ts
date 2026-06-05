@@ -7,7 +7,9 @@ import {
   mergeProviderProfileMeta,
   readProviderProfileMeta,
 } from "@/lib/provider-profile-meta";
+import { resolveListingDisplayId } from "@/lib/provider-listing-display-id";
 import { providerHasFeature } from "@/lib/provider-platform";
+import { getServiceProviderDisplayId } from "@/lib/service-provider-id";
 import { saveUploadedFile } from "@/lib/uploads";
 
 export const dynamic = "force-dynamic";
@@ -93,12 +95,10 @@ function serializeMedia(media: {
 
 export async function POST(
   request: NextRequest,
-  {
-    params,
-  }: { params: Promise<{ companyId: string }> | { companyId: string } },
+  { params }: { params: Promise<{ companyId: string }> },
 ) {
   try {
-    const { companyId } = await Promise.resolve(params);
+    const { companyId } = await params;
     const { user } = await requireSessionUser();
     if (user.role !== "admin") {
       return apiError("Only administrators can upload provider media.", 403);
@@ -121,6 +121,8 @@ export async function POST(
       where: { id: companyId },
       select: {
         id: true,
+        serviceProviderId: true,
+        companyName: true,
         socialMediaLinks: true,
         providerTier: true,
         tierStatus: true,
@@ -174,6 +176,7 @@ export async function POST(
       const mediaCount = await prisma.providerMedia.count({
         where: { companyId, listingId: galleryListing.id },
       });
+      const listingDisplayId = await resolveListingDisplayId(galleryListing.id);
       const media = await prisma.providerMedia.create({
         data: {
           companyId,
@@ -190,6 +193,7 @@ export async function POST(
           metadata: JSON.stringify({
             source: "admin_service_provider_detail",
             listingId: galleryListing.id,
+            listingDisplayId,
           }),
         },
       });
@@ -205,7 +209,10 @@ export async function POST(
           metadata: JSON.stringify({
             fileName: uploaded.fileName,
             size: uploaded.size,
+            targetDisplayId: listingDisplayId,
             listingId: galleryListing.id,
+            listingDisplayId,
+            internalListingId: galleryListing.id,
           }),
         },
       });
@@ -230,6 +237,29 @@ export async function POST(
       where: { id: company.id },
       data: {
         socialMediaLinks: JSON.stringify(nextLinks),
+      },
+    });
+    const serviceProviderId = getServiceProviderDisplayId(company);
+
+    await prisma.adminAuditLog.create({
+      data: {
+        adminUserId: user.id,
+        companyId,
+        action:
+          slot === "profile"
+            ? "provider_profile_image_updated"
+            : "provider_cover_image_updated",
+        targetType: "provider_company",
+        targetId: company.id,
+        summary: `${slot === "profile" ? "Profile image" : "Cover image"} updated for ${company.companyName}`,
+        metadata: JSON.stringify({
+          targetDisplayId: serviceProviderId,
+          serviceProviderId,
+          slot,
+          fileName: uploaded.fileName,
+          size: uploaded.size,
+          url: uploaded.fileUrl,
+        }),
       },
     });
 

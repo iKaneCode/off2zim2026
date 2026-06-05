@@ -5,21 +5,25 @@ import { requireSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 const verifyPinSchema = z.object({
-  pin: z.string().length(6).regex(/^\d{6}$/, "PIN must be 6 digits"),
+  pin: z
+    .string()
+    .length(6)
+    .regex(/^\d{6}$/, "PIN must be 6 digits"),
   orderItemId: z.string().min(1),
 });
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const { user } = await requireSessionUser();
     const payload = verifyPinSchema.parse(await request.json());
 
     // Verify the order exists
     const order = await prisma.shoppingOrder.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       select: { id: true, status: true },
     });
 
@@ -39,7 +43,7 @@ export async function POST(
     const orderItem = await prisma.shoppingOrderItem.findFirst({
       where: {
         id: payload.orderItemId,
-        orderId: params.id,
+        orderId: resolvedParams.id,
         deliveryMethod: "pickup",
         vendorCompanyId: company.id,
         status: { not: "collected" },
@@ -54,7 +58,10 @@ export async function POST(
     });
 
     if (!orderItem) {
-      return apiError("Order item not found or you are not authorised to verify it.", 404);
+      return apiError(
+        "Order item not found or you are not authorised to verify it.",
+        404,
+      );
     }
 
     if (orderItem.pickupPin !== payload.pin) {
@@ -71,14 +78,14 @@ export async function POST(
     // Check if all items in the order are now collected/fulfilled and update order status
     const remainingItems = await prisma.shoppingOrderItem.count({
       where: {
-        orderId: params.id,
+        orderId: resolvedParams.id,
         status: { notIn: ["collected", "delivered", "cancelled"] },
       },
     });
 
     if (remainingItems === 0) {
       await prisma.shoppingOrder.update({
-        where: { id: params.id },
+        where: { id: resolvedParams.id },
         data: { status: "completed" },
       });
     }

@@ -23,14 +23,15 @@ const patchSchema = z.object({
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const { user } = await requireSessionUser();
     const payload = patchSchema.parse(await request.json());
 
     const item = await prisma.cartItem.findFirst({
-      where: { id: params.id, cart: { userId: user.id } },
+      where: { id: resolvedParams.id, cart: { userId: user.id } },
       include: { product: { select: { offersShipping: true } } },
     });
 
@@ -41,14 +42,20 @@ export async function PATCH(
     }
 
     await prisma.cartItem.update({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       data: {
-        ...(payload.quantity !== undefined ? { quantity: payload.quantity } : {}),
+        ...(payload.quantity !== undefined
+          ? { quantity: payload.quantity }
+          : {}),
         ...(payload.deliveryMethod !== undefined
           ? { deliveryMethod: payload.deliveryMethod }
           : {}),
         ...(payload.pickupDate !== undefined
-          ? { pickupDate: payload.pickupDate ? new Date(payload.pickupDate) : null }
+          ? {
+              pickupDate: payload.pickupDate
+                ? new Date(payload.pickupDate)
+                : null,
+            }
           : {}),
         ...(payload.shippingAddress !== undefined
           ? {
@@ -69,9 +76,19 @@ export async function PATCH(
               include: {
                 listing: {
                   select: {
-                    id: true, slug: true, title: true, basePrice: true,
-                    currency: true, images: true,
-                    company: { select: { id: true, companyName: true, tradingName: true } },
+                    id: true,
+                    slug: true,
+                    title: true,
+                    basePrice: true,
+                    currency: true,
+                    images: true,
+                    company: {
+                      select: {
+                        id: true,
+                        companyName: true,
+                        tradingName: true,
+                      },
+                    },
                   },
                 },
               },
@@ -96,18 +113,19 @@ export async function PATCH(
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const { user } = await requireSessionUser();
 
     const item = await prisma.cartItem.findFirst({
-      where: { id: params.id, cart: { userId: user.id } },
+      where: { id: resolvedParams.id, cart: { userId: user.id } },
     });
 
     if (!item) return apiError("Cart item not found.", 404);
 
-    await prisma.cartItem.delete({ where: { id: params.id } });
+    await prisma.cartItem.delete({ where: { id: resolvedParams.id } });
 
     const cart = await prisma.shoppingCart.findUnique({
       where: { userId: user.id },
@@ -118,9 +136,19 @@ export async function DELETE(
               include: {
                 listing: {
                   select: {
-                    id: true, slug: true, title: true, basePrice: true,
-                    currency: true, images: true,
-                    company: { select: { id: true, companyName: true, tradingName: true } },
+                    id: true,
+                    slug: true,
+                    title: true,
+                    basePrice: true,
+                    currency: true,
+                    images: true,
+                    company: {
+                      select: {
+                        id: true,
+                        companyName: true,
+                        tradingName: true,
+                      },
+                    },
                   },
                 },
               },
@@ -131,7 +159,11 @@ export async function DELETE(
       },
     });
 
-    return NextResponse.json({ cart: cart ? serializeCart(cart) : { id: null, items: [], subtotal: 0, shippingTotal: 0, total: 0 } });
+    return NextResponse.json({
+      cart: cart
+        ? serializeCart(cart)
+        : { id: null, items: [], subtotal: 0, shippingTotal: 0, total: 0 },
+    });
   } catch (error) {
     if (error instanceof Error && error.message === "Unauthorized") {
       return apiError("Unauthorized", 401);

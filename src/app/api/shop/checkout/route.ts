@@ -35,7 +35,7 @@ function generatePickupPin(): string {
 }
 
 export async function POST(request: NextRequest) {
-  const rl = rateLimit(request, "checkout", PAYMENT_LIMIT);
+  const rl = await rateLimit(request, "checkout", PAYMENT_LIMIT);
   if (!rl.success) return rateLimitResponse(rl);
 
   try {

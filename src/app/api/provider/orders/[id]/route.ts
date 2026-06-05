@@ -9,13 +9,20 @@ import { sendBookingStatusUpdate } from "@/lib/platform-email";
 
 export const dynamic = "force-dynamic";
 const updateSchema = z.object({
-  status: z.enum(["REQUESTED", "PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"]),
+  status: z.enum([
+    "REQUESTED",
+    "PENDING",
+    "CONFIRMED",
+    "COMPLETED",
+    "CANCELLED",
+  ]),
 });
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const { user } = await requireSessionUser();
     if (user.role !== "provider") {
@@ -35,7 +42,7 @@ export async function PATCH(
 
     const booking = await prisma.booking.findFirst({
       where: {
-        id: params.id,
+        id: resolvedParams.id,
         providerId: company.id,
       },
       select: { id: true },
@@ -83,7 +90,10 @@ export async function PATCH(
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return apiError(error.issues[0]?.message || "Invalid booking update", 422);
+      return apiError(
+        error.issues[0]?.message || "Invalid booking update",
+        422,
+      );
     }
     if (error instanceof Error && error.message === "Unauthorized") {
       return apiError("Unauthorized", 401);

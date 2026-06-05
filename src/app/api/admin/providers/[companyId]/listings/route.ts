@@ -4,6 +4,10 @@ import { apiError } from "@/lib/http";
 import { requireSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { serializeAdminListing } from "@/lib/platform";
+import {
+  getNextListingDisplayIdentity,
+  withListingDisplayMetadata,
+} from "@/lib/provider-listing-display-id";
 
 export const dynamic = "force-dynamic";
 
@@ -48,12 +52,10 @@ async function uniqueSlug(title: string) {
 
 export async function POST(
   request: NextRequest,
-  {
-    params,
-  }: { params: Promise<{ companyId: string }> | { companyId: string } },
+  { params }: { params: Promise<{ companyId: string }> },
 ) {
   try {
-    const { companyId } = await Promise.resolve(params);
+    const { companyId } = await params;
     const { user } = await requireSessionUser();
     if (user.role !== "admin") {
       return apiError("Only administrators can create provider listings.", 403);
@@ -62,13 +64,14 @@ export async function POST(
     const payload = listingCreateSchema.parse(await request.json());
     const company = await prisma.providerCompany.findUnique({
       where: { id: companyId },
-      select: { id: true, companyName: true },
+      select: { id: true, serviceProviderId: true, companyName: true },
     });
 
     if (!company) {
       return apiError("Service provider not found.", 404);
     }
 
+    const listingIdentity = await getNextListingDisplayIdentity(company);
     const listing = await prisma.providerListing.create({
       data: {
         companyId,
@@ -90,10 +93,16 @@ export async function POST(
         tags: "[]",
         amenities: JSON.stringify(payload.amenities ?? []),
         policies: JSON.stringify(payload.policies ?? {}),
-        metadata: JSON.stringify({
-          source: "admin_service_provider_detail",
-          serviceCategory: payload.serviceCategory || null,
-        }),
+        metadata: JSON.stringify(
+          withListingDisplayMetadata(
+            {
+              source: "admin_service_provider_detail",
+              serviceCategory: payload.serviceCategory || null,
+            },
+            listingIdentity.displayId,
+            listingIdentity.sequence,
+          ),
+        ),
       },
       include: {
         company: true,
@@ -116,6 +125,11 @@ export async function POST(
         summary: `Listing created for ${company.companyName}`,
         metadata: JSON.stringify({
           title: payload.title,
+          targetDisplayId: listingIdentity.displayId,
+          listingDisplayId: listingIdentity.displayId,
+          listingSequence: listingIdentity.sequence,
+          serviceProviderId: listingIdentity.serviceProviderId,
+          internalListingId: listing.id,
           category: payload.category,
           location: payload.location,
         }),

@@ -7,13 +7,14 @@ export const dynamic = "force-dynamic";
 
 export async function GET(
   _request: NextRequest,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const product = await prisma.shoppingProduct.findFirst({
       where: {
         isActive: true,
-        listing: { slug: params.slug, status: "active" },
+        listing: { slug: resolvedParams.slug, status: "active" },
       },
       include: {
         listing: {
@@ -31,7 +32,12 @@ export async function GET(
             tags: true,
             policies: true,
             company: {
-              select: { id: true, companyName: true, tradingName: true, isVerified: true },
+              select: {
+                id: true,
+                companyName: true,
+                tradingName: true,
+                isVerified: true,
+              },
             },
           },
         },

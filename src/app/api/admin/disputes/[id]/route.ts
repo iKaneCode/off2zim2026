@@ -16,8 +16,9 @@ const updateDisputeSchema = z.object({
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const { user } = await requireSessionUser();
     if (user.role !== "admin") {
@@ -27,7 +28,7 @@ export async function PATCH(
     const payload = updateDisputeSchema.parse(await request.json());
 
     const dispute = await prisma.dispute.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       select: { id: true, bookingId: true, companyId: true },
     });
 
@@ -118,7 +119,10 @@ export async function PATCH(
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return apiError(error.issues[0]?.message || "Invalid dispute update", 422);
+      return apiError(
+        error.issues[0]?.message || "Invalid dispute update",
+        422,
+      );
     }
     if (error instanceof Error && error.message === "Unauthorized") {
       return apiError("Unauthorized", 401);

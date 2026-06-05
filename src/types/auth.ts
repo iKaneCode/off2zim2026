@@ -71,14 +71,27 @@ export interface UserProfile {
   // Aligns with PRD 3.1: Service Provider specific - Core Company Profile
   companyName?: string;
   tradingName?: string;
+  legalCompanyName?: string;
+  incorporationDate?: string;
+  profileImageUrl?: string;
+  coverImageUrl?: string;
   businessRegistrationNumber?: string;
   businessType?: string;
   mainContactPerson?: string;
+  contactPersonPhone?: string;
+  contactPersonIdType?: string;
+  contactPersonIdNumber?: string;
   businessPhone?: string;
   businessEmail?: string;
   physicalAddress?: string;
   website?: string;
   serviceAreas?: string[];
+  zimraBpNumber?: string;
+  tinNumber?: string;
+  taxClearanceExpiresAt?: string;
+  providerTier?: "basic" | "premium";
+  tierStatus?: string;
+  tierFeatures?: string[];
 
   // Aligns with PRD 2.3: Community Guide specific
   expertise?: string[];
@@ -194,7 +207,7 @@ export interface RegisterData {
 }
 
 export interface AuthContextType extends AuthState {
-  login: (credentials: LoginCredentials) => Promise<void>;
+  login: (credentials: LoginCredentials) => Promise<User>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => Promise<void>;
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>;

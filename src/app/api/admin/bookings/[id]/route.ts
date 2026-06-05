@@ -7,13 +7,20 @@ import { serializeAdminBooking } from "@/lib/platform";
 
 export const dynamic = "force-dynamic";
 const updateSchema = z.object({
-  status: z.enum(["REQUESTED", "PENDING", "CONFIRMED", "COMPLETED", "CANCELLED"]),
+  status: z.enum([
+    "REQUESTED",
+    "PENDING",
+    "CONFIRMED",
+    "COMPLETED",
+    "CANCELLED",
+  ]),
 });
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const { user } = await requireSessionUser();
     if (user.role !== "admin") {
@@ -23,7 +30,7 @@ export async function PATCH(
     const payload = updateSchema.parse(await request.json());
 
     const booking = await prisma.booking.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       select: { id: true },
     });
 
@@ -69,7 +76,10 @@ export async function PATCH(
     });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return apiError(error.issues[0]?.message || "Invalid booking update", 422);
+      return apiError(
+        error.issues[0]?.message || "Invalid booking update",
+        422,
+      );
     }
     if (error instanceof Error && error.message === "Unauthorized") {
       return apiError("Unauthorized", 401);

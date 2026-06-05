@@ -5,11 +5,14 @@ import { apiError } from "@/lib/http";
 export const dynamic = "force-dynamic";
 export async function GET(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const destinations = await getMobileDestinations();
-    const destination = destinations.find((item) => item.id === params.id);
+    const destination = destinations.find(
+      (item) => item.id === resolvedParams.id,
+    );
 
     if (!destination) {
       return apiError("Destination not found.", 404);

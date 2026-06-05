@@ -4,6 +4,7 @@ import { apiError } from "@/lib/http";
 import { requireSessionUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { serializeAdminListing } from "@/lib/platform";
+import { resolveListingDisplayId } from "@/lib/provider-listing-display-id";
 import {
   buildDestinationMetadata,
   getListingDestinationMetadata,
@@ -23,7 +24,14 @@ const updateListingSchema = z.object({
   bookingMode: z.string().min(1).optional(),
   instantBooking: z.boolean().optional(),
   status: z
-    .enum(["draft", "pending_review", "active", "paused", "archived"])
+    .enum([
+      "draft",
+      "pending_review",
+      "active",
+      "paused",
+      "archived",
+      "rejected",
+    ])
     .optional(),
   visibility: z.enum(["private", "public"]).optional(),
   category: z.string().min(1).optional(),
@@ -34,10 +42,10 @@ const updateListingSchema = z.object({
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> | { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { id } = await Promise.resolve(params);
+    const { id } = await params;
     const { user } = await requireSessionUser();
     if (user.role !== "admin") {
       return apiError("Only administrators can update platform listings.", 403);
@@ -86,8 +94,17 @@ export async function PATCH(
         null as ReturnType<typeof resolveListingDestinationByName>,
       );
     const nextCategory = payload.category ?? listing.category;
+    const nextStatus = payload.status ?? listing.status;
+    const nextVisibility = payload.visibility ?? listing.visibility;
+    const isPublishing =
+      ["active", "approved"].includes(nextStatus) ||
+      nextVisibility === "public";
 
-    if (listingRequiresDestination(nextCategory) && !destination) {
+    if (
+      isPublishing &&
+      listingRequiresDestination(nextCategory) &&
+      !destination
+    ) {
       return apiError(
         "Assign a destination before publishing this destination-scoped listing.",
         422,
@@ -138,6 +155,7 @@ export async function PATCH(
       },
     });
 
+    const listingDisplayId = await resolveListingDisplayId(updated.id);
     await prisma.adminAuditLog.create({
       data: {
         adminUserId: user.id,
@@ -148,6 +166,9 @@ export async function PATCH(
         summary: `Listing updated from admin console`,
         metadata: JSON.stringify({
           previousStatus: listing.status,
+          targetDisplayId: listingDisplayId,
+          listingDisplayId,
+          internalListingId: updated.id,
           nextStatus: payload.status ?? listing.status,
           previousVisibility: listing.visibility,
           nextVisibility: payload.visibility ?? listing.visibility,
@@ -184,10 +205,10 @@ export async function PATCH(
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: Promise<{ id: string }> | { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const { id } = await Promise.resolve(params);
+    const { id } = await params;
     const { user } = await requireSessionUser();
     if (user.role !== "admin") {
       return apiError("Only administrators can delete platform listings.", 403);
@@ -206,6 +227,7 @@ export async function DELETE(
       return apiError("Listing not found.", 404);
     }
 
+    const listingDisplayId = await resolveListingDisplayId(listing.id);
     await prisma.$transaction([
       prisma.booking.updateMany({
         where: { listingId: listing.id },
@@ -225,6 +247,9 @@ export async function DELETE(
         targetId: listing.id,
         summary: "Listing deleted from admin console",
         metadata: JSON.stringify({
+          targetDisplayId: listingDisplayId,
+          listingDisplayId,
+          internalListingId: listing.id,
           title: listing.title,
           detachedBookingsCount: listing.bookings.length,
         }),

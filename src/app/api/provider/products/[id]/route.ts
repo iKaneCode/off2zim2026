@@ -19,7 +19,7 @@ const updateSchema = z.object({
         label: z.string().min(1),
         priceAdjustment: z.coerce.number().default(0),
         stockQuantity: z.number().int().min(0).default(0),
-      })
+      }),
     )
     .optional()
     .nullable(),
@@ -34,8 +34,9 @@ async function findProviderCompany(userId: string) {
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const { user } = await requireSessionUser();
     if (user.role !== "provider") return apiError("Providers only.", 403);
@@ -48,7 +49,7 @@ export async function PATCH(
     // Verify product belongs to this provider's company
     const product = await prisma.shoppingProduct.findFirst({
       where: {
-        id: params.id,
+        id: resolvedParams.id,
         listing: { companyId: company.id },
       },
       select: { id: true },
@@ -57,19 +58,36 @@ export async function PATCH(
     if (!product) return apiError("Product not found.", 404);
 
     const updated = await prisma.shoppingProduct.update({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       data: {
-        ...(payload.stockQuantity !== undefined ? { stockQuantity: payload.stockQuantity } : {}),
-        ...(payload.isActive !== undefined ? { isActive: payload.isActive } : {}),
-        ...(payload.offersShipping !== undefined ? { offersShipping: payload.offersShipping } : {}),
-        ...(payload.shippingFee !== undefined ? { shippingFee: payload.shippingFee } : {}),
-        ...(payload.pickupLeadTimeHours !== undefined ? { pickupLeadTimeHours: payload.pickupLeadTimeHours } : {}),
-        ...(payload.deliveryEstimateDays !== undefined ? { deliveryEstimateDays: payload.deliveryEstimateDays } : {}),
+        ...(payload.stockQuantity !== undefined
+          ? { stockQuantity: payload.stockQuantity }
+          : {}),
+        ...(payload.isActive !== undefined
+          ? { isActive: payload.isActive }
+          : {}),
+        ...(payload.offersShipping !== undefined
+          ? { offersShipping: payload.offersShipping }
+          : {}),
+        ...(payload.shippingFee !== undefined
+          ? { shippingFee: payload.shippingFee }
+          : {}),
+        ...(payload.pickupLeadTimeHours !== undefined
+          ? { pickupLeadTimeHours: payload.pickupLeadTimeHours }
+          : {}),
+        ...(payload.deliveryEstimateDays !== undefined
+          ? { deliveryEstimateDays: payload.deliveryEstimateDays }
+          : {}),
         ...(payload.operatingHours !== undefined
           ? { operatingHours: payload.operatingHours ?? "{}" }
           : {}),
         ...(payload.variants !== undefined
-          ? { variants: payload.variants != null ? JSON.stringify(payload.variants) : undefined }
+          ? {
+              variants:
+                payload.variants != null
+                  ? JSON.stringify(payload.variants)
+                  : undefined,
+            }
           : {}),
       },
       select: {
@@ -99,8 +117,9 @@ export async function PATCH(
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const { user } = await requireSessionUser();
     if (user.role !== "provider") return apiError("Providers only.", 403);
@@ -110,7 +129,7 @@ export async function DELETE(
 
     const product = await prisma.shoppingProduct.findFirst({
       where: {
-        id: params.id,
+        id: resolvedParams.id,
         listing: { companyId: company.id },
       },
       select: { id: true },
@@ -120,7 +139,7 @@ export async function DELETE(
 
     // Soft-delete: deactivate rather than destroy (preserves order history)
     await prisma.shoppingProduct.update({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       data: { isActive: false },
     });
 

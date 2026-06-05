@@ -1,12 +1,14 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl =
-  process.env.EXPO_PUBLIC_SUPABASE_URL || 'https://yrulftpiwdgrejvmzkgb.supabase.co';
-const supabaseAnonKey =
-  process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ||
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InlydWxmdHBpd2RncmVqdm16a2diIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTk2MTU4NjIsImV4cCI6MjA3NTE5MTg2Mn0.QqjmUeNgYv37HG2D_ZGlpX9elJ6OHHR8ct543wPD9Lc';
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseServerKey = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+if (!supabaseUrl || !supabaseServerKey) {
+  console.error('SUPABASE_URL and SUPABASE_SECRET_KEY are required');
+  process.exit(1);
+}
+
+const supabase = createClient(supabaseUrl, supabaseServerKey, {
   auth: {
     autoRefreshToken: false,
     persistSession: false,

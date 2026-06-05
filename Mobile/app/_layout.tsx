@@ -31,6 +31,7 @@ import { MessagesProvider } from '@/context/MessagesContext';
 import { AppAlertProvider } from '@/context/AppAlertContext';
 import { PushDrawer } from '@/components/PushDrawer';
 import { getMobilePostAuthRoute, mobileAppVariant } from '@/config/appVariant';
+import { trackMobileAnalyticsEvent } from '@/core/analytics/client';
 
 const fullLogoBlack = require('@/assets/images/full_logo_black.png');
 const fullLogoWhite = require('@/assets/images/full_logo_white.png');
@@ -179,6 +180,20 @@ function AppWithDrawer() {
   const pathname = usePathname();
   const appColorScheme = useColorScheme();
   const theme = Colors[appColorScheme ?? 'light'];
+
+  useEffect(() => {
+    if (loading) {
+      return;
+    }
+
+    void trackMobileAnalyticsEvent('screen_view', {
+      path: pathname,
+      isGuest,
+      isAuthenticated: Boolean(session),
+    }).catch(() => {
+      // Analytics must never interrupt navigation.
+    });
+  }, [isGuest, loading, pathname, session]);
 
   // Use a ref to track the previous auth state to avoid unnecessary redirects
   useEffect(() => {

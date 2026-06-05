@@ -36,10 +36,15 @@ function normalizePath(pathname: string | null | undefined) {
   return path.startsWith("/") ? path : `/${path}`;
 }
 
-export function resolveSurfaceFromPath(pathname: string | null | undefined): AppSurface {
+export function resolveSurfaceFromPath(
+  pathname: string | null | undefined,
+): AppSurface {
   const path = normalizePath(pathname);
 
-  if (path === surfacePathPrefixes.admin || path.startsWith(`${surfacePathPrefixes.admin}/`)) {
+  if (
+    path === surfacePathPrefixes.admin ||
+    path.startsWith(`${surfacePathPrefixes.admin}/`)
+  ) {
     return "admin";
   }
 
@@ -191,9 +196,9 @@ export function getDefaultPostAuthRoute(
 export function getAllowedPrefixes(surface: AppSurface) {
   switch (surface) {
     case "admin":
-      return ["/admin", "/login", "/register", "/api"];
+      return ["/admin", "/login", "/register", "/auth", "/api"];
     case "provider":
-      return ["/provider-dashboard", "/login", "/register", "/api"];
+      return ["/provider-dashboard", "/login", "/register", "/auth", "/api"];
     case "explorer":
       return [
         "/dashboard",
@@ -219,6 +224,7 @@ export function getAllowedPrefixes(surface: AppSurface) {
         "/orders",
         "/login",
         "/register",
+        "/auth",
         "/api",
       ];
     default:
@@ -237,17 +243,33 @@ export function isPathAllowedOnSurface(pathname: string, surface: AppSurface) {
   );
 }
 
-function getBaseUrl() {
-  if (typeof window !== "undefined" && window.location?.origin) {
-    try {
-      return new URL(window.location.origin);
-    } catch {
-      // fall through to configured URL
+function getConfiguredSurfaceUrl(surface: AppSurface) {
+  const candidates =
+    surface === "admin"
+      ? [
+          process.env.NEXT_PUBLIC_ADMIN_APP_URL,
+          process.env.NEXT_PUBLIC_PORTAL_APP_URL,
+        ]
+      : surface === "provider"
+        ? [
+            process.env.NEXT_PUBLIC_PROVIDER_APP_URL,
+            process.env.NEXT_PUBLIC_PORTAL_APP_URL,
+          ]
+        : surface === "explorer"
+          ? [process.env.NEXT_PUBLIC_EXPLORER_APP_URL]
+          : [];
+
+  for (const candidate of candidates) {
+    if (candidate?.trim()) {
+      return { value: candidate.trim(), explicit: true };
     }
   }
 
   const configured = process.env.NEXT_PUBLIC_APP_URL;
+  return configured ? { value: configured, explicit: false } : null;
+}
 
+function parseConfiguredUrl(configured: string | null | undefined) {
   if (!configured) {
     return null;
   }
@@ -259,8 +281,30 @@ function getBaseUrl() {
   }
 }
 
+function getBaseUrl(surface: AppSurface = "public") {
+  const configuredSurfaceUrl = getConfiguredSurfaceUrl(surface);
+  if (configuredSurfaceUrl?.explicit) {
+    const parsed = parseConfiguredUrl(configuredSurfaceUrl.value);
+    if (parsed) {
+      return parsed;
+    }
+  }
+
+  if (typeof window !== "undefined" && window.location?.origin) {
+    try {
+      return new URL(window.location.origin);
+    } catch {
+      // fall through to configured URL
+    }
+  }
+
+  return parseConfiguredUrl(configuredSurfaceUrl?.value);
+}
+
 export function getSurfaceHref(surface: AppSurface, pathname = "/") {
-  const baseUrl = getBaseUrl();
+  const configuredSurfaceUrl = getConfiguredSurfaceUrl(surface);
+  const hasExplicitSurfaceUrl = configuredSurfaceUrl?.explicit ?? false;
+  const baseUrl = getBaseUrl(surface);
   const normalizedPath = pathname.startsWith("/") ? pathname : `/${pathname}`;
   const forcedSurface = getForcedSurface();
 
@@ -293,13 +337,26 @@ export function getSurfaceHref(surface: AppSurface, pathname = "/") {
     return `${getSurfacePrefix(surface)}${normalizedPath === "/" ? "" : normalizedPath}`;
   }
 
+  if (hasExplicitSurfaceUrl) {
+    const defaultSurfaceForHost = resolveAppSurface(baseUrl.hostname, "/");
+    const path =
+      defaultSurfaceForHost === surface
+        ? normalizedPath
+        : `${getSurfacePrefix(surface)}${normalizedPath === "/" ? "" : normalizedPath}`;
+    return `${baseUrl.origin}${path}`;
+  }
+
   const hostParts = baseUrl.hostname.split(".");
   const rootDomain =
     hostParts[0] === "www" && hostParts.length > 2
       ? hostParts.slice(1).join(".")
       : baseUrl.hostname;
   const subdomain =
-    surface === "provider" ? "sp" : surface === "explorer" ? "explorer" : "admin";
+    surface === "provider"
+      ? "sp"
+      : surface === "explorer"
+        ? "explorer"
+        : "admin";
 
   return `${baseUrl.protocol}//${subdomain}.${rootDomain}${normalizedPath}`;
 }

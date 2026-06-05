@@ -1,6 +1,6 @@
 "use client";
 
-import { ReactNode } from "react";
+import { ReactNode, useEffect } from "react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import AdminSidebar from "@/components/admin/AdminSidebar";
 
@@ -23,11 +23,25 @@ export default function AdminShell({
   fixedHeader?: boolean;
   children: ReactNode;
 }) {
+  useEffect(() => {
+    if (!fixedHeader) return;
+
+    const htmlOverflow = document.documentElement.style.overflow;
+    const bodyOverflow = document.body.style.overflow;
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+
+    return () => {
+      document.documentElement.style.overflow = htmlOverflow;
+      document.body.style.overflow = bodyOverflow;
+    };
+  }, [fixedHeader]);
+
   return (
     <div
       className={
         fixedHeader
-          ? "h-screen bg-slate-100/70 dark:bg-[#050505]"
+          ? "h-dvh overflow-hidden bg-slate-100/70 dark:bg-[#050505]"
           : "min-h-screen bg-slate-100/70 dark:bg-[#050505]"
       }
     >
@@ -42,7 +56,7 @@ export default function AdminShell({
         <main
           className={
             fixedHeader
-              ? "flex h-screen min-w-0 flex-col overflow-hidden"
+              ? "flex h-full min-w-0 flex-col overflow-hidden"
               : "min-w-0"
           }
         >
@@ -54,6 +68,7 @@ export default function AdminShell({
             actions={actions}
           />
           <div
+            data-detail-scroll-container={fixedHeader ? "" : undefined}
             className={
               fixedHeader
                 ? "min-h-0 flex-1 space-y-6 overflow-y-auto px-4 py-6 sm:px-6"

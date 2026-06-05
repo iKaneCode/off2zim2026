@@ -100,8 +100,9 @@ async function destinationExists(destinationId: string | null | undefined) {
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const { user } = await requireSessionUser();
     if (user.role !== "admin") {
@@ -110,7 +111,7 @@ export async function PATCH(
 
     const payload = updateSchema.parse(await request.json());
     const current = await prisma.exploreContent.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       select: { id: true, status: true, metadata: true },
     });
 
@@ -188,8 +189,9 @@ export async function PATCH(
 
 export async function DELETE(
   _request: NextRequest,
-  { params }: { params: { id: string } },
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const { user } = await requireSessionUser();
     if (user.role !== "admin") {
@@ -197,7 +199,7 @@ export async function DELETE(
     }
 
     const current = await prisma.exploreContent.findUnique({
-      where: { id: params.id },
+      where: { id: resolvedParams.id },
       select: { id: true, title: true, status: true },
     });
 

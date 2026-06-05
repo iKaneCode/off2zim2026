@@ -5,11 +5,12 @@ import { apiError } from "@/lib/http";
 export const dynamic = "force-dynamic";
 export async function GET(
   _request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> },
 ) {
+  const resolvedParams = await params;
   try {
     const events = await getMobileEvents();
-    const event = events.find((item) => item.id === params.id);
+    const event = events.find((item) => item.id === resolvedParams.id);
 
     if (!event) {
       return apiError("Event not found.", 404);

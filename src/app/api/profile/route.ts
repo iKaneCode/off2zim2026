@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { apiError } from "@/lib/http";
 import { requireSessionUser } from "@/lib/auth";
+import { createAuditLog } from "@/lib/audit-log";
 import {
   buildMobileProfile,
   parseUserPreferences,
@@ -63,7 +64,12 @@ export async function GET() {
 export async function PATCH(request: NextRequest) {
   try {
     const { user } = await requireSessionUser();
-    const payload = profileSchema.parse(await request.json());
+    const rawPayload = await request.json();
+    const submittedFields =
+      rawPayload && typeof rawPayload === "object" && !Array.isArray(rawPayload)
+        ? Object.keys(rawPayload as Record<string, unknown>)
+        : [];
+    const payload = profileSchema.parse(rawPayload);
     const current = await prisma.user.findUnique({
       where: { id: user.id },
       select: { id: true, preferences: true },
@@ -75,11 +81,12 @@ export async function PATCH(request: NextRequest) {
 
     const preferences = parseUserPreferences(current.preferences);
     const mobileProfile = {
-      ...(typeof preferences.mobileProfile === "object" && preferences.mobileProfile
+      ...(typeof preferences.mobileProfile === "object" &&
+      preferences.mobileProfile
         ? preferences.mobileProfile
         : {}),
       ...Object.fromEntries(
-        Object.entries(payload).filter(([, value]) => value !== undefined)
+        Object.entries(payload).filter(([, value]) => value !== undefined),
       ),
     };
 
@@ -110,10 +117,24 @@ export async function PATCH(request: NextRequest) {
       return apiError("User not found.", 404);
     }
 
+    await createAuditLog({
+      actorUserId: user.id,
+      action: "user_profile_updated",
+      targetType: "user",
+      targetId: user.id,
+      summary: `${user.email} updated their profile`,
+      metadata: {
+        updatedFields: submittedFields,
+      },
+    });
+
     return NextResponse.json({ profile: buildMobileProfile(updated) });
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return apiError(error.issues[0]?.message || "Invalid profile payload", 422);
+      return apiError(
+        error.issues[0]?.message || "Invalid profile payload",
+        422,
+      );
     }
 
     console.error("Profile route error:", error);

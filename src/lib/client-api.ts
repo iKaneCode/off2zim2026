@@ -1,3 +1,5 @@
+import { isManualLogoutInProgress } from "@/lib/auth-client-state";
+
 export class ApiError extends Error {
   status: number;
 
@@ -60,6 +62,7 @@ export async function apiFetch<T>(
     if (
       response.status === 401 &&
       hadBrowserSession &&
+      !isManualLogoutInProgress() &&
       typeof window !== "undefined"
     ) {
       window.dispatchEvent(

@@ -12,6 +12,13 @@ import {
   UserRole,
 } from "@/types/auth";
 import { apiFetch } from "@/lib/client-api";
+import {
+  clearAuthLogoutState,
+  clearManualLogout,
+  isManualLogoutInProgress,
+  markManualLogout,
+  setSessionExpiredNotice,
+} from "@/lib/auth-client-state";
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -83,6 +90,7 @@ const EMPTY_PROVIDER_DOCUMENTS: Array<{
 }> = [];
 
 function persistAuth(payload: AuthPayload) {
+  clearManualLogout();
   localStorage.setItem("off2zim_user", JSON.stringify(payload.user));
   localStorage.removeItem("off2zim_token");
 }
@@ -186,14 +194,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const handleSessionExpired = (event: Event) => {
+      if (isManualLogoutInProgress()) {
+        return;
+      }
+
       const detail =
         event instanceof CustomEvent ? (event.detail as { path?: string }) : {};
 
       clearAuth();
-      if (detail?.path && typeof window !== "undefined") {
-        sessionStorage.setItem("off2zim_post_logout_redirect", detail.path);
-      }
-      sessionStorage.setItem("off2zim_auth_notice", "session-expired");
+      setSessionExpiredNotice(detail?.path);
       dispatch({ type: "LOGOUT" });
       toast.error("Your session expired. Sign in again to continue.");
     };
@@ -209,6 +218,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async (credentials: LoginCredentials) => {
+    clearManualLogout();
     dispatch({ type: "LOGIN_START" });
 
     try {
@@ -231,6 +241,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const register = async (data: RegisterData) => {
+    clearManualLogout();
     dispatch({ type: "LOGIN_START" });
 
     try {
@@ -281,6 +292,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    markManualLogout();
+    clearAuthLogoutState();
+    clearAuth();
+
     try {
       await fetch("/api/auth/logout", {
         method: "POST",
@@ -289,11 +304,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // If the session is already gone we can still clear client state safely.
     } finally {
-      clearAuth();
-      if (typeof window !== "undefined") {
-        sessionStorage.removeItem("off2zim_auth_notice");
-        sessionStorage.removeItem("off2zim_post_logout_redirect");
-      }
+      clearAuthLogoutState();
       dispatch({ type: "LOGOUT" });
     }
   };

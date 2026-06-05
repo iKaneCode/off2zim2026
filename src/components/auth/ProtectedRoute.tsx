@@ -9,6 +9,11 @@ import {
   getSurfaceHref,
   resolveSurfaceFromPath,
 } from "@/lib/app-surface";
+import {
+  clearAuthLogoutState,
+  getAuthNotice,
+  isManualLogoutInProgress,
+} from "@/lib/auth-client-state";
 import { UserRole } from "@/types/auth";
 import { getAccountRoute } from "@/lib/auth-routing";
 
@@ -40,16 +45,17 @@ const ProtectedRoute = ({
 
   useEffect(() => {
     if (!isLoading && !user) {
+      if (isManualLogoutInProgress()) {
+        clearAuthLogoutState();
+        router.replace(getSurfaceHref("public", "/"));
+        return;
+      }
+
       const nextPath = `${window.location.pathname}${window.location.search}`;
-      const notice =
-        typeof window !== "undefined"
-          ? sessionStorage.getItem("off2zim_auth_notice")
-          : null;
+      const notice = getAuthNotice();
       const reason = notice === "session-expired" ? "&reason=session-expired" : "";
 
-      if (typeof window !== "undefined") {
-        sessionStorage.removeItem("off2zim_auth_notice");
-      }
+      clearAuthLogoutState();
 
       router.replace(`${signInHref}?redirect=${encodeURIComponent(nextPath)}${reason}`);
     }

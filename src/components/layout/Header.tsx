@@ -4,6 +4,9 @@ import React, { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
+  BedDouble,
+  Bus,
+  CalendarDays,
   ChevronDown,
   Compass,
   LogOut,
@@ -22,120 +25,25 @@ import { getSurfaceHref } from "@/lib/app-surface";
 import ThemeToggle from "./ThemeToggle";
 import SiteLogo from "./SiteLogo";
 
-type NavGroup = {
+type NavLinkItem = {
   label: string;
+  href: string;
   icon: React.ComponentType<{ className?: string }>;
-  items: Array<{ label: string; href: string; description: string }>;
 };
 
-const navGroups: NavGroup[] = [
-  {
-    label: "Explore",
-    icon: Compass,
-    items: [
-      {
-        label: "Destinations",
-        href: "/travel-guide",
-        description: "Explore cities, parks, heritage sites, and scenic places across Zimbabwe.",
-      },
-      {
-        label: "Events",
-        href: "/events",
-        description: "Find festivals, shows, and travel dates worth planning around.",
-      },
-    ],
-  },
-  {
-    label: "Plan",
-    icon: MapPinned,
-    items: [
-      {
-        label: "Trip Planner",
-        href: "/trip-planner",
-        description: "Build your itinerary, organize each day, and keep your route on track.",
-      },
-      {
-        label: "Transport",
-        href: "/transport",
-        description: "Flights, cars, buses, taxis, and route planning.",
-      },
-      {
-        label: "Events",
-        href: "/events",
-        description: "Tickets, festivals, and live dates.",
-      },
-      {
-        label: "Destination services",
-        href: "/travel-guide",
-        description: "Choose a destination first, then see its stays, dining, and local travel help.",
-      },
-    ],
-  },
+const navLinks: NavLinkItem[] = [
+  { label: "Destinations", href: "/travel-guide", icon: Compass },
+  { label: "Stays", href: "/accommodation", icon: BedDouble },
+  { label: "Things to do", href: "/activities", icon: MapPinned },
+  { label: "Events", href: "/events", icon: CalendarDays },
+  { label: "Transport", href: "/transport", icon: Bus },
+  { label: "Marketplace", href: "/marketplace", icon: ShoppingBag },
 ];
-
-function DesktopDropdown({
-  group,
-  isOpen,
-  onToggle,
-  onClose,
-}: {
-  group: NavGroup;
-  isOpen: boolean;
-  onToggle: () => void;
-  onClose: () => void;
-}) {
-  const Icon = group.icon;
-
-  return (
-    <div className="relative">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-black/[0.06] hover:text-slate-950 dark:text-white dark:hover:bg-white/10 dark:hover:text-white"
-        aria-expanded={isOpen}
-      >
-        <Icon className="h-4 w-4 text-[#ff7352]" />
-        <span>{group.label}</span>
-        <ChevronDown
-          className={`h-4 w-4 transition ${isOpen ? "rotate-180" : ""}`}
-        />
-      </button>
-
-      {isOpen ? (
-        <div className="absolute left-0 top-[calc(100%+0.9rem)] z-50 w-[22rem] rounded-[28px] border border-black/12 bg-white p-3 shadow-[0_28px_80px_rgba(15,23,42,0.16)] dark:border-white/10 dark:bg-[#0e0e0e] dark:shadow-[0_28px_80px_rgba(0,0,0,0.6)]">
-          <div className="mb-2 px-3 pt-2">
-            <div className="text-xs uppercase tracking-[0.24em] text-black/45 dark:text-white/40">
-              {group.label}
-            </div>
-          </div>
-          <div className="grid gap-1">
-            {group.items.map((item) => (
-              <Link
-                key={item.label}
-                href={item.href}
-                onClick={onClose}
-                className="rounded-[22px] px-3 py-3 transition hover:bg-black/[0.055] dark:hover:bg-white/7"
-              >
-                <div className="text-sm font-semibold text-black dark:text-white">
-                  {item.label}
-                </div>
-                <div className="mt-1 text-sm leading-5 text-black/68 dark:text-white/78">
-                  {item.description}
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      ) : null}
-    </div>
-  );
-}
 
 export default function Header() {
   const { user, isLoading, logout } = useAuth();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const accountMenuRef = useRef<HTMLDivElement | null>(null);
   const accountRoute = getAccountRoute(user);
@@ -210,45 +118,31 @@ export default function Header() {
             />
           </div>
 
-          <nav className="hidden items-center gap-2 lg:flex">
-            {navGroups.map((group) => (
-              <DesktopDropdown
-                key={group.label}
-                group={group}
-                isOpen={openGroup === group.label}
-                onToggle={() =>
-                  setOpenGroup((current) =>
-                    current === group.label ? null : group.label,
-                  )
-                }
-                onClose={() => setOpenGroup(null)}
-              />
-            ))}
+          <nav className="hidden items-center gap-1 lg:flex">
+            {navLinks.map((item) => {
+              const Icon = item.icon;
 
-            <Link
-              href="/marketplace"
-              className="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-black/[0.06] hover:text-slate-950 dark:text-white dark:hover:bg-white/10 dark:hover:text-white"
-            >
-              Marketplace
-            </Link>
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="inline-flex items-center gap-2 whitespace-nowrap rounded-lg px-3 py-2 text-sm font-bold text-slate-700 transition hover:bg-black/[0.06] hover:text-slate-950 dark:text-white/82 dark:hover:bg-white/10 dark:hover:text-white"
+                >
+                  <Icon className="h-4 w-4 text-[#ff5630]" />
+                  {item.label}
+                </Link>
+              );
+            })}
           </nav>
 
           <div className="flex items-center gap-2 sm:gap-3">
             {!isLoading && !user ? (
-              <>
-                <Link
-                  href={getSurfaceHref("explorer", "/login")}
-                  className="hidden items-center gap-2 rounded-full px-4 py-2 text-sm font-medium text-slate-700 transition hover:bg-black/[0.06] hover:text-slate-950 dark:text-white dark:hover:bg-white/10 dark:hover:text-white md:inline-flex"
-                >
-                  Traveler login
-                </Link>
-                <Link
-                  href={getSurfaceHref("explorer", "/register")}
-                  className="hidden items-center gap-2 rounded-full bg-[#ff5630] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#ff6f4d] md:inline-flex"
-                >
-                  Create account
-                </Link>
-              </>
+              <Link
+                href={getSurfaceHref("explorer", "/register")}
+                className="hidden items-center gap-2 whitespace-nowrap rounded-full bg-[#ff5630] px-4 py-2 text-sm font-semibold text-white transition hover:bg-[#ff6f4d] md:inline-flex"
+              >
+                Create account
+              </Link>
             ) : null}
 
             <ThemeToggle />

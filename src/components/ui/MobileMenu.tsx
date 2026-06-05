@@ -27,30 +27,32 @@ interface MobileMenuProps {
 
 const sections = [
   {
-    label: "Explore",
+    label: "Discover",
     icon: Compass,
     links: [
       { label: "Destinations", href: "/travel-guide" },
+      { label: "Stays", href: "/accommodation" },
+      { label: "Things to do", href: "/activities" },
       { label: "Events", href: "/events" },
     ],
   },
   {
-    label: "Plan",
+    label: "Plan and book",
     icon: MapPinned,
     links: [
       { label: "Trip Planner", href: "/trip-planner" },
       { label: "Transport", href: "/transport" },
-      { label: "Events", href: "/events" },
-      { label: "Destination services", href: "/travel-guide" },
+      { label: "Marketplace", href: "/marketplace" },
+      { label: "Shop", href: "/shop" },
     ],
   },
   {
-    label: "More",
+    label: "Off2Zim",
     icon: Store,
     links: [
-      { label: "Marketplace", href: "/marketplace" },
       { label: "Featured", href: "/featured-section" },
-      { label: "Provider access", href: getSurfaceHref("provider", "/login") },
+      { label: "Local guides", href: "/community-guides" },
+      { label: "Provider access", href: getSurfaceHref("provider", "/register") },
     ],
   },
 ];

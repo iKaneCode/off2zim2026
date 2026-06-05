@@ -302,11 +302,19 @@ function getBaseUrl(surface: AppSurface = "public") {
 }
 
 export function getSurfaceHref(surface: AppSurface, pathname = "/") {
+  const normalizedPath = pathname.startsWith("/") ? pathname : `/${pathname}`;
+  const forcedSurface = getForcedSurface();
+  const hasExplicitExplorerUrl = Boolean(
+    process.env.NEXT_PUBLIC_EXPLORER_APP_URL?.trim(),
+  );
+
+  if (surface === "explorer" && !hasExplicitExplorerUrl && !forcedSurface) {
+    return getSurfaceHref("public", normalizedPath);
+  }
+
   const configuredSurfaceUrl = getConfiguredSurfaceUrl(surface);
   const hasExplicitSurfaceUrl = configuredSurfaceUrl?.explicit ?? false;
   const baseUrl = getBaseUrl(surface);
-  const normalizedPath = pathname.startsWith("/") ? pathname : `/${pathname}`;
-  const forcedSurface = getForcedSurface();
 
   if (!baseUrl) {
     if (forcedSurface && (surface === forcedSurface || surface === "public")) {

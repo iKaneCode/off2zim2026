@@ -54,7 +54,7 @@ export default function AdminSidebar({ activePath }: { activePath: string }) {
     if (loggingOut) return;
     setLoggingOut(true);
     await logout();
-    router.push(getSurfaceHref("admin", "/login"));
+    router.push(getSurfaceHref("public", "/"));
   };
 
   return (

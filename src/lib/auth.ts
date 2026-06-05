@@ -59,6 +59,39 @@ export async function createSession(userId: string) {
   return { sessionToken, expires };
 }
 
+function getSessionCookieDomain() {
+  const explicitDomain = process.env.SESSION_COOKIE_DOMAIN?.trim();
+  if (explicitDomain) {
+    return explicitDomain;
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    return undefined;
+  }
+
+  const configuredUrl =
+    process.env.APP_URL?.trim() || process.env.NEXT_PUBLIC_APP_URL?.trim();
+
+  if (!configuredUrl) {
+    return undefined;
+  }
+
+  try {
+    const hostname = new URL(configuredUrl).hostname;
+    if (
+      hostname === "localhost" ||
+      hostname === "127.0.0.1" ||
+      hostname.endsWith(".vercel.app")
+    ) {
+      return undefined;
+    }
+
+    return hostname.startsWith(".") ? hostname : `.${hostname}`;
+  } catch {
+    return undefined;
+  }
+}
+
 export async function deleteSession(sessionToken: string) {
   await prisma.session.deleteMany({
     where: {
@@ -79,6 +112,7 @@ export function setSessionCookie(
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
+    domain: getSessionCookieDomain(),
     expires,
   });
   return response;
@@ -92,6 +126,7 @@ export function clearSessionCookie(response: NextResponse) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "lax",
     path: "/",
+    domain: getSessionCookieDomain(),
     expires: new Date(0),
   });
   return response;

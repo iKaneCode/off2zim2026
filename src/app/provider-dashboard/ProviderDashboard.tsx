@@ -570,7 +570,7 @@ function ProviderSidebar({
     if (loggingOut) return;
     setLoggingOut(true);
     await logout();
-    router.push(getSurfaceHref("provider", "/login"));
+    router.push(getSurfaceHref("public", "/"));
   };
 
   return (

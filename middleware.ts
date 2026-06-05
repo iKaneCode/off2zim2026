@@ -4,6 +4,7 @@ import {
   getSurfaceHome,
   isPathAllowedOnSurface,
   getSurfacePrefix,
+  getSurfaceHref,
   resolveAppSurface,
   stripSurfacePrefix,
 } from "@/lib/app-surface";
@@ -14,10 +15,11 @@ export function middleware(request: NextRequest) {
   const surface = resolveAppSurface(hostname, pathname);
   const internalPath = stripSurfacePrefix(pathname);
   const isAuthScreen = internalPath === "/login" || internalPath === "/register";
+  const isAuthRoute = isAuthScreen || internalPath.startsWith("/auth");
   const withSurfaceHeaders = (url = request.nextUrl.clone()) => {
     const requestHeaders = new Headers(request.headers);
     requestHeaders.set("x-off2zim-surface", surface);
-    if (isAuthScreen) {
+    if (isAuthRoute) {
       requestHeaders.set("x-off2zim-auth-screen", "true");
     }
 
@@ -40,10 +42,22 @@ export function middleware(request: NextRequest) {
   }
 
   if (surface === "public") {
-    if (!isAuthScreen) {
+    if (!isAuthRoute) {
       return NextResponse.next();
     }
     return withSurfaceHeaders();
+  }
+
+  if (isAuthRoute) {
+    const url = new URL(getSurfaceHref("public", internalPath), request.url);
+    url.search = request.nextUrl.search;
+    return NextResponse.redirect(url);
+  }
+
+  if (surface === "admin" && internalPath === "/") {
+    const url = new URL(getSurfaceHref("public", "/login"), request.url);
+    url.search = request.nextUrl.search;
+    return NextResponse.redirect(url);
   }
 
   const surfaceRoot = getSurfacePrefix(surface);

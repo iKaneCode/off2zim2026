@@ -5,7 +5,6 @@ import { Providers } from "./providers";
 import GlobalBackground from "../components/GlobalBackground";
 import Header from "../components/layout/Header";
 import Footer from "../components/layout/Footer";
-import PortalChrome from "../components/layout/PortalChrome";
 import { resolveAppSurface } from "@/lib/app-surface";
 
 export const metadata: Metadata = {
@@ -22,7 +21,7 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
-  metadataBase: new URL("https://off2zim.com"),
+  metadataBase: new URL("https://off2zim.co.zw"),
   alternates: {
     canonical: "/",
   },
@@ -30,7 +29,7 @@ export const metadata: Metadata = {
     title: "Off2Zim - Explore | Experience | Enjoy",
     description:
       "Explore, experience, and enjoy Zimbabwe with trusted stays, activities, transport, and local travel help.",
-    url: "https://off2zim.com",
+    url: "https://off2zim.co.zw",
     siteName: "Off2Zim",
     images: [
       {
@@ -80,8 +79,6 @@ export default async function RootLayout({
     ? resolveAppSurface(surfaceHeader)
     : resolveAppSurface(host);
   const isPublicSurface = surface === "public";
-  const showPortalChrome =
-    !isAuthScreen && surface !== "public" && surface !== "admin";
   const showPublicChrome = !isAuthScreen && isPublicSurface;
 
   return (
@@ -108,7 +105,6 @@ export default async function RootLayout({
         <GlobalBackground />
         <Providers>
           {showPublicChrome ? <Header /> : null}
-          {showPortalChrome ? <PortalChrome surface={surface} /> : null}
           <main className="min-h-screen">{children}</main>
           {showPublicChrome ? <Footer /> : null}
         </Providers>

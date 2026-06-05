@@ -100,6 +100,15 @@ external actions:
 - Paynow: set staging callback URLs once the Vercel domain is live.
 - GitHub: push the deployment-prep changes when ready.
 
+If a temporary Vercel access token is available locally, run:
+
+```bash
+VERCEL_TOKEN="temporary-token" VERCEL_TEAM_SLUG="off2zim" VERCEL_PROJECT_NAME="off2zim" node scripts/sync-vercel-env.mjs
+```
+
+The script reads the local `.env`, upserts the approved variables into the
+existing Production and Preview environments, and does not print secret values.
+
 ## Validation
 
 Before attaching custom domains, run locally:

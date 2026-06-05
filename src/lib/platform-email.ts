@@ -1,18 +1,22 @@
 /**
  * Transactional email library for Off2Zim platform events.
- * Wraps Resend. All functions are fire-and-forget safe — they log on failure
+ * Wraps Resend. All functions are fire-and-forget safe; they log on failure
  * but never throw, so a delivery problem never breaks the calling request.
  */
 import { Resend } from "resend";
 
-// ─── Internal helpers ──────────────────────────────────────────────────────────
-
 function getAppUrl() {
-  return process.env.APP_URL?.trim().replace(/\/+$/, "") || "http://localhost:3000";
+  return (
+    process.env.APP_URL?.trim().replace(/\/+$/, "") ||
+    "http://localhost:3000"
+  );
 }
 
 function getFrom() {
-  return process.env.AUTH_EMAIL_FROM?.trim() || "Off2Zim <noreply@off2zim.com>";
+  return (
+    process.env.AUTH_EMAIL_FROM?.trim() ||
+    "Off2Zim <no-reply@off2zim.co.zw>"
+  );
 }
 
 function resend(): Resend | null {
@@ -24,17 +28,16 @@ async function send(to: string, subject: string, html: string): Promise<void> {
   const client = resend();
   const from = getFrom();
   if (!client || !from) {
-    console.warn("[platform-email] Not configured — skipping:", subject, "→", to);
+    console.warn("[platform-email] Not configured; skipping:", subject, "->", to);
     return;
   }
+
   try {
     await client.emails.send({ from, to, subject, html });
   } catch (err) {
-    console.error("[platform-email] Delivery failed:", subject, "→", to, err);
+    console.error("[platform-email] Delivery failed:", subject, "->", to, err);
   }
 }
-
-// ─── Shared HTML shell ─────────────────────────────────────────────────────────
 
 function shell(body: string) {
   return `
@@ -45,24 +48,21 @@ function shell(body: string) {
   <table width="100%" cellpadding="0" cellspacing="0" style="background:#0a0a0a;padding:40px 0">
     <tr><td align="center">
       <table width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%">
-        <!-- Header -->
         <tr>
           <td style="background:#111111;border-radius:24px 24px 0 0;padding:32px 40px 24px;border-bottom:1px solid rgba(255,255,255,0.08)">
             <span style="font-size:20px;font-weight:700;color:#ffffff;letter-spacing:-0.5px">Off2Zim</span>
           </td>
         </tr>
-        <!-- Body -->
         <tr>
           <td style="background:#111111;padding:32px 40px">
             ${body}
           </td>
         </tr>
-        <!-- Footer -->
         <tr>
           <td style="background:#111111;border-radius:0 0 24px 24px;padding:24px 40px 32px;border-top:1px solid rgba(255,255,255,0.08)">
             <p style="margin:0;font-size:12px;color:rgba(255,255,255,0.3)">
               &copy; ${new Date().getFullYear()} Off2Zim &bull;
-              <a href="${getAppUrl()}" style="color:rgba(255,255,255,0.4)">off2zim.com</a>
+              <a href="${getAppUrl()}" style="color:rgba(255,255,255,0.4)">off2zim.co.zw</a>
             </p>
           </td>
         </tr>
@@ -100,7 +100,13 @@ function detailTable(rows: string[]) {
     </table>`;
 }
 
-// ─── 1. Booking confirmation (explorer) ───────────────────────────────────────
+function formatDate(date: string) {
+  return new Date(date).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "long",
+    year: "numeric",
+  });
+}
 
 export async function sendBookingConfirmation(opts: {
   to: string;
@@ -116,7 +122,7 @@ export async function sendBookingConfirmation(opts: {
   const url = opts.bookingsUrl ?? `${getAppUrl()}/bookings`;
   await send(
     opts.to,
-    `Booking confirmed — ${opts.confirmationNumber}`,
+    `Booking confirmed - ${opts.confirmationNumber}`,
     shell(`
       ${h2("Your booking is confirmed!")}
       ${p(`Hi ${opts.explorerName}, your booking has been confirmed. Here are the details:`)}
@@ -125,15 +131,13 @@ export async function sendBookingConfirmation(opts: {
         detail("Experience", opts.listingTitle),
         detail("Provider", opts.providerName),
         detail("Total", `${opts.currency} ${opts.totalAmount.toFixed(2)}`),
-        ...(opts.checkIn ? [detail("Date", new Date(opts.checkIn).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }))] : []),
+        ...(opts.checkIn ? [detail("Date", formatDate(opts.checkIn))] : []),
       ])}
       ${p("You can view and manage this booking from your bookings page.")}
       ${btn(url, "View booking")}
-    `)
+    `),
   );
 }
-
-// ─── 2. New booking alert (provider) ──────────────────────────────────────────
 
 export async function sendProviderNewBookingAlert(opts: {
   to: string;
@@ -147,10 +151,11 @@ export async function sendProviderNewBookingAlert(opts: {
   checkIn?: string | null;
   dashboardUrl?: string;
 }) {
-  const url = opts.dashboardUrl ?? `${getAppUrl()}/provider-dashboard?tab=orders`;
+  const url =
+    opts.dashboardUrl ?? `${getAppUrl()}/provider-dashboard?tab=orders`;
   await send(
     opts.to,
-    `New booking request — ${opts.confirmationNumber}`,
+    `New booking request - ${opts.confirmationNumber}`,
     shell(`
       ${h2("You have a new booking request")}
       ${p(`Hi ${opts.providerName}, a new booking has been submitted for your listing.`)}
@@ -160,15 +165,13 @@ export async function sendProviderNewBookingAlert(opts: {
         detail("Explorer", opts.explorerName),
         detail("Guests", String(opts.guests)),
         detail("Total", `${opts.currency} ${opts.totalAmount.toFixed(2)}`),
-        ...(opts.checkIn ? [detail("Date", new Date(opts.checkIn).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric" }))] : []),
+        ...(opts.checkIn ? [detail("Date", formatDate(opts.checkIn))] : []),
       ])}
       ${p("Please confirm or decline this booking from your dashboard.")}
       ${btn(url, "Review booking")}
-    `)
+    `),
   );
 }
-
-// ─── 3. Booking status update (explorer) ──────────────────────────────────────
 
 export async function sendBookingStatusUpdate(opts: {
   to: string;
@@ -188,17 +191,15 @@ export async function sendBookingStatusUpdate(opts: {
 
   await send(
     opts.to,
-    `Booking ${label} — ${opts.confirmationNumber}`,
+    `Booking ${label} - ${opts.confirmationNumber}`,
     shell(`
       ${h2(`Your booking has been ${label}`)}
       ${p(`Hi ${opts.explorerName}, your booking <strong style="color:#fff">${opts.confirmationNumber}</strong> for <strong style="color:#fff">${opts.listingTitle}</strong> has been ${label}.`)}
       ${opts.newStatus === "COMPLETED" ? p("You can now rate your experience. Ratings are blind until both parties submit or 7 days pass.") : ""}
       ${btn(url, "View booking")}
-    `)
+    `),
   );
 }
-
-// ─── 4. Dispute opened ────────────────────────────────────────────────────────
 
 export async function sendDisputeOpenedNotification(opts: {
   to: string;
@@ -207,14 +208,13 @@ export async function sendDisputeOpenedNotification(opts: {
   reason: string;
   role: "explorer" | "provider";
 }) {
-  const dashPath = opts.role === "provider"
-    ? "/provider-dashboard?tab=orders"
-    : "/bookings";
+  const dashPath =
+    opts.role === "provider" ? "/provider-dashboard?tab=orders" : "/bookings";
   const url = `${getAppUrl()}${dashPath}`;
 
   await send(
     opts.to,
-    `Dispute opened — ${opts.confirmationNumber}`,
+    `Dispute opened - ${opts.confirmationNumber}`,
     shell(`
       ${h2("A dispute has been opened")}
       ${p(`Hi ${opts.recipientName}, a dispute has been filed against booking <strong style="color:#fff">${opts.confirmationNumber}</strong>.`)}
@@ -224,11 +224,9 @@ export async function sendDisputeOpenedNotification(opts: {
       ])}
       ${p("Our team will review this and be in touch. Please ensure any relevant evidence is available.")}
       ${btn(url, "View booking")}
-    `)
+    `),
   );
 }
-
-// ─── 5. Payout request received (provider) ────────────────────────────────────
 
 export async function sendPayoutRequestReceived(opts: {
   to: string;
@@ -238,7 +236,8 @@ export async function sendPayoutRequestReceived(opts: {
   method: string;
   dashboardUrl?: string;
 }) {
-  const url = opts.dashboardUrl ?? `${getAppUrl()}/provider-dashboard?tab=subscriptions`;
+  const url =
+    opts.dashboardUrl ?? `${getAppUrl()}/provider-dashboard?tab=subscriptions`;
   await send(
     opts.to,
     "Payout request received",
@@ -250,13 +249,11 @@ export async function sendPayoutRequestReceived(opts: {
         detail("Method", opts.method),
         detail("Status", "Under review"),
       ])}
-      ${p("Payouts are typically processed within 3–5 business days. You will receive another email once it has been sent.")}
+      ${p("Payouts are typically processed within 3-5 business days. You will receive another email once it has been sent.")}
       ${btn(url, "View earnings")}
-    `)
+    `),
   );
 }
-
-// ─── 6. Payout processed (provider) ───────────────────────────────────────────
 
 export async function sendPayoutProcessed(opts: {
   to: string;
@@ -281,11 +278,9 @@ export async function sendPayoutProcessed(opts: {
         ...(opts.reference ? [detail("Reference", opts.reference)] : []),
       ])}
       ${btn(url, "View earnings")}
-    `)
+    `),
   );
 }
-
-// ─── 7. Ratings revealed ──────────────────────────────────────────────────────
 
 export async function sendRatingsRevealed(opts: {
   to: string;
@@ -296,11 +291,11 @@ export async function sendRatingsRevealed(opts: {
   const url = opts.bookingsUrl ?? `${getAppUrl()}/bookings`;
   await send(
     opts.to,
-    `Ratings revealed — ${opts.confirmationNumber}`,
+    `Ratings revealed - ${opts.confirmationNumber}`,
     shell(`
       ${h2("Your ratings have been revealed")}
       ${p(`Hi ${opts.recipientName}, the blind rating period for booking <strong style="color:#fff">${opts.confirmationNumber}</strong> has ended and both ratings are now visible.`)}
       ${btn(url, "View ratings")}
-    `)
+    `),
   );
 }

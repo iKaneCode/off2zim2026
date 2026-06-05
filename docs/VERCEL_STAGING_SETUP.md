@@ -81,6 +81,11 @@ Use Resend for staging transactional email:
 2. Add the SPF and DKIM DNS records Resend provides.
 3. Verify the domain in Resend.
 4. Create a restricted API key and set it as `RESEND_API_KEY` in Vercel.
+5. Send a smoke-test email:
+
+   ```bash
+   EMAIL_TEST_TO="your-address@example.com" node scripts/send-test-email.mjs
+   ```
 
 If Off2Zim already uses root-domain email elsewhere, using a sending subdomain
 such as `mail.off2zim.co.zw` is safer for reputation isolation. If the sender

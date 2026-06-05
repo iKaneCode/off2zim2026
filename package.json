@@ -33,6 +33,7 @@
     "db:baseline:generate": "prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script --output prisma/postgres-baseline.sql",
     "storage:bootstrap:supabase": "node scripts/bootstrap-supabase-storage.mjs",
     "production:check": "node scripts/check-production-readiness.mjs",
+    "email:test": "node scripts/send-test-email.mjs",
     "vercel:build": "prisma generate && next build",
     "analyze": "cross-env ANALYZE=true next build",
     "netlify:build": "prisma generate && next build",

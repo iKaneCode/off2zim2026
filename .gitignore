@@ -12,5 +12,16 @@ node_modules
 tsconfig.tsbuildinfo
 .data
 
+# Generated Expo web bundle for mobile browser visitors.
+public/.mobile-web-manifest.json
+public/_expo/
+public/assets/
+public/(tabs)/
+public/admin/
+public/provider/
+public/screens/
+public/*.html
+public/favicon.ico
+
 # Local Netlify folder
 .netlify

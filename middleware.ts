@@ -9,9 +9,51 @@ import {
   stripSurfacePrefix,
 } from "@/lib/app-surface";
 
+function isMobileBrowser(request: NextRequest) {
+  const mobileHint = request.headers.get("sec-ch-ua-mobile");
+
+  if (mobileHint === "?1") {
+    return true;
+  }
+
+  const userAgent = request.headers.get("user-agent") || "";
+  return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini|Mobile/i.test(
+    userAgent,
+  );
+}
+
+function isStaticAssetPath(pathname: string) {
+  return (
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/_expo") ||
+    pathname.startsWith("/assets") ||
+    pathname.startsWith("/icons") ||
+    pathname.startsWith("/images") ||
+    pathname.startsWith("/fonts") ||
+    pathname.startsWith("/logos") ||
+    pathname === "/favicon.ico" ||
+    pathname.includes(".")
+  );
+}
+
+function isPortalPath(pathname: string) {
+  return (
+    pathname === "/admin" ||
+    pathname.startsWith("/admin/") ||
+    pathname === "/admin-app" ||
+    pathname.startsWith("/admin-app/") ||
+    pathname === "/provider-dashboard" ||
+    pathname.startsWith("/provider-dashboard/") ||
+    pathname === "/sp" ||
+    pathname.startsWith("/sp/")
+  );
+}
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  const hostname = request.headers.get("host");
+  const hostname =
+    request.headers.get("x-forwarded-host") || request.headers.get("host");
   const surface = resolveAppSurface(hostname, pathname);
   const internalPath = stripSurfacePrefix(pathname);
   const isAuthScreen = internalPath === "/login" || internalPath === "/register";
@@ -30,18 +72,17 @@ export function middleware(request: NextRequest) {
     });
   };
 
-  if (
-    internalPath.startsWith("/_next") ||
-    internalPath.startsWith("/icons") ||
-    internalPath.startsWith("/images") ||
-    internalPath.startsWith("/fonts") ||
-    internalPath.startsWith("/logos") ||
-    internalPath.includes(".")
-  ) {
+  if (isStaticAssetPath(internalPath)) {
     return NextResponse.next();
   }
 
   if (surface === "public") {
+    if (isMobileBrowser(request) && !isPortalPath(internalPath)) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/index.html";
+      return NextResponse.rewrite(url);
+    }
+
     if (!isAuthRoute) {
       return NextResponse.next();
     }

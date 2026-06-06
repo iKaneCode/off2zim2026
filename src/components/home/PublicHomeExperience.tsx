@@ -8,6 +8,7 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  CloudSun,
   Clock3,
   Heart,
   MapPin,
@@ -27,7 +28,6 @@ type CarouselItem = {
   location: string;
   image: string;
   href: string;
-  stats: Array<{ label: string; value: string }>;
 };
 
 type DestinationItem = {
@@ -57,62 +57,42 @@ const carouselItems: CarouselItem[] = [
   {
     id: "victoria-falls",
     eyebrow: "Featured",
-    title: "Victoria Falls, arranged around the way you travel.",
+    title: "Victoria Falls",
     description:
-      "Stays, events, transport, experiences, and trip planning brought together in one destination-led flow.",
+      "Stays, activities, transport, and trip planning in one destination-led flow.",
     location: "Victoria Falls",
     image: "/images/victoria-falls.jpg",
     href: "/travel-guide/victoria-falls",
-    stats: [
-      { label: "Stays", value: "24+" },
-      { label: "Trips", value: "38" },
-      { label: "Best for", value: "Adventure" },
-    ],
   },
   {
-    id: "hwange",
+    id: "hwange-national-park",
     eyebrow: "Safari route",
-    title: "Hwange stays, drives, and transfers in one view.",
+    title: "Hwange National Park",
     description:
-      "Compare safari camps, guided activities, transport routes, and local support without losing the trip context.",
+      "Safari camps, game drives, local guides, and transfers organized around the destination.",
     location: "Hwange",
     image: "/images/hwange-national-park.jpg",
-    href: "/travel-guide/hwange",
-    stats: [
-      { label: "Stays", value: "16+" },
-      { label: "Routes", value: "6" },
-      { label: "Best for", value: "Safari" },
-    ],
+    href: "/travel-guide/hwange-national-park",
   },
   {
     id: "eastern-highlands",
     eyebrow: "Scenic escape",
-    title: "Eastern Highlands with room to slow down.",
+    title: "Eastern Highlands",
     description:
-      "Discover mountain stays, trails, scenic drives, local guides, and flexible planning for quieter Zimbabwe travel.",
+      "Mountain stays, trails, scenic drives, and local guides for quieter Zimbabwe travel.",
     location: "Nyanga",
     image: "/images/nyanga.jpg",
     href: "/travel-guide/eastern-highlands",
-    stats: [
-      { label: "Guides", value: "12" },
-      { label: "Routes", value: "8" },
-      { label: "Best for", value: "Scenery" },
-    ],
   },
   {
     id: "kariba",
     eyebrow: "Lake escape",
-    title: "Kariba weekends with stays, boats, and sunsets.",
+    title: "Lake Kariba",
     description:
-      "Keep lake stays, houseboats, fishing, transfers, and activity options in a calmer planning surface.",
+      "Lake stays, houseboats, fishing, transfers, and sunset escapes in one calm view.",
     location: "Kariba",
     image: "/images/kariba.jpg",
     href: "/travel-guide/kariba",
-    stats: [
-      { label: "Stays", value: "18" },
-      { label: "Water", value: "Lake" },
-      { label: "Best for", value: "Groups" },
-    ],
   },
 ];
 
@@ -120,35 +100,35 @@ const destinations: DestinationItem[] = [
   {
     id: "victoria-falls",
     name: "Victoria Falls",
-    weather: "Adventure",
+    weather: "25°C · Sunny",
     image: "/images/destinations/victoria-falls.jpg",
     href: "/travel-guide/victoria-falls",
   },
   {
-    id: "hwange",
+    id: "hwange-national-park",
     name: "Hwange",
-    weather: "Safari",
+    weather: "30°C · Clear",
     image: "/images/destinations/hwange.jpg",
-    href: "/travel-guide/hwange",
+    href: "/travel-guide/hwange-national-park",
   },
   {
     id: "kariba",
     name: "Kariba",
-    weather: "Lake",
+    weather: "31°C · Warm",
     image: "/images/destinations/lake-kariba.jpg",
     href: "/travel-guide/kariba",
   },
   {
     id: "great-zimbabwe",
     name: "Great Zimbabwe",
-    weather: "Heritage",
+    weather: "27°C · Clear",
     image: "/images/destinations/great-zimbabwe.jpg",
     href: "/travel-guide/great-zimbabwe",
   },
   {
     id: "eastern-highlands",
     name: "Eastern Highlands",
-    weather: "Scenic",
+    weather: "19°C · Cool",
     image: "/images/nyanga.jpg",
     href: "/travel-guide/eastern-highlands",
   },
@@ -330,7 +310,7 @@ const sections: Array<{
 ];
 
 const categoryDock = [
-  { label: "Destinations", href: "/travel-guide", icon: Search },
+  { label: "Explore", href: "/travel-guide", icon: Search },
   { label: "Stays", href: "/accommodation", icon: Sparkles },
   { label: "Events", href: "/events", icon: CalendarDays },
   { label: "Transport", href: "/transport", icon: Bus },
@@ -436,8 +416,8 @@ function FeaturedCarousel() {
   };
 
   return (
-    <section className="mx-auto w-full max-w-7xl px-4 pt-5 sm:px-6 lg:px-8">
-      <div className="apple-scale-in relative min-h-[620px] overflow-hidden rounded-[2.25rem] border border-black/[0.08] bg-[#111] shadow-[0_40px_120px_-80px_rgba(0,0,0,0.72)] dark:border-white/[0.09] md:min-h-[680px]">
+    <section className="mx-auto w-full max-w-7xl px-4 pt-4 sm:px-6 lg:px-8">
+      <div className="apple-scale-in relative h-[430px] overflow-hidden rounded-[1.25rem] bg-[#111] shadow-[0_28px_90px_-72px_rgba(0,0,0,0.72)] dark:border dark:border-white/[0.08] sm:rounded-[1.5rem] md:h-[520px]">
         {carouselItems.map((item, index) => (
           <div
             key={item.id}
@@ -455,108 +435,58 @@ function FeaturedCarousel() {
           </div>
         ))}
 
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.08)_0%,rgba(0,0,0,0.22)_36%,rgba(0,0,0,0.78)_100%)]" />
-        <div className="absolute inset-x-0 top-0 h-48 bg-[linear-gradient(180deg,rgba(0,0,0,0.48),transparent)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(0,0,0,0.06)_0%,rgba(0,0,0,0.08)_38%,rgba(0,0,0,0.72)_100%)]" />
 
-        <div className="relative flex min-h-[620px] flex-col justify-between p-4 text-white sm:p-6 md:min-h-[680px] lg:p-8">
-          <div className="flex items-start justify-between gap-4">
+        <div className="absolute inset-x-0 bottom-0 p-4 text-white sm:p-6 md:p-8">
+          <div className="apple-fade-up max-w-2xl">
             <LocationPill label={activeItem.location} overlay />
-            <div className="hidden items-center gap-2 sm:flex">
-              <button
-                type="button"
-                onClick={() => goTo(activeIndex - 1)}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/16 bg-white/12 backdrop-blur-xl transition hover:bg-white/22"
-                aria-label="Previous featured destination"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </button>
-              <button
-                type="button"
-                onClick={() => goTo(activeIndex + 1)}
-                className="flex h-10 w-10 items-center justify-center rounded-full border border-white/16 bg-white/12 backdrop-blur-xl transition hover:bg-white/22"
-                aria-label="Next featured destination"
-              >
-                <ChevronRight className="h-5 w-5" />
-              </button>
-            </div>
+            <p className="mt-4 text-[10px] font-semibold uppercase tracking-[0.24em] text-white/68">
+              {activeItem.eyebrow}
+            </p>
+            <h1 className="mt-2 text-4xl font-bold leading-none md:text-6xl">
+              {activeItem.title}
+            </h1>
+            <p className="mt-3 max-w-xl text-sm leading-6 text-white/76 md:text-base">
+              {activeItem.description}
+            </p>
+            <Link href={activeItem.href} className="mt-5 inline-flex items-center gap-2 rounded-full bg-white px-5 py-2.5 text-sm font-bold text-[#1d1d1f] transition hover:bg-white/88">
+              Explore
+              <ArrowRight className="h-4 w-4" />
+            </Link>
           </div>
+        </div>
 
-          <div className="grid gap-5 lg:grid-cols-[1fr_24rem] lg:items-end">
-            <div className="apple-fade-up max-w-3xl">
-              <div className="inline-flex rounded-full border border-white/18 bg-white/12 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-[0.22em] text-white/78 backdrop-blur-xl">
-                {activeItem.eyebrow}
-              </div>
-              <h1 className="mt-4 max-w-4xl text-4xl font-bold leading-[1.02] md:text-6xl">
-                {activeItem.title}
-              </h1>
-              <p className="mt-4 max-w-2xl text-sm leading-6 text-white/76 md:text-base">
-                {activeItem.description}
-              </p>
+        <div className="absolute right-4 top-4 hidden items-center gap-2 sm:flex">
+          <button
+            type="button"
+            onClick={() => goTo(activeIndex - 1)}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/18 bg-black/18 text-white backdrop-blur-xl transition hover:bg-black/32"
+            aria-label="Previous featured destination"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </button>
+          <button
+            type="button"
+            onClick={() => goTo(activeIndex + 1)}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-white/18 bg-black/18 text-white backdrop-blur-xl transition hover:bg-black/32"
+            aria-label="Next featured destination"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
+        </div>
 
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Link href={activeItem.href} className="apple-action">
-                  Explore destination
-                  <ArrowRight className="h-4 w-4" />
-                </Link>
-                <Link href="/trip-planner" className="apple-action-secondary border-white/18 bg-white/12 text-white hover:bg-white/18">
-                  Build a trip
-                </Link>
-              </div>
-            </div>
-
-            <div className="apple-surface rounded-[1.75rem] p-3 text-white dark:bg-black/36">
-              <div className="grid grid-cols-3 gap-2">
-                {activeItem.stats.map((stat) => (
-                  <div key={stat.label} className="rounded-2xl bg-white/10 px-3 py-3 backdrop-blur">
-                    <div className="text-lg font-bold leading-none">{stat.value}</div>
-                    <div className="mt-1 truncate text-[10px] font-semibold uppercase tracking-[0.16em] text-white/54">
-                      {stat.label}
-                    </div>
-                  </div>
-                ))}
-              </div>
-
-              <div className="mt-3 grid grid-cols-4 gap-2">
-                {carouselItems.map((item, index) => (
-                  <button
-                    key={item.id}
-                    type="button"
-                    onClick={() => goTo(index)}
-                    className={`relative h-14 overflow-hidden rounded-2xl border transition ${
-                      index === activeIndex
-                        ? "border-white/75"
-                        : "border-white/14 opacity-72 hover:opacity-100"
-                    }`}
-                    aria-label={`Show ${item.location}`}
-                  >
-                    <span
-                      className="absolute inset-0 bg-cover bg-center"
-                      style={{ backgroundImage: `url('${item.image}')` }}
-                    />
-                    <span className="absolute inset-0 bg-black/18" />
-                  </button>
-                ))}
-              </div>
-
-              <div className="mt-3 flex gap-2">
-                {carouselItems.map((item, index) => (
-                  <button
-                    key={`${item.id}-progress`}
-                    type="button"
-                    onClick={() => goTo(index)}
-                    className="h-1.5 flex-1 overflow-hidden rounded-full bg-white/22"
-                    aria-label={`Go to ${item.location}`}
-                  >
-                    <span
-                      className={`block h-full rounded-full bg-white transition-all duration-500 ${
-                        index === activeIndex ? "w-full" : "w-0"
-                      }`}
-                    />
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
+        <div className="absolute bottom-4 right-4 flex gap-1.5">
+          {carouselItems.map((item, index) => (
+            <button
+              key={`${item.id}-dot`}
+              type="button"
+              onClick={() => goTo(index)}
+              className={`h-1.5 rounded-full transition-all ${
+                index === activeIndex ? "w-7 bg-white" : "w-1.5 bg-white/42 hover:bg-white/70"
+              }`}
+              aria-label={`Go to ${item.location}`}
+            />
+          ))}
         </div>
       </div>
     </section>
@@ -622,7 +552,7 @@ function DestinationCard({ item }: { item: DestinationItem }) {
   return (
     <Link
       href={item.href}
-      className="group relative mr-4 block h-[218px] w-[calc((100vw-48px)/2)] max-w-[232px] shrink-0 overflow-hidden rounded-[1.75rem] bg-white shadow-[0_22px_70px_-58px_rgba(0,0,0,0.42)] transition duration-500 hover:-translate-y-1 dark:bg-white/[0.055] sm:w-[220px]"
+      className="group relative mr-4 block h-[200px] w-[calc((100vw-48px)/2)] max-w-[224px] shrink-0 overflow-hidden rounded-[14px] bg-white transition duration-500 hover:-translate-y-1 dark:bg-[#1c1c1e] sm:h-[224px] sm:w-[224px] sm:rounded-2xl"
     >
       <div
         className="h-full w-full bg-cover bg-center transition duration-700 group-hover:scale-[1.04]"
@@ -633,11 +563,12 @@ function DestinationCard({ item }: { item: DestinationItem }) {
           <Heart className="h-4 w-4" />
         </IconActionButton>
       </div>
-      <div className="absolute inset-x-0 bottom-0 bg-[linear-gradient(180deg,transparent,rgba(0,0,0,0.76))] px-3 pb-3 pt-12">
+      <div className="absolute inset-x-0 bottom-0 bg-black/70 px-2.5 py-2.5">
         <h3 className="truncate text-left text-lg font-bold leading-none text-white">{item.name}</h3>
-        <p className="mt-1 truncate text-left text-sm font-semibold leading-none text-white/72">
-          {item.weather}
-        </p>
+        <div className="mt-1 flex min-w-0 items-center gap-1.5 text-left text-sm font-bold leading-none text-white">
+          <CloudSun className="h-4 w-4 shrink-0 text-[#ffd60a]" />
+          <span className="truncate">{item.weather}</span>
+        </div>
       </div>
     </Link>
   );

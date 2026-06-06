@@ -24,7 +24,7 @@ import SiteLogo from "./SiteLogo";
 
 const navLinks = [
   { label: "Featured", href: "/" },
-  { label: "Destinations", href: "/travel-guide" },
+  { label: "Explore", href: "/travel-guide" },
   { label: "Stays", href: "/accommodation" },
   { label: "Events", href: "/events" },
   { label: "Things To Do", href: "/activities" },
@@ -154,7 +154,7 @@ export default function Header() {
             <Link
               href="/travel-guide"
               className="hidden h-9 w-9 items-center justify-center rounded-full text-[#1d1d1f] transition hover:bg-black/[0.055] dark:text-white dark:hover:bg-white/[0.09] md:inline-flex"
-              aria-label="Search destinations"
+              aria-label="Search Explore"
             >
               <Search className="h-[18px] w-[18px]" />
             </Link>

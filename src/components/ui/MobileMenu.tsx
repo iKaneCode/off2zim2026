@@ -30,7 +30,7 @@ const sections = [
     label: "Discover",
     icon: Compass,
     links: [
-      { label: "Destinations", href: "/travel-guide" },
+      { label: "Explore", href: "/travel-guide" },
       { label: "Stays", href: "/accommodation" },
       { label: "Things to do", href: "/activities" },
       { label: "Events", href: "/events" },

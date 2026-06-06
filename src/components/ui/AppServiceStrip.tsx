@@ -18,7 +18,7 @@ import {
 } from "@/lib/destination-explorer";
 
 const iconMap = {
-  Destinations: Compass,
+  Explore: Compass,
   Events: Ticket,
   Transport: Bus,
   "Trip Planner": CalendarDays,

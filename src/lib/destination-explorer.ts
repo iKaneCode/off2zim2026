@@ -200,7 +200,7 @@ export const curatedZimbabweDestinations: CuratedDestinationEntry[] = [
 ];
 
 export const explorerGlobalServices = [
-  { label: "Destinations", href: "/travel-guide" },
+  { label: "Explore", href: "/travel-guide" },
   { label: "Events", href: "/events" },
   { label: "Transport", href: "/transport" },
   { label: "Trip Planner", href: "/trip-planner" },

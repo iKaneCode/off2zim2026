@@ -22,15 +22,17 @@ import { getSurfaceHref } from "@/lib/app-surface";
 import ThemeToggle from "./ThemeToggle";
 import SiteLogo from "./SiteLogo";
 
-const navLinks = [
+const appNavLinks = [
   { label: "Featured", href: "/" },
   { label: "Explore", href: "/travel-guide" },
   { label: "Stays", href: "/accommodation" },
   { label: "Events", href: "/events" },
-  { label: "Things To Do", href: "/activities" },
+  { label: "Experiences", href: "/activities" },
   { label: "Transport", href: "/transport" },
-  { label: "Shop", href: "/shop" },
+  { label: "Flights", href: "/transport/flights" },
 ];
+
+const desktopNavLinks = [...appNavLinks, { label: "Shop", href: "/shop" }];
 
 function HeaderIconButton({
   children,
@@ -131,7 +133,7 @@ export default function Header() {
           </div>
 
           <nav className="hidden items-center justify-center gap-1 lg:flex" aria-label="Primary navigation">
-            {navLinks.map((link) => {
+            {desktopNavLinks.map((link) => {
               const active = hasMounted && isActive(link.href);
 
               return (
@@ -176,13 +178,15 @@ export default function Header() {
               ) : null}
             </Link>
 
-            <Link
-              href="/trip-planner"
-              className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0071e3] text-white transition hover:bg-[#147ce5] md:inline-flex"
-              aria-label="Open trip planner"
-            >
-              <CalendarDays className="h-[18px] w-[18px]" />
-            </Link>
+            {user ? (
+              <Link
+                href="/trip-planner"
+                className="hidden h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#0071e3] text-white transition hover:bg-[#147ce5] md:inline-flex"
+                aria-label="Open itinerary"
+              >
+                <CalendarDays className="h-[18px] w-[18px]" />
+              </Link>
+            ) : null}
 
             {user ? (
               <div className="relative" ref={accountMenuRef}>
@@ -252,7 +256,7 @@ export default function Header() {
         </div>
 
         <nav className="mx-auto flex max-w-7xl gap-1 overflow-x-auto px-4 pb-2 scrollbar-hide sm:px-6 lg:hidden lg:px-8" aria-label="Mobile public navigation">
-          {navLinks.map((link) => {
+          {appNavLinks.map((link) => {
             const active = hasMounted && isActive(link.href);
 
             return (

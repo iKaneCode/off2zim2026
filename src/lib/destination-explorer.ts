@@ -203,7 +203,7 @@ export const explorerGlobalServices = [
   { label: "Explore", href: "/travel-guide" },
   { label: "Events", href: "/events" },
   { label: "Transport", href: "/transport" },
-  { label: "Trip Planner", href: "/trip-planner" },
+  { label: "Itinerary", href: "/trip-planner" },
 ] as const;
 
 export const destinationScopedServices = [

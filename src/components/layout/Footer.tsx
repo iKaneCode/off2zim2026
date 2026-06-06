@@ -12,17 +12,18 @@ const footerColumns = [
   {
     title: "Discover",
     links: [
-      { label: "Destinations", href: "/travel-guide" },
+      { label: "Explore", href: "/travel-guide" },
       { label: "Stays", href: "/accommodation" },
-      { label: "Things to do", href: "/activities" },
       { label: "Events", href: "/events" },
+      { label: "Experiences", href: "/activities" },
     ],
   },
   {
     title: "Plan",
     links: [
-      { label: "Trip planner", href: "/trip-planner" },
+      { label: "Itinerary", href: "/trip-planner", requiresAuth: true },
       { label: "Transport", href: "/transport" },
+      { label: "Flights", href: "/transport/flights" },
       { label: "Marketplace", href: "/marketplace" },
       { label: "Shop", href: "/shop" },
     ],
@@ -117,7 +118,9 @@ export default function Footer() {
                     {column.title}
                   </h3>
                   <div className="mt-4 grid gap-3">
-                    {column.links.map((link) => (
+                    {column.links
+                      .filter((link) => !("requiresAuth" in link) || !link.requiresAuth || Boolean(user))
+                      .map((link) => (
                       <Link
                         key={link.href}
                         href={link.href}

@@ -16,12 +16,13 @@ import {
   explorerGlobalServices,
   withDestinationContext,
 } from "@/lib/destination-explorer";
+import { useAuth } from "@/contexts/AuthContext";
 
 const iconMap = {
   Explore: Compass,
   Events: Ticket,
   Transport: Bus,
-  "Trip Planner": CalendarDays,
+  Itinerary: CalendarDays,
   Stays: BedDouble,
   "Things To Do": Sparkles,
   Restaurants: UtensilsCrossed,
@@ -39,10 +40,11 @@ export default function AppServiceStrip({
   destinationId,
   destinationName,
 }: AppServiceStripProps) {
+  const { user } = useAuth();
   const items = [
     ...explorerGlobalServices,
     ...(destinationId ? destinationScopedServices : []),
-  ];
+  ].filter((item) => item.label !== "Itinerary" || Boolean(user));
 
   return (
     <div className="space-y-3">

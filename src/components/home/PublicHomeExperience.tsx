@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
 import {
   ArrowRight,
+  BedDouble,
   Bus,
   CalendarDays,
   ChevronLeft,
@@ -311,8 +312,9 @@ const sections: Array<{
 
 const categoryDock = [
   { label: "Explore", href: "/travel-guide", icon: Search },
-  { label: "Stays", href: "/accommodation", icon: Sparkles },
+  { label: "Stays", href: "/accommodation", icon: BedDouble },
   { label: "Events", href: "/events", icon: CalendarDays },
+  { label: "Experiences", href: "/activities", icon: Sparkles },
   { label: "Transport", href: "/transport", icon: Bus },
   { label: "Flights", href: "/transport/flights", icon: Plane },
 ];

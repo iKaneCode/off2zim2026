@@ -2,6 +2,7 @@ import React from "react";
 import AppServiceStrip from "@/components/ui/AppServiceStrip";
 import CompactPageHero from "@/components/ui/CompactPageHero";
 import TripPlannerBuilder from "../../components/trip-planner/TripPlannerBuilder";
+import TripPlannerAccessGate from "@/components/trip-planner/TripPlannerAccessGate";
 import type { TripPlannerRouteSelections } from "@/components/trip-planner/TripPlannerBuilder";
 
 export const metadata = {
@@ -76,25 +77,27 @@ export default function TripPlannerPage({
   const routeSelections = getRouteSelections(searchParams);
 
   return (
-    <div className="theme-page">
-      <CompactPageHero
-        eyebrow="Trip planner"
-        title="Build your Zimbabwe itinerary, day by day"
-        description="Add stays, activities, transport, and dining into one timeline. Reorder your plans, track your budget, book in one checkout, or export a PDF to share."
-        imageUrl="/images/hwange-bush-camp-548548-original.jpg"
-      >
-        <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <PlannerFact title="All in one" detail="Stays, activities and transport" />
-          <PlannerFact title="Live budget" detail="Track spend as you plan" />
-          <PlannerFact title="One checkout" detail="Book the whole itinerary" />
-        </div>
-      </CompactPageHero>
+    <TripPlannerAccessGate>
+      <div className="theme-page">
+        <CompactPageHero
+          eyebrow="Itinerary"
+          title="Build your Zimbabwe itinerary, day by day"
+          description="Add stays, activities, transport, and dining into one timeline. Reorder your plans, track your budget, book in one checkout, or export a PDF to share."
+          imageUrl="/images/hwange-bush-camp-548548-original.jpg"
+        >
+          <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <PlannerFact title="All in one" detail="Stays, activities and transport" />
+            <PlannerFact title="Live budget" detail="Track spend as you plan" />
+            <PlannerFact title="One checkout" detail="Book the whole itinerary" />
+          </div>
+        </CompactPageHero>
 
-      <section className="mx-auto max-w-7xl px-4 pb-2 pt-0 sm:px-6 lg:px-8">
-        <AppServiceStrip activeLabel="Trip Planner" />
-      </section>
-      <TripPlannerBuilder routeSelections={routeSelections} />
-    </div>
+        <section className="mx-auto max-w-7xl px-4 pb-2 pt-0 sm:px-6 lg:px-8">
+          <AppServiceStrip activeLabel="Itinerary" />
+        </section>
+        <TripPlannerBuilder routeSelections={routeSelections} />
+      </div>
+    </TripPlannerAccessGate>
   );
 }
 

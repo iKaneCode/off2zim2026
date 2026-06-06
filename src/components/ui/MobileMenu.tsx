@@ -32,16 +32,17 @@ const sections = [
     links: [
       { label: "Explore", href: "/travel-guide" },
       { label: "Stays", href: "/accommodation" },
-      { label: "Things to do", href: "/activities" },
       { label: "Events", href: "/events" },
+      { label: "Experiences", href: "/activities" },
     ],
   },
   {
     label: "Plan and book",
     icon: MapPinned,
     links: [
-      { label: "Trip Planner", href: "/trip-planner" },
+      { label: "Itinerary", href: "/trip-planner", requiresAuth: true },
       { label: "Transport", href: "/transport" },
+      { label: "Flights", href: "/transport/flights" },
       { label: "Marketplace", href: "/marketplace" },
       { label: "Shop", href: "/shop" },
     ],
@@ -62,6 +63,12 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
   const router = useRouter();
   const [openSection, setOpenSection] = useState("Discover");
   const accountRoute = getAccountRoute(user);
+  const visibleSections = sections
+    .map((section) => ({
+      ...section,
+      links: section.links.filter((link) => !("requiresAuth" in link) || !link.requiresAuth || Boolean(user)),
+    }))
+    .filter((section) => section.links.length > 0);
 
   const handleLogout = async () => {
     onClose();
@@ -166,7 +173,7 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
           )}
 
           <div className="mt-5 space-y-3">
-            {sections.map((section) => {
+            {visibleSections.map((section) => {
               const Icon = section.icon;
               const isSectionOpen = openSection === section.label;
 
@@ -238,10 +245,12 @@ export function MobileMenu({ isOpen, onClose }: MobileMenuProps) {
             </div>
           ) : null}
 
-          <div className="mt-6 flex items-center gap-3 border-t border-black/[0.08] pt-5 text-sm text-[#6e6e73] dark:border-white/[0.09] dark:text-white/62">
-            <CalendarDays className="h-4 w-4 text-[#0071e3]" />
-            Book, plan, and move from one place.
-          </div>
+          {user ? (
+            <div className="mt-6 flex items-center gap-3 border-t border-black/[0.08] pt-5 text-sm text-[#6e6e73] dark:border-white/[0.09] dark:text-white/62">
+              <CalendarDays className="h-4 w-4 text-[#0071e3]" />
+              Your itinerary and saved trip tools are available.
+            </div>
+          ) : null}
 
           <Link
             href="/checkout"

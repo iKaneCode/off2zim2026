@@ -126,7 +126,7 @@ function ExplorerDashboardShell() {
         </section>
 
         <section>
-          <AppServiceStrip activeLabel="Trip Planner" />
+          <AppServiceStrip activeLabel="Itinerary" />
         </section>
 
         <section className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">

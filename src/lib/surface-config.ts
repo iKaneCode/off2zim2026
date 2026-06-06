@@ -61,7 +61,7 @@ export type PortalLink = {
 export const portalLinks: Record<NonPublicSurface, PortalLink[]> = {
   explorer: [
     { label: "Workspace", href: "/dashboard" },
-    { label: "Trip planner", href: "/trip-planner" },
+    { label: "Itinerary", href: "/trip-planner" },
     { label: "Featured", href: "/featured" },
     { label: "Bookings", href: "/bookings" },
     { label: "Shop", href: "/shop" },
